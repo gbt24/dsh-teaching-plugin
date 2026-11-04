@@ -6,7 +6,7 @@
  *   environments/
  *     state.json                 versioned record snapshot (atomic replace)
  *     managed/<language>-<id>/   plugin-owned extended environment directories
- *     tmp/run-*/                 short-lived run directories
+ *     tmp/run-<id>/              short-lived run directories
  *
  * A partially written or newer-schema state file is quarantined
  * (`state.corrupt-*.json`) instead of being silently overwritten, so a

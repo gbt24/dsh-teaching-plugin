@@ -925,6 +925,7 @@ export function registerRoutes(services: RouteServices): void {
       dialect: activity.payload.dialect,
       code,
       stdin: input.stdin ?? activity.payload.stdin,
+      ...(input.clientRunId === undefined ? {} : { runId: input.clientRunId }),
       checks: activity.payload.tests,
     })
     return envelope({ run, validation: run.status === 'succeeded' || run.verification === 'objective'
@@ -948,6 +949,7 @@ export function registerRoutes(services: RouteServices): void {
       stdin: input.stdin,
       checks: input.checks,
       timeoutMs: input.timeoutMs,
+      ...(input.clientRunId === undefined ? {} : { runId: input.clientRunId }),
     })
     return envelope({ run })
   })
@@ -1300,10 +1302,12 @@ async function runExperiment(
     code: string
     stdin?: string
     timeoutMs?: number
+    /** Client-generated identity for cancelling an in-flight run. */
+    runId?: string
     checks?: readonly { readonly name: string; readonly type: string; readonly value: string | number }[]
   },
 ): Promise<ExperimentRun> {
-  const runId = `run-${randomUUID().slice(0, 12)}`
+  const runId = input.runId ?? `run-${randomUUID().slice(0, 12)}`
   const checks = (input.checks ?? []).flatMap(check => {
     if (check.type !== 'stdout-contains' && check.type !== 'stdout-equals' && check.type !== 'exit-code') return []
     return [{ name: check.name, type: check.type, value: check.value }]

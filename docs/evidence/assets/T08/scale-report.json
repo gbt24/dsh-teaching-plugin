@@ -1,0 +1,139 @@
+{
+  "files": 300,
+  "charsPerFile": 35000,
+  "totalCharsApprox": 10500000,
+  "pageEquivalent": 10500,
+  "importMs": 6430,
+  "importMinutes": 0.11,
+  "importedDocuments": 300,
+  "failures": 0,
+  "sampleRevisionUnits": 1265,
+  "searchLatencyMs": {
+    "min": 1281,
+    "max": 1465,
+    "avg": 1374
+  },
+  "searchHitsDuringImport": [
+    {
+      "atMs": 314,
+      "ms": 12,
+      "ok": true,
+      "hits": 5
+    },
+    {
+      "atMs": 1199,
+      "ms": 382,
+      "ok": true,
+      "hits": 5
+    },
+    {
+      "atMs": 2392,
+      "ms": 694,
+      "ok": true,
+      "hits": 5
+    },
+    {
+      "atMs": 3937,
+      "ms": 1046,
+      "ok": true,
+      "hits": 5
+    },
+    {
+      "atMs": 5929,
+      "ms": 1493,
+      "ok": true,
+      "hits": 5
+    }
+  ],
+  "rssMb": 1683,
+  "heapUsedMb": 1205,
+  "durationMs": 13307,
+  "warmSearch": {
+    "rounds": [
+      [
+        {
+          "query": "特征值与对角化",
+          "ms": 1698,
+          "hits": 10
+        },
+        {
+          "query": "条件概率 贝叶斯",
+          "ms": 1398,
+          "hits": 10
+        },
+        {
+          "query": "中值定理 连续性",
+          "ms": 1400,
+          "hits": 10
+        },
+        {
+          "query": "TCP 拥塞控制",
+          "ms": 1361,
+          "hits": 10
+        },
+        {
+          "query": "SQL 事务隔离",
+          "ms": 1306,
+          "hits": 10
+        }
+      ],
+      [
+        {
+          "query": "特征值与对角化",
+          "ms": 1223,
+          "hits": 10
+        },
+        {
+          "query": "条件概率 贝叶斯",
+          "ms": 1343,
+          "hits": 10
+        },
+        {
+          "query": "中值定理 连续性",
+          "ms": 1344,
+          "hits": 10
+        },
+        {
+          "query": "TCP 拥塞控制",
+          "ms": 1232,
+          "hits": 10
+        },
+        {
+          "query": "SQL 事务隔离",
+          "ms": 1363,
+          "hits": 10
+        }
+      ],
+      [
+        {
+          "query": "特征值与对角化",
+          "ms": 1276,
+          "hits": 10
+        },
+        {
+          "query": "条件概率 贝叶斯",
+          "ms": 1276,
+          "hits": 10
+        },
+        {
+          "query": "中值定理 连续性",
+          "ms": 1292,
+          "hits": 10
+        },
+        {
+          "query": "TCP 拥塞控制",
+          "ms": 1299,
+          "hits": 10
+        },
+        {
+          "query": "SQL 事务隔离",
+          "ms": 1276,
+          "hits": 10
+        }
+      ]
+    ],
+    "min": 1223,
+    "max": 1698,
+    "avg": 1339
+  }
+}

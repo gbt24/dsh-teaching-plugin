@@ -77,6 +77,11 @@ export interface DeclaredEnvironmentNeed {
   readonly dependencies?: readonly string[]
   /** Resource envelope of the intended experiment (used for AC12 fallbacks). */
   readonly resources?: DeclaredResourceEnvelope
+  /**
+   * Kind of the intended experiment, stated by the declaration. The manager
+   * never infers this from free text; `other` means no automatic reduced plan.
+   */
+  readonly experimentKind?: ResourceRequestKind
 }
 
 /** Classification result for one declared requirement. */

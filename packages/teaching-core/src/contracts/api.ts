@@ -199,6 +199,8 @@ export interface ApiRequests {
     readonly method: 'POST'
     readonly body: {
       readonly activityId: ActivityId
+      /** Optional client-generated run id so the run can be cancelled in flight. */
+      readonly clientRunId?: string
       readonly activityRevision?: number
       readonly code?: string
       readonly params?: Readonly<Record<string, number>>
@@ -236,7 +238,16 @@ export interface ApiRequests {
     readonly method: 'POST'
     readonly body: { readonly language: string; readonly dialect?: string; readonly courseId?: CourseId; readonly approveSystemChange?: boolean }
   }
-  'experiments.run': { readonly method: 'POST'; readonly body: RunRequest }
+  'experiments.run': {
+    readonly method: 'POST'
+    /**
+     * `clientRunId` lets the client address the in-flight run with
+     * `experiments.cancel` before the synchronous response settles. The Host
+     * uses it as the run identity when it is a safe id; otherwise it generates
+     * one.
+     */
+    readonly body: RunRequest & { readonly clientRunId?: string }
+  }
   'experiments.cancel': { readonly method: 'POST'; readonly body: { readonly runId: string } }
   'tasks.get': { readonly method: 'GET'; readonly query: { readonly taskId: string }; readonly body?: never }
   'tasks.cancel': { readonly method: 'POST'; readonly body: { readonly taskId: string } }
