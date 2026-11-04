@@ -147,7 +147,7 @@ function MessageBubble(props: {
         <EvidenceChips refs={message.evidenceRefs} onEvidenceClick={props.onEvidenceClick} />
       )}
       {message.error !== undefined && (
-        <div className="ai-muted" style={{ color: '#b91c1c' }}>失败：{message.error.message}</div>
+        <div className="ai-muted" style={{ color: 'var(--dsw-alias-state-error-primary, #b91c1c)' }}>失败：{message.error.message}</div>
       )}
       <div className="ai-msg-meta">
         <span>{formatTime(message.createdAt)}</span>

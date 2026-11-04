@@ -174,7 +174,7 @@ export function createModelRubricAssessor(
   options: ModelRubricAssessorOptions = {},
 ): RubricAssessor {
   const language = options.language ?? 'zh'
-  const maxTokens = options.maxTokens ?? 800
+  const maxTokens = options.maxTokens ?? 2000
   const threshold = options.threshold ?? DEFAULT_RUBRIC_THRESHOLD
 
   return async (request: RubricAssessmentRequest): Promise<AttemptValidation> => {
@@ -203,12 +203,46 @@ export function createModelRubricAssessor(
       return degradedValidation(`模型 rubric 评分调用失败：${message}`)
     }
 
-    const parsed = completion.json !== undefined && isRecord(completion.json)
+    let parsed = completion.json !== undefined && isRecord(completion.json)
       ? completion.json
       : tryParseJsonObject(completion.text)
     if (parsed === undefined) {
-      const detail = completion.parseError ?? '模型没有返回可解析的 JSON'
-      return degradedValidation(`模型 rubric 评分输出无法解析：${detail}`)
+      // One bounded repair call: ask for the same JSON again without prose,
+      // with all newlines escaped. A second failure degrades honestly.
+      let detail = completion.parseError ?? '模型没有返回可解析的 JSON'
+      try {
+        const repair = await model.complete({
+          system: buildRubricSystemPrompt(),
+          messages: [
+            {
+              role: 'user',
+              text: buildRubricUserPrompt({
+                input: request.input,
+                rubric: request.rubric,
+                ...(request.conceptTitles === undefined ? {} : { conceptTitles: request.conceptTitles }),
+                language,
+              }),
+            },
+            { role: 'assistant', text: completion.text.slice(0, 3000) },
+            { role: 'user', text: '上一次输出不是合法 JSON。请只输出一个合法的 JSON 对象（不要代码围栏、不要解释；字符串内的换行请写成空格）。' },
+          ],
+          json: RUBRIC_JSON,
+          sessionId: request.input.sessionId,
+          purpose: 'evaluation',
+          language,
+          maxTokens,
+          temperature: 0,
+        })
+        parsed = repair.json !== undefined && isRecord(repair.json)
+          ? repair.json
+          : tryParseJsonObject(repair.text)
+        if (parsed === undefined) detail = repair.parseError ?? detail
+      } catch (cause) {
+        detail = cause instanceof Error ? cause.message : String(cause)
+      }
+      if (parsed === undefined) {
+        return degradedValidation(`模型 rubric 评分输出无法解析（已尝试一次修复）：${detail}`)
+      }
     }
     const scores = normalizeScores(parsed.scores, request.rubric)
     if (scores.length === 0) {

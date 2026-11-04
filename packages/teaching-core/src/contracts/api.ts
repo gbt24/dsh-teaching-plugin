@@ -243,7 +243,14 @@ export interface ApiRequests {
   'tasks.list': { readonly method: 'GET'; readonly query?: Record<string, never>; readonly body?: never }
   'portability.export': {
     readonly method: 'POST'
-    readonly body: { readonly courseId: CourseId; readonly sessionIds?: readonly SessionId[]; readonly outDir?: string; readonly format?: 'html' }
+    readonly body: {
+      readonly courseId: CourseId
+      readonly sessionIds?: readonly SessionId[]
+      readonly outDir?: string
+      readonly format?: 'html'
+      /** Include student notes in the exported page (default false). */
+      readonly includeNotes?: boolean
+    }
   }
   'portability.backup': { readonly method: 'POST'; readonly body: { readonly outDir?: string } }
   'portability.inspect': { readonly method: 'POST'; readonly body: { readonly archivePath: string } }

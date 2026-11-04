@@ -34,7 +34,7 @@ export function TopBar(props: TopBarProps): React.ReactElement {
           )}
         </div>
         <div className="ai-topbar-meta">
-          {props.offline && <span className="ai-badge" style={{ color: '#b45309', borderColor: '#d97706' }}>离线</span>}
+          {props.offline && <span className="ai-badge" style={{ color: 'var(--dsw-alias-state-warn-primary, #b45309)', borderColor: 'var(--dsw-alias-state-warn-primary, #d97706)' }}>离线</span>}
           {model !== undefined && (
             <span title={`模型：${model.provider}/${model.model}；${imageCapability}${model.note !== undefined ? `；${model.note}` : ''}`}>
               模型 {model.model} · {imageCapability}

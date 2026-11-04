@@ -34620,12 +34620,29 @@ function findTrailingMetadata(text2) {
   return void 0;
 }
 function splitTurnOutput(fullText) {
-  const markerIndex = fullText.lastIndexOf(META_MARKER);
-  if (markerIndex !== -1) {
+  const markerIndexes = [];
+  for (let index = fullText.indexOf(META_MARKER); index !== -1; index = fullText.indexOf(META_MARKER, index + 1)) {
+    markerIndexes.push(index);
+  }
+  if (markerIndexes.length > 0) {
+    const segments = markerIndexes.map((index, position) => {
+      const end = position + 1 < markerIndexes.length ? markerIndexes[position + 1] : fullText.length;
+      return { index, text: fullText.slice(index + META_MARKER.length, end).trim() };
+    });
+    const parsable = segments.find((segment) => {
+      if (!segment.text.startsWith("{")) return false;
+      try {
+        JSON.parse(segment.text);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    const chosen = parsable ?? segments.reduce((best, current) => current.text.length > best.text.length ? current : best, segments[0]);
     return {
-      body: fullText.slice(0, markerIndex).trimEnd(),
-      metadataText: fullText.slice(markerIndex + META_MARKER.length).trim(),
-      metadataStart: markerIndex
+      body: fullText.slice(0, chosen.index).trimEnd(),
+      metadataText: chosen.text,
+      metadataStart: chosen.index
     };
   }
   const trailing = findTrailingMetadata(fullText);
@@ -35183,7 +35200,8 @@ function verificationFor(kind) {
 function normalizeActivityProposal(raw, ctx) {
   if (raw === void 0 || raw === null) return { warnings: [] };
   if (!isRecord(raw)) return { warnings: ["\u6D3B\u52A8\u63D0\u6848\u4E0D\u662F JSON \u5BF9\u8C61\uFF0C\u5DF2\u5FFD\u7565\u3002"] };
-  const payloadRaw = raw.payload;
+  const flatType = asString(raw.type, 40);
+  const payloadRaw = isRecord(raw.payload) ? raw.payload : flatType === void 0 ? void 0 : raw;
   if (!isRecord(payloadRaw)) return { warnings: ["\u6D3B\u52A8\u63D0\u6848\u7F3A\u5C11 payload\uFF0C\u5DF2\u5FFD\u7565\u3002"] };
   const payloadType = asString(payloadRaw.type, 40);
   if (payloadType === void 0) return { warnings: ["\u6D3B\u52A8 payload \u7F3A\u5C11 type\uFF0C\u5DF2\u5FFD\u7565\u3002"] };
@@ -35923,7 +35941,7 @@ function normalizeConfidence(value) {
 }
 function createModelRubricAssessor(model, options = {}) {
   const language = options.language ?? "zh";
-  const maxTokens = options.maxTokens ?? 800;
+  const maxTokens = options.maxTokens ?? 2e3;
   const threshold = options.threshold ?? DEFAULT_RUBRIC_THRESHOLD;
   return async (request) => {
     let completion;
@@ -35950,10 +35968,40 @@ function createModelRubricAssessor(model, options = {}) {
       const message = cause instanceof Error ? cause.message : String(cause);
       return degradedValidation(`\u6A21\u578B rubric \u8BC4\u5206\u8C03\u7528\u5931\u8D25\uFF1A${message}`);
     }
-    const parsed = completion.json !== void 0 && isRecord2(completion.json) ? completion.json : tryParseJsonObject(completion.text);
+    let parsed = completion.json !== void 0 && isRecord2(completion.json) ? completion.json : tryParseJsonObject(completion.text);
     if (parsed === void 0) {
-      const detail = completion.parseError ?? "\u6A21\u578B\u6CA1\u6709\u8FD4\u56DE\u53EF\u89E3\u6790\u7684 JSON";
-      return degradedValidation(`\u6A21\u578B rubric \u8BC4\u5206\u8F93\u51FA\u65E0\u6CD5\u89E3\u6790\uFF1A${detail}`);
+      let detail = completion.parseError ?? "\u6A21\u578B\u6CA1\u6709\u8FD4\u56DE\u53EF\u89E3\u6790\u7684 JSON";
+      try {
+        const repair = await model.complete({
+          system: buildRubricSystemPrompt(),
+          messages: [
+            {
+              role: "user",
+              text: buildRubricUserPrompt({
+                input: request.input,
+                rubric: request.rubric,
+                ...request.conceptTitles === void 0 ? {} : { conceptTitles: request.conceptTitles },
+                language
+              })
+            },
+            { role: "assistant", text: completion.text.slice(0, 3e3) },
+            { role: "user", text: "\u4E0A\u4E00\u6B21\u8F93\u51FA\u4E0D\u662F\u5408\u6CD5 JSON\u3002\u8BF7\u53EA\u8F93\u51FA\u4E00\u4E2A\u5408\u6CD5\u7684 JSON \u5BF9\u8C61\uFF08\u4E0D\u8981\u4EE3\u7801\u56F4\u680F\u3001\u4E0D\u8981\u89E3\u91CA\uFF1B\u5B57\u7B26\u4E32\u5185\u7684\u6362\u884C\u8BF7\u5199\u6210\u7A7A\u683C\uFF09\u3002" }
+          ],
+          json: RUBRIC_JSON,
+          sessionId: request.input.sessionId,
+          purpose: "evaluation",
+          language,
+          maxTokens,
+          temperature: 0
+        });
+        parsed = repair.json !== void 0 && isRecord2(repair.json) ? repair.json : tryParseJsonObject(repair.text);
+        if (parsed === void 0) detail = repair.parseError ?? detail;
+      } catch (cause) {
+        detail = cause instanceof Error ? cause.message : String(cause);
+      }
+      if (parsed === void 0) {
+        return degradedValidation(`\u6A21\u578B rubric \u8BC4\u5206\u8F93\u51FA\u65E0\u6CD5\u89E3\u6790\uFF08\u5DF2\u5C1D\u8BD5\u4E00\u6B21\u4FEE\u590D\uFF09\uFF1A${detail}`);
+      }
     }
     const scores = normalizeScores(parsed.scores, request.rubric);
     if (scores.length === 0) {
@@ -37430,14 +37478,14 @@ var Registry = class {
           missingReason: "\u672C\u673A\u672A\u627E\u5230\u53EF\u7528\u7684 python3\u3002\u53EF\u5728\u7CFB\u7EDF\u5B89\u88C5 Python 3 \u540E\u91CD\u8BD5\uFF1B\u8BFE\u7A0B\u5B9E\u9A8C\u4ECD\u53EF\u7528 JavaScript/Scheme \u6216\u964D\u7EA7\u6559\u5B66\u3002"
         };
       }
-      return { language, available: true, version: resolved.version, executable: resolved.executable, args: [...resolved.args], note: resolved.note };
+      return { language, available: true, version: resolved.version, executable: resolved.executable, args: [...resolved.args], ...Object.keys(resolved.env).length > 0 ? { env: resolved.env } : {}, note: resolved.note };
     }
     if (language === "javascript") {
       const resolved = await resolveNode(this.options.nodePath);
       if (resolved === void 0) {
         return { language, available: false, missingReason: "\u672C\u673A\u672A\u627E\u5230 Node.js \u53EF\u6267\u884C\u6587\u4EF6\uFF0CJavaScript \u5B9E\u9A8C\u4E0D\u53EF\u7528\u3002" };
       }
-      return { language, available: true, version: resolved.version, executable: resolved.executable, args: [...resolved.args], note: resolved.note };
+      return { language, available: true, version: resolved.version, executable: resolved.executable, args: [...resolved.args], ...Object.keys(resolved.env).length > 0 ? { env: resolved.env } : {}, note: resolved.note };
     }
     if (language === "scheme") {
       const node = await resolveNode(this.options.nodePath);
@@ -37457,6 +37505,9 @@ var Registry = class {
         version: `biwascheme 0.8.3\uFF08Node ${node.version}\uFF09`,
         executable: node.executable,
         args: [...node.args],
+        // ELECTRON_RUN_AS_NODE must reach the child or Electron starts a browser
+        // app instead of a Node script (observed on the real Host).
+        ...Object.keys(node.env).length > 0 ? { env: node.env } : {},
         note: "\u89E3\u91CA\u5668\u4EE5 Node \u5B50\u8FDB\u7A0B\u8FD0\u884C\uFF1BSICP \u9884\u7F6E\u5E93\u7531\u63D2\u4EF6\u6CE8\u5165\uFF0C\u4E0D\u4FEE\u6539 biwascheme \u5305\u3002"
       };
     }
@@ -37477,7 +37528,10 @@ var Registry = class {
     const command = {
       executable: probe.executable ?? "",
       args: probe.args ?? [],
-      env: input.language === "scheme" ? { TEACHING_BIWASCHEME_ENTRY: resolveBiwaschemeEntry(this.options.biwaschemePath) ?? "" } : {},
+      env: {
+        ...probe.env ?? {},
+        ...input.language === "scheme" ? { TEACHING_BIWASCHEME_ENTRY: resolveBiwaschemeEntry(this.options.biwaschemePath) ?? "" } : {}
+      },
       version: probe.version ?? "unknown"
     };
     const record = {
@@ -53493,8 +53547,8 @@ function mountCodeRun(container, payload, options = {}) {
       lineHeight: "1.5",
       padding: "8px",
       borderRadius: "8px",
-      border: "1px solid var(--dsw-border, rgba(127,127,127,0.3))",
-      background: "var(--dsw-surface, transparent)",
+      border: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3))",
+      background: "var(--dsw-alias-bg-base, transparent)",
       color: "inherit",
       resize: "vertical",
       boxSizing: "border-box"
@@ -53556,7 +53610,7 @@ function mountCodeRun(container, payload, options = {}) {
     if (result.errorMessage !== void 0) {
       output.appendChild(createElement(document2, "div", {
         text: result.errorMessage,
-        styles: { color: "#b45309", fontSize: "12px", whiteSpace: "pre-wrap" }
+        styles: { color: "var(--dsw-alias-state-warn-primary, #b45309)", fontSize: "12px", whiteSpace: "pre-wrap" }
       }));
     }
     if (result.stdout !== "") {
@@ -53570,7 +53624,7 @@ function mountCodeRun(container, payload, options = {}) {
           borderRadius: "6px",
           maxHeight: "260px",
           overflow: "auto",
-          background: "var(--dsw-surface-raised, rgba(127,127,127,0.08))",
+          background: "var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08))",
           fontSize: "12px",
           whiteSpace: "pre-wrap",
           wordBreak: "break-word"
@@ -53589,7 +53643,7 @@ function mountCodeRun(container, payload, options = {}) {
           maxHeight: "200px",
           overflow: "auto",
           background: "rgba(239,68,68,0.08)",
-          color: "#b91c1c",
+          color: "var(--dsw-alias-state-error-primary, #b91c1c)",
           fontSize: "12px",
           whiteSpace: "pre-wrap",
           wordBreak: "break-word"
@@ -53602,7 +53656,7 @@ function mountCodeRun(container, payload, options = {}) {
         const marker = check.status === "pass" ? "\u2713" : check.status === "fail" ? "\u2717" : "\xB7";
         list.appendChild(createElement(document2, "li", {
           text: `${marker} ${check.name}${check.detail !== void 0 ? ` \u2014 ${check.detail}` : ""}`,
-          styles: { color: check.status === "fail" ? "#b91c1c" : "inherit" }
+          styles: { color: check.status === "fail" ? "var(--dsw-alias-state-error-primary, #b91c1c)" : "inherit" }
         }));
       }
       output.appendChild(list);
@@ -53726,10 +53780,10 @@ function mountDerivation(container, payload, options = {}) {
     const item = createElement(document2, "li", {
       className: "teaching-derivation-step",
       styles: {
-        border: "1px solid var(--dsw-border, rgba(127,127,127,0.25))",
+        border: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25))",
         borderRadius: "8px",
         padding: "8px 10px",
-        background: "var(--dsw-surface-raised, rgba(127,127,127,0.06))"
+        background: "var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.06))"
       }
     });
     const node = createElement(document2, "div");
@@ -54185,8 +54239,8 @@ function compileExpression(source, options = {}) {
 var WIDTH = 640;
 var HEIGHT = 340;
 var PADDING = { left: 48, right: 20, top: 24, bottom: 56 };
-var TEXT = "var(--dsw-text-secondary, #64748b)";
-var BORDER = "var(--dsw-border, rgba(127,127,127,0.25))";
+var TEXT = "var(--dsw-alias-label-secondary, #64748b)";
+var BORDER = "var(--dsw-alias-border-l2, rgba(127,127,127,0.25))";
 var MAX_LABEL = 28;
 function shortLabel(label) {
   return label.length > MAX_LABEL ? `${label.slice(0, MAX_LABEL - 1)}\u2026` : label;
@@ -54518,7 +54572,7 @@ function renderFlow(document2, svg, payload, width, height) {
       width: boxWidth,
       height: 32,
       rx: 8,
-      fill: "var(--dsw-surface-raised, rgba(127,127,127,0.10))",
+      fill: "var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.10))",
       stroke: BORDER
     }));
     const label = createSvgElement(document2, "text", {
@@ -54647,8 +54701,8 @@ function mountGraph(container, payload, options = {}) {
   const plotHeight = height - PADDING2.top - PADDING2.bottom;
   const projectX = (x) => PADDING2.left + (x - xFrom) / (xTo - xFrom) * plotWidth;
   const projectY = (y) => PADDING2.top + (yTo - y) / (yTo - yFrom) * plotHeight;
-  const textFill = "var(--dsw-text-secondary, #64748b)";
-  const gridStroke = "var(--dsw-border, rgba(127, 127, 127, 0.22))";
+  const textFill = "var(--dsw-alias-label-secondary, #64748b)";
+  const gridStroke = "var(--dsw-alias-border-l2, rgba(127, 127, 127, 0.22))";
   const drawFrame = () => {
     for (let index = 0; index <= 4; index += 1) {
       const x = xFrom + (xTo - xFrom) * index / 4;
@@ -54737,7 +54791,7 @@ function mountGraph(container, payload, options = {}) {
           errorNote = createElement(document2, "div", {
             className: "teaching-graph-error",
             text: `\u516C\u5F0F\u300C${series.label}\u300D\u65E0\u6CD5\u6C42\u503C\uFF1A${expression.message}`,
-            styles: { color: "#b45309", fontSize: "12px", marginTop: "4px" }
+            styles: { color: "var(--dsw-alias-state-warn-primary, #b45309)", fontSize: "12px", marginTop: "4px" }
           });
           wrapper.appendChild(errorNote);
         }
@@ -55001,7 +55055,7 @@ function mountQuiz(container, payload, options = {}) {
         gap: "8px",
         alignItems: "flex-start",
         padding: "6px 8px",
-        border: "1px solid var(--dsw-border, rgba(127,127,127,0.25))",
+        border: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25))",
         borderRadius: "8px",
         cursor: "pointer",
         fontSize: "12px"
@@ -55044,7 +55098,7 @@ function mountQuiz(container, payload, options = {}) {
       const suffix = feedbackSuffix.get(option.id);
       if (row === void 0 || input === void 0 || suffix === void 0) continue;
       input.checked = selected.has(option.id);
-      row.style.background = selected.has(option.id) ? "var(--dsw-surface-raised, rgba(127,127,127,0.12))" : "";
+      row.style.background = selected.has(option.id) ? "var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.12))" : "";
       if (!revealed) {
         row.style.borderColor = "";
         suffix.textContent = "";
@@ -55052,7 +55106,7 @@ function mountQuiz(container, payload, options = {}) {
       }
       const correct = payload.correctOptionIds.includes(option.id);
       const chosen = selected.has(option.id);
-      row.style.borderColor = correct ? "#16a34a" : chosen ? "#dc2626" : "";
+      row.style.borderColor = correct ? "var(--dsw-alias-state-success-primary, #16a34a)" : chosen ? "var(--dsw-alias-state-error-primary, #dc2626)" : "";
       suffix.textContent = correct ? "\u2713 \u6B63\u786E\u9009\u9879" : chosen ? "\u2717 \u4F60\u7684\u9009\u62E9\u4E0D\u6B63\u786E" : "";
     }
   };
@@ -55076,7 +55130,7 @@ function mountQuiz(container, payload, options = {}) {
   let hintButton;
   const hintBox = createElement(document2, "div", {
     className: "teaching-quiz-hint",
-    styles: { marginTop: "8px", fontSize: "12px", color: "#b45309", display: "none" }
+    styles: { marginTop: "8px", fontSize: "12px", color: "var(--dsw-alias-state-warn-primary, #b45309)", display: "none" }
   });
   const showHint = () => {
     if (payload.hint === void 0 || hintShown) return;
@@ -55176,7 +55230,7 @@ function mountExplanation(container, payload, options = {}) {
       styles: { fontWeight: "600", fontSize: "12px", marginTop: "8px" }
     }));
     const list = createElement(document2, "ul", {
-      styles: { margin: "2px 0", paddingLeft: "18px", fontSize: "12px", color: "#b45309" }
+      styles: { margin: "2px 0", paddingLeft: "18px", fontSize: "12px", color: "var(--dsw-alias-state-warn-primary, #b45309)" }
     });
     for (const caveat of payload.caveats ?? []) list.appendChild(createElement(document2, "li", { text: caveat }));
     wrapper.appendChild(list);
@@ -55289,7 +55343,7 @@ function mountExperimentNote(container, payload, options = {}) {
       text: "\u5C40\u9650",
       styles: { fontWeight: "600", fontSize: "12px", marginTop: "8px" }
     }));
-    const list = createElement(document2, "ul", { styles: { margin: "2px 0", paddingLeft: "18px", fontSize: "12px", color: "#b45309" } });
+    const list = createElement(document2, "ul", { styles: { margin: "2px 0", paddingLeft: "18px", fontSize: "12px", color: "var(--dsw-alias-state-warn-primary, #b45309)" } });
     for (const limitation of payload.limitations ?? []) list.appendChild(createElement(document2, "li", { text: limitation }));
     wrapper.appendChild(list);
   }
@@ -55311,8 +55365,8 @@ function mountAnswerArea(root, document2, options, extras) {
       fontSize: "12px",
       lineHeight: "1.6",
       borderRadius: "8px",
-      border: "1px solid var(--dsw-border, rgba(127,127,127,0.3))",
-      background: "var(--dsw-surface, transparent)",
+      border: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3))",
+      background: "var(--dsw-alias-bg-base, transparent)",
       color: "inherit",
       resize: "vertical",
       boxSizing: "border-box",
@@ -55372,7 +55426,7 @@ function mountAnswerArea(root, document2, options, extras) {
     });
     const hintBox = createElement(document2, "div", {
       className: "teaching-hint",
-      styles: { marginTop: "6px", fontSize: "12px", color: "#b45309" }
+      styles: { marginTop: "6px", fontSize: "12px", color: "var(--dsw-alias-state-warn-primary, #b45309)" }
     });
     disposers.push(on(hintButton, "click", () => {
       clearElement(hintBox);
@@ -55445,7 +55499,7 @@ function appendAnchors(parent, document2, anchors, options) {
         padding: "2px 8px",
         borderRadius: "999px",
         cursor: "pointer",
-        border: "1px solid var(--dsw-border, rgba(127,127,127,0.3))",
+        border: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3))",
         background: "transparent",
         color: "inherit",
         maxWidth: "100%",
@@ -55708,10 +55762,10 @@ function mountActivity(container, input, options = {}) {
       "data-activity-revision": String(activity.revision ?? 0)
     },
     styles: {
-      border: "1px solid var(--dsw-border, rgba(127,127,127,0.25))",
+      border: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25))",
       borderRadius: "10px",
       padding: "10px 12px",
-      background: "var(--dsw-surface, transparent)"
+      background: "var(--dsw-alias-bg-base, transparent)"
     }
   });
   const title = activity.title ?? ("title" in payload ? payload.title : void 0) ?? "\u6559\u5B66\u6D3B\u52A8";
@@ -57447,7 +57501,7 @@ ${PAGE_CSS}`;
   const notice = el(document2, "section", { className: "tp-offline-notice" });
   notice.appendChild(el(document2, "h2", { text: "\u79BB\u7EBF\u8BF4\u660E" }));
   const noticeList = el(document2, "ul");
-  for (const note of [...OFFLINE_NOTICE_LINES, ...input.limitations]) {
+  for (const note of uniqueStrings([...OFFLINE_NOTICE_LINES, ...input.limitations])) {
     noticeList.appendChild(el(document2, "li", { text: note }));
   }
   notice.appendChild(noticeList);
@@ -58025,6 +58079,18 @@ var HarnessModelAdapter = class {
         continue;
       }
       if (terminal?.ok === true) {
+        if (request.purpose === "chat" && text2.includes("<<<TEACHING_META>>>")) {
+          this.options.log?.("chat raw tail", { chars: text2.length, tail: text2.slice(-200) });
+          if (process.env.DSH_TEACHING_DEBUG_CHAT === "1") {
+            try {
+              const { writeFileSync } = process.getBuiltinModule("node:fs");
+              const { tmpdir: tmpdir2 } = process.getBuiltinModule("node:os");
+              const { join: join13 } = process.getBuiltinModule("node:path");
+              writeFileSync(join13(tmpdir2(), `teaching-chat-${Date.now()}.txt`), text2, "utf8");
+            } catch {
+            }
+          }
+        }
         yield {
           type: "done",
           text: text2,
@@ -58222,7 +58288,11 @@ function teacherMessage(input) {
     activityIds: input.activityIds,
     usage: input.usage,
     teaching: {
-      intent: "explain",
+      intent: input.meta?.intent ?? "explain",
+      ...input.meta?.stage === void 0 ? {} : { stage: input.meta.stage },
+      ...input.meta?.conceptIds === void 0 ? {} : { conceptIds: input.meta.conceptIds },
+      ...input.meta?.requestedForm === void 0 ? {} : { requestedForm: input.meta.requestedForm },
+      ...input.meta?.nextActions === void 0 ? {} : { nextActions: input.meta.nextActions },
       uncertainty: input.uncertainty,
       evidenceKinds: Array.from(new Set(input.evidenceRefs.map((ref) => ref.kind)))
     }
@@ -58804,7 +58874,9 @@ function registerRoutes(services) {
             materialWarnings: [],
             requestedForm: detectRequestedForm(input.text)?.form,
             wantsFullAnswer: /完整答案|直接给(我)?答案|别提示|tell me the answer|just give me/i.test(input.text),
-            webResults
+            // Only pass results when a lookup was actually attempted; an empty
+            // array means "searched but nothing found", undefined means "not used".
+            ...wantsWebLookup(input.text) ? { webResults } : {}
           };
           let finalText = "";
           let finalMeta;
@@ -58879,7 +58951,16 @@ function registerRoutes(services) {
               costUsd: usage.costUsd,
               usageUnknown: usage.usageUnknown
             },
-            uncertainty: [...uncertainty, ...limitations, ...webNote === void 0 ? [] : [webNote]]
+            uncertainty: [...uncertainty, ...limitations, ...webNote === void 0 ? [] : [webNote]],
+            ...finalMeta === void 0 ? {} : {
+              meta: {
+                intent: finalMeta.intent,
+                stage: finalMeta.stage,
+                conceptIds: finalMeta.conceptIds,
+                requestedForm: finalMeta.requestedForm,
+                nextActions: finalMeta.nextActions
+              }
+            }
           });
           await services.sessions.appendMessage(teacher);
           const latest = await services.sessions.get(session.id) ?? session;
@@ -59051,6 +59132,9 @@ function registerRoutes(services) {
     const session = await services.sessions.get(input.sessionId);
     if (session === void 0) throw notFoundError("\u5B66\u4E60\u4F1A\u8BDD");
     const activity = input.activityId === void 0 ? void 0 : await services.sessions.getActivity(input.activityId);
+    if (input.activityId !== void 0 && activity === void 0) {
+      return failure({ code: "not-found", message: "\u4F5C\u7B54\u7684\u6D3B\u52A8\u4E0D\u5B58\u5728\u6216\u5DF2\u88AB\u66F4\u65B0\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5", details: { activityId: input.activityId } });
+    }
     const validation = activity === void 0 ? void 0 : await validateAttempt(services, activity, input);
     const conceptIds = activity?.conceptIds ?? (session.position.conceptId === void 0 ? [] : [session.position.conceptId]);
     const learning = services.createLearningFor(activity);
@@ -59188,7 +59272,8 @@ function registerRoutes(services) {
         courseId: input.courseId,
         ...input.sessionIds === void 0 ? {} : { sessionIds: input.sessionIds },
         ...input.outDir === void 0 ? {} : { outDir: input.outDir },
-        ...input.format === void 0 ? {} : { format: input.format }
+        ...input.format === void 0 ? {} : { format: input.format },
+        ...input.includeNotes === void 0 ? {} : { includeNotes: input.includeNotes }
       }, context.signal);
       if (!result.ok) throw appError(result.error.code, result.error.message, result.error.details);
       context.step("collect", { status: "done" });
@@ -59609,7 +59694,7 @@ function apply(ctx, config = {}) {
   const learning = new LearningRepository(state);
   const tasks = new TaskManager(state, logger);
   const web = createWebBridge(ctx);
-  const teaching = createTeachingService({ maxTokens: 6e3 });
+  const teaching = createTeachingService({ maxTokens: 12e3 });
   const experiments = createRunnerRegistry({ dataDir });
   const usageBySession = /* @__PURE__ */ new Map();
   const model = new HarnessModelAdapter(ctx, {

@@ -53,7 +53,7 @@ export function mountExplanation(
       text: '适用条件与注意', styles: { fontWeight: '600', fontSize: '12px', marginTop: '8px' },
     }))
     const list = createElement(document, 'ul', {
-      styles: { margin: '2px 0', paddingLeft: '18px', fontSize: '12px', color: '#b45309' },
+      styles: { margin: '2px 0', paddingLeft: '18px', fontSize: '12px', color: 'var(--dsw-alias-state-warn-primary, #b45309)' },
     })
     for (const caveat of payload.caveats ?? []) list.appendChild(createElement(document, 'li', { text: caveat }))
     wrapper.appendChild(list)
@@ -180,7 +180,7 @@ export function mountExperimentNote(
     wrapper.appendChild(createElement(document, 'div', {
       text: '局限', styles: { fontWeight: '600', fontSize: '12px', marginTop: '8px' },
     }))
-    const list = createElement(document, 'ul', { styles: { margin: '2px 0', paddingLeft: '18px', fontSize: '12px', color: '#b45309' } })
+    const list = createElement(document, 'ul', { styles: { margin: '2px 0', paddingLeft: '18px', fontSize: '12px', color: 'var(--dsw-alias-state-warn-primary, #b45309)' } })
     for (const limitation of payload.limitations ?? []) list.appendChild(createElement(document, 'li', { text: limitation }))
     wrapper.appendChild(list)
   }
@@ -224,8 +224,8 @@ function mountAnswerArea(
     attrs: { 'aria-label': '你的回答', rows: '6', placeholder: '写下你的推理过程或答案（可用中文）' },
     styles: {
       width: '100%', marginTop: '8px', padding: '8px', fontSize: '12px', lineHeight: '1.6',
-      borderRadius: '8px', border: '1px solid var(--dsw-border, rgba(127,127,127,0.3))',
-      background: 'var(--dsw-surface, transparent)', color: 'inherit', resize: 'vertical',
+      borderRadius: '8px', border: '1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3))',
+      background: 'var(--dsw-alias-bg-base, transparent)', color: 'inherit', resize: 'vertical',
       boxSizing: 'border-box', fontFamily: 'inherit',
     },
   })
@@ -279,7 +279,7 @@ function mountAnswerArea(
       styles: { fontSize: '12px', padding: '4px 12px', cursor: 'pointer' },
     })
     const hintBox = createElement(document, 'div', {
-      className: 'teaching-hint', styles: { marginTop: '6px', fontSize: '12px', color: '#b45309' },
+      className: 'teaching-hint', styles: { marginTop: '6px', fontSize: '12px', color: 'var(--dsw-alias-state-warn-primary, #b45309)' },
     })
     disposers.push(on(hintButton, 'click', () => {
       clearElement(hintBox)
@@ -358,7 +358,7 @@ export function appendAnchors(
       attrs: { type: 'button' },
       styles: {
         fontSize: '11px', padding: '2px 8px', borderRadius: '999px', cursor: 'pointer',
-        border: '1px solid var(--dsw-border, rgba(127,127,127,0.3))', background: 'transparent',
+        border: '1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3))', background: 'transparent',
         color: 'inherit', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       },
     })

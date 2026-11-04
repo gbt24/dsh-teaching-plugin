@@ -56,9 +56,9 @@ export function mountDerivation(
     const item = createElement(document, 'li', {
       className: 'teaching-derivation-step',
       styles: {
-        border: '1px solid var(--dsw-border, rgba(127,127,127,0.25))',
+        border: '1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25))',
         borderRadius: '8px', padding: '8px 10px',
-        background: 'var(--dsw-surface-raised, rgba(127,127,127,0.06))',
+        background: 'var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.06))',
       },
     })
     const node = createElement(document, 'div')

@@ -150,12 +150,31 @@ function findTrailingMetadata(text: string): { readonly start: number; readonly 
 
 /** 把模型完整输出拆成「学生可见正文」与「元数据文本」。 */
 export function splitTurnOutput(fullText: string): SplitTurnOutput {
-  const markerIndex = fullText.lastIndexOf(META_MARKER)
-  if (markerIndex !== -1) {
+  // Models sometimes echo the marker with nothing after it (e.g. a trailing
+  // duplicate). Pick the earliest marker that actually has metadata behind it,
+  // and fall back to the first marker when every occurrence is empty.
+  const markerIndexes: number[] = []
+  for (let index = fullText.indexOf(META_MARKER); index !== -1; index = fullText.indexOf(META_MARKER, index + 1)) {
+    markerIndexes.push(index)
+  }
+  if (markerIndexes.length > 0) {
+    // Segment text between consecutive markers; models occasionally repeat the
+    // marker after the JSON (leaving an empty tail). Pick the first segment
+    // that starts like JSON and parses, then fall back to the longest one.
+    const segments = markerIndexes.map((index, position) => {
+      const end = position + 1 < markerIndexes.length ? markerIndexes[position + 1] as number : fullText.length
+      return { index, text: fullText.slice(index + META_MARKER.length, end).trim() }
+    })
+    const parsable = segments.find(segment => {
+      if (!segment.text.startsWith('{')) return false
+      try { JSON.parse(segment.text); return true } catch { return false }
+    })
+    const chosen = parsable
+      ?? segments.reduce((best, current) => current.text.length > best.text.length ? current : best, segments[0]!)
     return {
-      body: fullText.slice(0, markerIndex).trimEnd(),
-      metadataText: fullText.slice(markerIndex + META_MARKER.length).trim(),
-      metadataStart: markerIndex,
+      body: fullText.slice(0, chosen.index).trimEnd(),
+      metadataText: chosen.text,
+      metadataStart: chosen.index,
     }
   }
   const trailing = findTrailingMetadata(fullText)
@@ -815,7 +834,12 @@ export function normalizeActivityProposal(
 ): { readonly proposal?: ActivityProposal; readonly warnings: readonly string[] } {
   if (raw === undefined || raw === null) return { warnings: [] }
   if (!isRecord(raw)) return { warnings: ['活动提案不是 JSON 对象，已忽略。'] }
-  const payloadRaw = raw.payload
+  // Some models emit the payload fields directly on the activity object
+  // ({"type":"quiz","question":...}) instead of nesting them under payload.
+  const flatType = asString(raw.type, 40)
+  const payloadRaw = isRecord(raw.payload)
+    ? raw.payload
+    : (flatType === undefined ? undefined : raw)
   if (!isRecord(payloadRaw)) return { warnings: ['活动提案缺少 payload，已忽略。'] }
   const payloadType = asString(payloadRaw.type, 40)
   if (payloadType === undefined) return { warnings: ['活动 payload 缺少 type，已忽略。'] }

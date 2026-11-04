@@ -595,7 +595,6 @@ export function TeachingWorkspace(): React.ReactElement {
       else if (snapshot?.status === 'partial') notify({ kind: 'warning', message: `资料部分导入：${(snapshot.warnings ?? []).join('；') || '部分文件失败，详见任务详情。'}` })
       else if (snapshot?.status === 'failed') notify({ kind: 'error', message: `资料导入失败：${snapshot.error?.message ?? '未知原因'}` })
       void loadTasks()
-      void loadCourse(courseId)
     } catch (error) {
       notify({ kind: 'error', message: `导入失败：${describeError(error)}` })
     } finally {
@@ -603,13 +602,6 @@ export function TeachingWorkspace(): React.ReactElement {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadTasks, awaitTask, notify])
-
-  const loadCourse = useCallback(async (courseId: string): Promise<void> => {
-    try {
-      const detail = await apiGet('courses.get', { courseId: courseId as never })
-      if (mounted.current) dispatch({ type: 'course/loaded', detail, sessions: stateRef.current.sessions })
-    } catch { /* non-fatal on the onboarding path */ }
-  }, [])
 
   const generateDraft = useCallback(async (courseId: string): Promise<void> => {
     dispatch({ type: 'busy', label: '生成课程结构草案…' })

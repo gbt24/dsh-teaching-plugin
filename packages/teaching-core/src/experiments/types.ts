@@ -63,6 +63,8 @@ export interface EnvironmentProbe {
   readonly version?: string
   readonly executable?: string
   readonly args?: readonly string[]
+  /** Child-process environment the resolved interpreter needs (e.g. ELECTRON_RUN_AS_NODE). */
+  readonly env?: Readonly<Record<string, string>>
   readonly note?: string
   /** Missing-capability description used by the teaching fallback. */
   readonly missingReason?: string

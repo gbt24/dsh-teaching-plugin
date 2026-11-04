@@ -473,14 +473,14 @@ class Registry implements RunnerRegistry {
           missingReason: '本机未找到可用的 python3。可在系统安装 Python 3 后重试；课程实验仍可用 JavaScript/Scheme 或降级教学。',
         }
       }
-      return { language, available: true, version: resolved.version, executable: resolved.executable, args: [...resolved.args], note: resolved.note }
+      return { language, available: true, version: resolved.version, executable: resolved.executable, args: [...resolved.args], ...(Object.keys(resolved.env).length > 0 ? { env: resolved.env } : {}), note: resolved.note }
     }
     if (language === 'javascript') {
       const resolved = await resolveNode(this.options.nodePath)
       if (resolved === undefined) {
         return { language, available: false, missingReason: '本机未找到 Node.js 可执行文件，JavaScript 实验不可用。' }
       }
-      return { language, available: true, version: resolved.version, executable: resolved.executable, args: [...resolved.args], note: resolved.note }
+      return { language, available: true, version: resolved.version, executable: resolved.executable, args: [...resolved.args], ...(Object.keys(resolved.env).length > 0 ? { env: resolved.env } : {}), note: resolved.note }
     }
     if (language === 'scheme') {
       const node = await resolveNode(this.options.nodePath)
@@ -497,6 +497,9 @@ class Registry implements RunnerRegistry {
         language, ...(dialect !== undefined ? { dialect } : {}), available: true,
         version: `biwascheme 0.8.3（Node ${node.version}）`,
         executable: node.executable, args: [...node.args],
+        // ELECTRON_RUN_AS_NODE must reach the child or Electron starts a browser
+        // app instead of a Node script (observed on the real Host).
+        ...(Object.keys(node.env).length > 0 ? { env: node.env } : {}),
         note: '解释器以 Node 子进程运行；SICP 预置库由插件注入，不修改 biwascheme 包。',
       }
     }
@@ -518,7 +521,12 @@ class Registry implements RunnerRegistry {
     const command: ResolvedCommand = {
       executable: probe.executable ?? '',
       args: probe.args ?? [],
-      env: input.language === 'scheme' ? { TEACHING_BIWASCHEME_ENTRY: resolveBiwaschemeEntry(this.options.biwaschemePath) ?? '' } : {},
+      env: {
+        ...(probe.env ?? {}),
+        ...(input.language === 'scheme'
+          ? { TEACHING_BIWASCHEME_ENTRY: resolveBiwaschemeEntry(this.options.biwaschemePath) ?? '' }
+          : {}),
+      },
       version: probe.version ?? 'unknown',
     }
     const record: EnvironmentRecord = {

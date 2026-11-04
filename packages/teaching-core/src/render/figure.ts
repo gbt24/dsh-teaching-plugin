@@ -25,8 +25,8 @@ export interface FigureMountOptions extends RenderEnvironment {
 const WIDTH = 640
 const HEIGHT = 340
 const PADDING = { left: 48, right: 20, top: 24, bottom: 56 }
-const TEXT = 'var(--dsw-text-secondary, #64748b)'
-const BORDER = 'var(--dsw-border, rgba(127,127,127,0.25))'
+const TEXT = 'var(--dsw-alias-label-secondary, #64748b)'
+const BORDER = 'var(--dsw-alias-border-l2, rgba(127,127,127,0.25))'
 const MAX_LABEL = 28
 
 /** Truncate long labels for the canvas; full text stays in the tooltip. */
@@ -329,7 +329,7 @@ function renderFlow(
     const boxWidth = Math.min(190, Math.max(84, node.label.length * 13 + 24))
     svg.appendChild(createSvgElement(document, 'rect', {
       x: position.x - boxWidth / 2, y: position.y - 16, width: boxWidth, height: 32, rx: 8,
-      fill: 'var(--dsw-surface-raised, rgba(127,127,127,0.10))', stroke: BORDER,
+      fill: 'var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.10))', stroke: BORDER,
     }))
     const label = createSvgElement(document, 'text', {
       x: position.x, y: position.y + 4, 'text-anchor': 'middle', 'font-size': 11, fill: TEXT,

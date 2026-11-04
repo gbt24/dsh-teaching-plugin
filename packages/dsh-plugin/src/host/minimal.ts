@@ -800,6 +800,14 @@ export function teacherMessage(input: {
   activityIds: readonly string[]
   usage?: ChatMessage['usage']
   uncertainty?: readonly string[]
+  /** Structured metadata produced by the teaching turn, persisted for audit/resume. */
+  meta?: {
+    readonly intent?: NonNullable<ChatMessage['teaching']>['intent']
+    readonly stage?: NonNullable<ChatMessage['teaching']>['stage']
+    readonly conceptIds?: readonly string[]
+    readonly requestedForm?: string
+    readonly nextActions?: readonly { readonly id: string; readonly label: string }[]
+  }
 }): ChatMessage {
   return {
     id: newMessageId(),
@@ -813,7 +821,11 @@ export function teacherMessage(input: {
     activityIds: input.activityIds as never,
     usage: input.usage,
     teaching: {
-      intent: 'explain',
+      intent: input.meta?.intent ?? 'explain',
+      ...(input.meta?.stage === undefined ? {} : { stage: input.meta.stage }),
+      ...(input.meta?.conceptIds === undefined ? {} : { conceptIds: input.meta.conceptIds as never }),
+      ...(input.meta?.requestedForm === undefined ? {} : { requestedForm: input.meta.requestedForm }),
+      ...(input.meta?.nextActions === undefined ? {} : { nextActions: input.meta.nextActions }),
       uncertainty: input.uncertainty,
       evidenceKinds: Array.from(new Set(input.evidenceRefs.map(ref => ref.kind))),
     },

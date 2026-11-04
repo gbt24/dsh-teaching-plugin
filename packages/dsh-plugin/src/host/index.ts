@@ -81,7 +81,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
   const tasks = new TaskManager(state, logger)
   const web = createWebBridge(ctx)
   // Teaching turns are long-form: give the model room for reasoning + text.
-  const teaching = createTeachingService({ maxTokens: 6000 })
+  const teaching = createTeachingService({ maxTokens: 12000 })
   const experiments = createRunnerRegistry({ dataDir })
   const usageBySession = new Map<string, import('@deepseek-teaching/core').UsageEntry>()
   const model = new HarnessModelAdapter(ctx, {

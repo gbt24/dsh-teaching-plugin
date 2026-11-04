@@ -688,7 +688,9 @@ export function registerRoutes(services: RouteServices): void {
             materialWarnings: [],
             requestedForm: detectRequestedForm(input.text)?.form,
             wantsFullAnswer: /完整答案|直接给(我)?答案|别提示|tell me the answer|just give me/i.test(input.text),
-            webResults,
+            // Only pass results when a lookup was actually attempted; an empty
+            // array means "searched but nothing found", undefined means "not used".
+            ...(wantsWebLookup(input.text) ? { webResults } : {}),
           }
 
           let finalText = ''
@@ -771,6 +773,17 @@ export function registerRoutes(services: RouteServices): void {
                   usageUnknown: usage.usageUnknown,
                 },
             uncertainty: [...uncertainty, ...limitations, ...(webNote === undefined ? [] : [webNote])],
+            ...(finalMeta === undefined
+              ? {}
+              : {
+                  meta: {
+                    intent: finalMeta.intent,
+                    stage: finalMeta.stage,
+                    conceptIds: finalMeta.conceptIds,
+                    requestedForm: finalMeta.requestedForm,
+                    nextActions: finalMeta.nextActions,
+                  },
+                }),
           })
           await services.sessions.appendMessage(teacher)
           const latest = (await services.sessions.get(session.id)) ?? session
@@ -960,6 +973,11 @@ export function registerRoutes(services: RouteServices): void {
     const session = await services.sessions.get(input.sessionId)
     if (session === undefined) throw notFoundError('学习会话')
     const activity = input.activityId === undefined ? undefined : await services.sessions.getActivity(input.activityId)
+    if (input.activityId !== undefined && activity === undefined) {
+      // A stale client reference must be visible, not silently recorded as a
+      // free-form attempt against the session position.
+      return failure({ code: 'not-found', message: '作答的活动不存在或已被更新，请刷新后重试', details: { activityId: input.activityId } })
+    }
     const validation = activity === undefined ? undefined : await validateAttempt(services, activity, input)
     const conceptIds = activity?.conceptIds ?? (session.position.conceptId === undefined ? [] : [session.position.conceptId])
     const learning = services.createLearningFor(activity)
@@ -1117,6 +1135,7 @@ export function registerRoutes(services: RouteServices): void {
         ...(input.sessionIds === undefined ? {} : { sessionIds: input.sessionIds as never }),
         ...(input.outDir === undefined ? {} : { outDir: input.outDir }),
         ...(input.format === undefined ? {} : { format: input.format }),
+        ...(input.includeNotes === undefined ? {} : { includeNotes: input.includeNotes }),
       }, context.signal)
       if (!result.ok) throw appError(result.error.code, result.error.message, result.error.details)
       context.step('collect', { status: 'done' })

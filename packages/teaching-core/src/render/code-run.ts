@@ -105,8 +105,8 @@ export function mountCodeRun(
     styles: {
       width: '100%', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
       fontSize: '12px', lineHeight: '1.5', padding: '8px', borderRadius: '8px',
-      border: '1px solid var(--dsw-border, rgba(127,127,127,0.3))',
-      background: 'var(--dsw-surface, transparent)', color: 'inherit', resize: 'vertical',
+      border: '1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3))',
+      background: 'var(--dsw-alias-bg-base, transparent)', color: 'inherit', resize: 'vertical',
       boxSizing: 'border-box',
     },
   })
@@ -165,7 +165,7 @@ export function mountCodeRun(
     if (result.errorMessage !== undefined) {
       output.appendChild(createElement(document, 'div', {
         text: result.errorMessage,
-        styles: { color: '#b45309', fontSize: '12px', whiteSpace: 'pre-wrap' },
+        styles: { color: 'var(--dsw-alias-state-warn-primary, #b45309)', fontSize: '12px', whiteSpace: 'pre-wrap' },
       }))
     }
     if (result.stdout !== '') {
@@ -175,7 +175,7 @@ export function mountCodeRun(
         text: result.stdout,
         styles: {
           margin: '2px 0', padding: '8px', borderRadius: '6px', maxHeight: '260px', overflow: 'auto',
-          background: 'var(--dsw-surface-raised, rgba(127,127,127,0.08))', fontSize: '12px',
+          background: 'var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08))', fontSize: '12px',
           whiteSpace: 'pre-wrap', wordBreak: 'break-word',
         },
       }))
@@ -187,7 +187,7 @@ export function mountCodeRun(
         text: result.stderr,
         styles: {
           margin: '2px 0', padding: '8px', borderRadius: '6px', maxHeight: '200px', overflow: 'auto',
-          background: 'rgba(239,68,68,0.08)', color: '#b91c1c', fontSize: '12px',
+          background: 'rgba(239,68,68,0.08)', color: 'var(--dsw-alias-state-error-primary, #b91c1c)', fontSize: '12px',
           whiteSpace: 'pre-wrap', wordBreak: 'break-word',
         },
       }))
@@ -198,7 +198,7 @@ export function mountCodeRun(
         const marker = check.status === 'pass' ? '✓' : check.status === 'fail' ? '✗' : '·'
         list.appendChild(createElement(document, 'li', {
           text: `${marker} ${check.name}${check.detail !== undefined ? ` — ${check.detail}` : ''}`,
-          styles: { color: check.status === 'fail' ? '#b91c1c' : 'inherit' },
+          styles: { color: check.status === 'fail' ? 'var(--dsw-alias-state-error-primary, #b91c1c)' : 'inherit' },
         }))
       }
       output.appendChild(list)

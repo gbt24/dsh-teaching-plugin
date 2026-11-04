@@ -54,6 +54,7 @@ test('offline export renders every activity kind and stays self-contained', asyn
     assert.match(html, /学习记录摘要/u, 'learning summary rendered')
     assert.match(html, /离线说明/u, 'visible offline notice')
     assert.match(html, /KaTeX 专用字体未内嵌/u, 'visible KaTeX font limitation')
+    assert.equal((html.match(/本页面是单文件导出/gu) ?? []).length, 1, 'offline notice has no duplicated bullets')
     assert.match(html, /__TeachingOfflineRuntime/u, 'inline interaction runtime present')
     assert.match(html, /__TEACHING_OFFLINE_DATA__/u, 'inline runtime data present')
     assert.match(html, /data-teaching-runtime-ready|window\.__TeachingOfflineRuntime/u)

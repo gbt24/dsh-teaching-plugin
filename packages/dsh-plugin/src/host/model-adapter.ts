@@ -210,6 +210,19 @@ export class HarnessModelAdapter implements ModelClient {
         continue
       }
       if (terminal?.ok === true) {
+        if (request.purpose === 'chat' && text.includes('<<<TEACHING_META>>>')) {
+          this.options.log?.('chat raw tail', { chars: text.length, tail: text.slice(-200) })
+          if (process.env.DSH_TEACHING_DEBUG_CHAT === '1') {
+            try {
+              const { writeFileSync } = process.getBuiltinModule('node:fs') as typeof import('node:fs')
+              const { tmpdir } = process.getBuiltinModule('node:os') as typeof import('node:os')
+              const { join } = process.getBuiltinModule('node:path') as typeof import('node:path')
+              writeFileSync(join(tmpdir(), `teaching-chat-${Date.now()}.txt`), text, 'utf8')
+            } catch {
+              // Debug capture is best-effort only.
+            }
+          }
+        }
         yield {
           type: 'done',
           text,

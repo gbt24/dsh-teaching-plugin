@@ -834,7 +834,9 @@ export function buildOfflinePage(input: OfflinePageInput): OfflinePageResult {
   const notice = el(document, 'section', { className: 'tp-offline-notice' })
   notice.appendChild(el(document, 'h2', { text: '离线说明' }))
   const noticeList = el(document, 'ul')
-  for (const note of [...OFFLINE_NOTICE_LINES, ...input.limitations]) {
+  // `input.limitations` already contains the fixed notice lines in the service
+  // path; dedupe so the visible list never repeats a bullet (screenshot review).
+  for (const note of uniqueStrings([...OFFLINE_NOTICE_LINES, ...input.limitations])) {
     noticeList.appendChild(el(document, 'li', { text: note }))
   }
   notice.appendChild(noticeList)

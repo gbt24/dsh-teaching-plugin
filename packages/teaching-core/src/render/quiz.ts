@@ -69,7 +69,7 @@ export function mountQuiz(container: HTMLElement, payload: QuizPayload, options:
       className: 'teaching-quiz-option',
       styles: {
         display: 'flex', gap: '8px', alignItems: 'flex-start', padding: '6px 8px',
-        border: '1px solid var(--dsw-border, rgba(127,127,127,0.25))', borderRadius: '8px',
+        border: '1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25))', borderRadius: '8px',
         cursor: 'pointer', fontSize: '12px',
       },
     })
@@ -111,7 +111,7 @@ export function mountQuiz(container: HTMLElement, payload: QuizPayload, options:
       const suffix = feedbackSuffix.get(option.id)
       if (row === undefined || input === undefined || suffix === undefined) continue
       input.checked = selected.has(option.id)
-      row.style.background = selected.has(option.id) ? 'var(--dsw-surface-raised, rgba(127,127,127,0.12))' : ''
+      row.style.background = selected.has(option.id) ? 'var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.12))' : ''
       if (!revealed) {
         row.style.borderColor = ''
         suffix.textContent = ''
@@ -119,7 +119,7 @@ export function mountQuiz(container: HTMLElement, payload: QuizPayload, options:
       }
       const correct = payload.correctOptionIds.includes(option.id)
       const chosen = selected.has(option.id)
-      row.style.borderColor = correct ? '#16a34a' : chosen ? '#dc2626' : ''
+      row.style.borderColor = correct ? 'var(--dsw-alias-state-success-primary, #16a34a)' : chosen ? 'var(--dsw-alias-state-error-primary, #dc2626)' : ''
       suffix.textContent = correct ? '✓ 正确选项' : chosen ? '✗ 你的选择不正确' : ''
     }
   }
@@ -145,7 +145,7 @@ export function mountQuiz(container: HTMLElement, payload: QuizPayload, options:
   let hintButton: HTMLElement | undefined
   const hintBox = createElement(document, 'div', {
     className: 'teaching-quiz-hint',
-    styles: { marginTop: '8px', fontSize: '12px', color: '#b45309', display: 'none' },
+    styles: { marginTop: '8px', fontSize: '12px', color: 'var(--dsw-alias-state-warn-primary, #b45309)', display: 'none' },
   })
   const showHint = (): void => {
     if (payload.hint === undefined || hintShown) return

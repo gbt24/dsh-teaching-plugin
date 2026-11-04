@@ -385,10 +385,10 @@ export function mountActivity(
       'data-activity-revision': String(activity.revision ?? 0),
     },
     styles: {
-      border: '1px solid var(--dsw-border, rgba(127,127,127,0.25))',
+      border: '1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25))',
       borderRadius: '10px',
       padding: '10px 12px',
-      background: 'var(--dsw-surface, transparent)',
+      background: 'var(--dsw-alias-bg-base, transparent)',
     },
   })
   const title = activity.title ?? ('title' in payload ? payload.title : undefined) ?? '教学活动'

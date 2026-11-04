@@ -143,8 +143,8 @@ export function mountGraph(
   const plotHeight = height - PADDING.top - PADDING.bottom
   const projectX = (x: number): number => PADDING.left + ((x - xFrom) / (xTo - xFrom)) * plotWidth
   const projectY = (y: number): number => PADDING.top + ((yTo - y) / (yTo - yFrom)) * plotHeight
-  const textFill = 'var(--dsw-text-secondary, #64748b)'
-  const gridStroke = 'var(--dsw-border, rgba(127, 127, 127, 0.22))'
+  const textFill = 'var(--dsw-alias-label-secondary, #64748b)'
+  const gridStroke = 'var(--dsw-alias-border-l2, rgba(127, 127, 127, 0.22))'
 
   /** Static frame: grid, axes, ticks (redrawn only on mount). */
   const drawFrame = (): void => {
@@ -215,7 +215,7 @@ export function mountGraph(
           errorNote = createElement(document, 'div', {
             className: 'teaching-graph-error',
             text: `公式「${series.label}」无法求值：${expression.message}`,
-            styles: { color: '#b45309', fontSize: '12px', marginTop: '4px' },
+            styles: { color: 'var(--dsw-alias-state-warn-primary, #b45309)', fontSize: '12px', marginTop: '4px' },
           })
           wrapper.appendChild(errorNote)
         }

@@ -323,7 +323,7 @@ function ExperimentsTab(props: {
               <pre style={{ maxHeight: 140, overflow: 'auto', fontSize: 11 }}>{result.stdout}</pre>
             )}
             {result !== undefined && result.stderr !== '' && (
-              <pre style={{ maxHeight: 140, overflow: 'auto', fontSize: 11, color: '#b91c1c' }}>{result.stderr}</pre>
+              <pre style={{ maxHeight: 140, overflow: 'auto', fontSize: 11, color: 'var(--dsw-alias-state-error-primary, #b91c1c)' }}>{result.stderr}</pre>
             )}
           </div>
         )
