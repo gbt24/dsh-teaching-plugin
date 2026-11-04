@@ -2116,7 +2116,7 @@ var require_fxp = __commonJS({
 
 // packages/dsh-plugin/src/host/index.ts
 import { homedir } from "node:os";
-import { join as join12 } from "node:path";
+import { join as join15 } from "node:path";
 
 // packages/teaching-core/src/contracts/ids.ts
 var RANDOM_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -2151,6 +2151,9 @@ var exportId = () => newId("exp");
 var backupId = () => newId("bak");
 function nowIso() {
   return (/* @__PURE__ */ new Date()).toISOString();
+}
+function isSafeId(value) {
+  return typeof value === "string" && value.length > 0 && value.length <= 160 && /^[A-Za-z0-9._:-]+$/.test(value) && !value.includes("..") && !value.includes("/");
 }
 
 // packages/teaching-core/src/contracts/result.ts
@@ -2990,11 +2993,11 @@ async function statFile(path2) {
 }
 async function hashFile(path2) {
   const hash = createHash("sha256");
-  await new Promise((resolve4, reject) => {
+  await new Promise((resolve5, reject) => {
     const stream = createReadStream(path2);
     stream.on("data", (chunk2) => hash.update(chunk2));
     stream.on("error", reject);
-    stream.on("end", () => resolve4());
+    stream.on("end", () => resolve5());
   });
   return `${FINGERPRINT_PREFIX}${hash.digest("hex")}`;
 }
@@ -3037,7 +3040,7 @@ import { access } from "node:fs/promises";
 import { delimiter, join as join3 } from "node:path";
 async function runCommand(command, args, options = {}) {
   const maxOutputChars = options.maxOutputChars ?? 8 * 1024 * 1024;
-  return await new Promise((resolve4) => {
+  return await new Promise((resolve5) => {
     let stdout = "";
     let stderr = "";
     let timedOut = false;
@@ -3052,7 +3055,7 @@ async function runCommand(command, args, options = {}) {
         windowsHide: true
       });
     } catch (cause) {
-      resolve4({
+      resolve5({
         code: null,
         stdout: "",
         stderr: cause instanceof Error ? cause.message : String(cause),
@@ -3067,7 +3070,7 @@ async function runCommand(command, args, options = {}) {
       settled = true;
       if (timer !== void 0) clearTimeout(timer);
       options.signal?.removeEventListener("abort", onAbort);
-      resolve4(result);
+      resolve5(result);
     };
     const onAbort = () => {
       aborted2 = true;
@@ -9334,7 +9337,7 @@ var __webpack_modules__ = {
       var defineProperty = Object.defineProperty;
       var stringSlice = uncurryThis("".slice);
       var replace = uncurryThis("".replace);
-      var join13 = uncurryThis([].join);
+      var join16 = uncurryThis([].join);
       var CONFIGURABLE_LENGTH = DESCRIPTORS && !fails(function() {
         return defineProperty(function() {
         }, "length", { value: 8 }).length !== 8;
@@ -9361,7 +9364,7 @@ var __webpack_modules__ = {
         }
         var state = enforceInternalState(value);
         if (!hasOwn(state, "source")) {
-          state.source = join13(TEMPLATE, typeof name2 == "string" ? name2 : "");
+          state.source = join16(TEMPLATE, typeof name2 == "string" ? name2 : "");
         }
         return value;
       };
@@ -9389,13 +9392,13 @@ var __webpack_modules__ = {
       var aCallable = __webpack_require__2(9306);
       var $TypeError = TypeError;
       var PromiseCapability = function(C) {
-        var resolve4, reject;
+        var resolve5, reject;
         this.promise = new C(function($$resolve, $$reject) {
-          if (resolve4 !== void 0 || reject !== void 0) throw new $TypeError("Bad Promise constructor");
-          resolve4 = $$resolve;
+          if (resolve5 !== void 0 || reject !== void 0) throw new $TypeError("Bad Promise constructor");
+          resolve5 = $$resolve;
           reject = $$reject;
         });
-        this.resolve = aCallable(resolve4);
+        this.resolve = aCallable(resolve5);
         this.reject = aCallable(reject);
       };
       module.exports.f = function(C) {
@@ -12237,7 +12240,7 @@ async function fetchData(url, type = "text") {
     }
     return response.text();
   }
-  return new Promise((resolve4, reject) => {
+  return new Promise((resolve5, reject) => {
     const request = new XMLHttpRequest();
     request.open("GET", url, true);
     request.responseType = type;
@@ -12250,10 +12253,10 @@ async function fetchData(url, type = "text") {
           case "arraybuffer":
           case "blob":
           case "json":
-            resolve4(request.response);
+            resolve5(request.response);
             return;
         }
-        resolve4(request.responseText);
+        resolve5(request.responseText);
         return;
       }
       reject(new Error(request.statusText));
@@ -12867,11 +12870,11 @@ var ImageManager = class _ImageManager {
         const mustRemoveAspectRatioPromise = _ImageManager._isSVGFittingCanvas;
         const fileReader = new FileReader();
         const imageElement = new Image();
-        const imagePromise = new Promise((resolve4, reject) => {
+        const imagePromise = new Promise((resolve5, reject) => {
           imageElement.onload = () => {
             data.bitmap = imageElement;
             data.isSvg = true;
-            resolve4();
+            resolve5();
           };
           fileReader.onload = async () => {
             const url = data.svgUrl = fileReader.result;
@@ -16720,8 +16723,8 @@ var FontLoader = class {
       if (this.isSyncFontLoadingSupported) {
         return;
       }
-      await new Promise((resolve4) => {
-        const request = this._queueLoadingCallback(resolve4);
+      await new Promise((resolve5) => {
+        const request = this._queueLoadingCallback(resolve5);
         this._prepareFontLoadEvent(font, request);
       });
     }
@@ -23153,14 +23156,14 @@ var PDFPageProxy = class {
       return this.getXfa().then((xfa) => XfaText.textContent(xfa));
     }
     const readableStream = this.streamTextContent(params);
-    return new Promise(function(resolve4, reject) {
+    return new Promise(function(resolve5, reject) {
       function pump() {
         reader.read().then(function({
           value,
           done
         }) {
           if (done) {
-            resolve4(textContent);
+            resolve5(textContent);
             return;
           }
           textContent.lang ??= value.lang;
@@ -31269,7 +31272,7 @@ var StampEditor = class _StampEditor extends AnnotationEditor {
     input.type = "file";
     input.accept = _StampEditor.supportedTypesStr;
     const signal = this._uiManager._signal;
-    this.#bitmapPromise = new Promise((resolve4) => {
+    this.#bitmapPromise = new Promise((resolve5) => {
       input.addEventListener("change", async () => {
         if (!input.files || input.files.length === 0) {
           this.remove();
@@ -31284,13 +31287,13 @@ var StampEditor = class _StampEditor extends AnnotationEditor {
           });
           this.#getBitmapFetched(data);
         }
-        resolve4();
+        resolve5();
       }, {
         signal
       });
       input.addEventListener("cancel", () => {
         this.remove();
-        resolve4();
+        resolve5();
       }, {
         signal
       });
@@ -32734,16 +32737,16 @@ function median(values) {
 }
 function bboxOfLines(lines, viewport) {
   if (lines.length === 0) return void 0;
-  const clamp2 = (value) => Math.min(1, Math.max(0, value));
+  const clamp3 = (value) => Math.min(1, Math.max(0, value));
   const x0 = Math.min(...lines.map((line) => line.x0));
   const y0 = Math.min(...lines.map((line) => line.y0));
   const x1 = Math.max(...lines.map((line) => line.x1));
   const y1 = Math.max(...lines.map((line) => line.y1));
   return [
-    clamp2(x0 / viewport.width),
-    clamp2(y0 / viewport.height),
-    clamp2(x1 / viewport.width),
-    clamp2(y1 / viewport.height)
+    clamp3(x0 / viewport.width),
+    clamp3(y0 / viewport.height),
+    clamp3(x1 / viewport.width),
+    clamp3(y1 / viewport.height)
   ];
 }
 function addPdfParagraph(budget, pageNumber, viewport, lines, section) {
@@ -32873,12 +32876,12 @@ function imageBbox(ctm, viewport) {
     maxY = Math.max(maxY, viewY);
   }
   if (!Number.isFinite(minX) || !Number.isFinite(minY)) return void 0;
-  const clamp2 = (value) => Math.min(1, Math.max(0, value));
+  const clamp3 = (value) => Math.min(1, Math.max(0, value));
   return [
-    clamp2(minX / viewport.width),
-    clamp2(minY / viewport.height),
-    clamp2(maxX / viewport.width),
-    clamp2(maxY / viewport.height)
+    clamp3(minX / viewport.width),
+    clamp3(minY / viewport.height),
+    clamp3(maxX / viewport.width),
+    clamp3(maxY / viewport.height)
   ];
 }
 async function extractPdfFigures(budget, page, viewport, pageNumber, imageCounter) {
@@ -36743,7 +36746,7 @@ function killProcessTree(child, signal = "SIGKILL") {
   }
 }
 function runProcess(spec) {
-  return new Promise((resolve4) => {
+  return new Promise((resolve5) => {
     const startedAt = Date.now();
     let stdout = "";
     let stderr = "";
@@ -36763,7 +36766,7 @@ function runProcess(spec) {
         detached: detachTree
       });
     } catch (error) {
-      resolve4({
+      resolve5({
         stdout: "",
         stderr: "",
         timedOut: false,
@@ -36782,7 +36785,7 @@ function runProcess(spec) {
         spec.signal.removeEventListener("abort", abortListener);
       }
       if (killTimer !== void 0) clearTimeout(killTimer);
-      resolve4({
+      resolve5({
         stdout: truncated ? stdout + TRUNCATION_MARKER : stdout,
         stderr: truncated ? stderr + TRUNCATION_MARKER : stderr,
         timedOut,
@@ -37728,12 +37731,12 @@ var Registry = class {
   async executeScript(fileName, input) {
     await writeFile3(join8(input.cwd, fileName), input.code, "utf8");
     const command = input.environment.command;
-    const childEnv = baseChildEnv({ ...this.options.env, ...input.environment.command.env ?? {} });
+    const childEnv2 = baseChildEnv({ ...this.options.env, ...input.environment.command.env ?? {} });
     const outcome = await runProcess({
       command: command.executable,
       args: [...command.args, fileName],
       cwd: input.cwd,
-      env: childEnv,
+      env: childEnv2,
       ...input.stdin !== void 0 ? { stdin: input.stdin } : {},
       timeoutMs: input.limits.timeoutMs,
       maxOutputBytes: input.limits.maxOutputBytes,
@@ -37762,7 +37765,7 @@ var Registry = class {
     const dialect = input.environment.record.dialect;
     const usePrelude = dialect === void 0 || dialect === "" || dialect === "sicp";
     if (usePrelude) await writeFile3(join8(input.cwd, "sicp-prelude.scm"), SICP_PRELUDE, "utf8");
-    const childEnv = baseChildEnv({
+    const childEnv2 = baseChildEnv({
       ...this.options.env,
       ...input.environment.command.env ?? {},
       TEACHING_BIWASCHEME_ENTRY: entry,
@@ -37772,7 +37775,7 @@ var Registry = class {
       command: input.environment.command.executable,
       args: [...input.environment.command.args, "runner.cjs", "program.scm"],
       cwd: input.cwd,
-      env: childEnv,
+      env: childEnv2,
       ...input.stdin !== void 0 ? { stdin: input.stdin } : {},
       timeoutMs: input.limits.timeoutMs,
       maxOutputBytes: input.limits.maxOutputBytes,
@@ -56170,7 +56173,7 @@ function runtimeCompileExpression(source) {
   const text2 = String(source);
   let index = 0;
   let depth = 0;
-  const constants2 = { pi: Math.PI, e: Math.E, tau: Math.PI * 2 };
+  const constants3 = { pi: Math.PI, e: Math.E, tau: Math.PI * 2 };
   const unaryFunctionNames = [
     "sin",
     "cos",
@@ -56302,8 +56305,8 @@ function runtimeCompileExpression(source) {
         return name2 === "min" ? Math.min(...evaluated) : Math.max(...evaluated);
       };
     }
-    if (Object.hasOwn(constants2, name2)) {
-      const constant = constants2[name2] ?? 0;
+    if (Object.hasOwn(constants3, name2)) {
+      const constant = constants3[name2] ?? 0;
       return () => constant;
     }
     return (values) => {
@@ -57941,8 +57944,2299 @@ function createPortabilityService(dependencies) {
   return new PortabilityServiceImpl(dependencies);
 }
 
+// packages/teaching-core/src/environments/manager.ts
+import { accessSync as accessSync2, constants as constants2, existsSync as existsSync3 } from "node:fs";
+import { mkdir as mkdir6, mkdtemp as mkdtemp4, readdir as readdir4, rm as rm6, writeFile as writeFile6 } from "node:fs/promises";
+import { delimiter as delimiter3, isAbsolute as isAbsolute5, join as join14, resolve as resolve4, sep as sep3 } from "node:path";
+
+// packages/teaching-core/src/environments/catalog.ts
+import { join as join12 } from "node:path";
+function firstVersion(output, pattern) {
+  return pattern.exec(output)?.[1];
+}
+var RUBY_SPEC = {
+  language: "ruby",
+  label: "Ruby",
+  executables: ["ruby"],
+  versionArgs: ["--version"],
+  parseVersion: (output) => firstVersion(output, /ruby\s+(\d+\.\d+\.\d+)/u),
+  scriptExtension: "rb",
+  runArgs: [],
+  smokeProgram: "x = 21\nputs x * 2\n",
+  expectedSmokeStdout: "42",
+  prepareDirs: ["work", "gems", "gem-cache"],
+  isolationEnv: (dir) => ({
+    GEM_HOME: join12(dir, "gems"),
+    GEM_PATH: join12(dir, "gems"),
+    GEM_SPEC_CACHE: join12(dir, "gem-cache")
+  }),
+  isolationNote: "gem \u4F9D\u8D56\u76EE\u5F55\uFF08GEM_HOME/GEM_PATH\uFF09\u6307\u5411\u63D2\u4EF6\u6570\u636E\u76EE\u5F55\uFF1B\u4E0D\u5199\u7528\u6237\u6216\u7CFB\u7EDF gem \u76EE\u5F55",
+  network: "unknown",
+  confinementNote: "\u5F53\u524D\u7528\u6237\u8EAB\u4EFD\u5B50\u8FDB\u7A0B\uFF1B\u65E0 CPU/\u5185\u5B58\u914D\u989D\uFF1B\u8D85\u65F6\u4E0E\u53D6\u6D88\u4F1A\u7ED3\u675F\u6574\u4E2A\u8FDB\u7A0B\u7EC4"
+};
+var LUA_SPEC = {
+  language: "lua",
+  label: "Lua",
+  executables: ["lua", "luajit"],
+  versionArgs: ["-v"],
+  parseVersion: (output) => firstVersion(output, /(?:Lua|LuaJIT)\s+(\d+\.\d+(?:\.\d+)?)/u),
+  scriptExtension: "lua",
+  runArgs: [],
+  smokeProgram: "print(21 * 2)\n",
+  expectedSmokeStdout: "42",
+  prepareDirs: ["work", "lua"],
+  isolationEnv: (dir) => ({
+    LUA_PATH: `${join12(dir, "lua", "?.lua")};${join12(dir, "lua", "?", "init.lua")};;`,
+    LUA_CPATH: `${join12(dir, "lua", "?.so")};;`
+  }),
+  isolationNote: "Lua \u6A21\u5757\u8DEF\u5F84\uFF08LUA_PATH/LUA_CPATH\uFF09\u6307\u5411\u63D2\u4EF6\u6570\u636E\u76EE\u5F55\uFF0C\u5E76\u4EE5 ;; \u4FDD\u7559\u7CFB\u7EDF\u9ED8\u8BA4\u8DEF\u5F84",
+  network: "unknown",
+  confinementNote: "\u5F53\u524D\u7528\u6237\u8EAB\u4EFD\u5B50\u8FDB\u7A0B\uFF1B\u65E0 CPU/\u5185\u5B58\u914D\u989D\uFF1B\u8D85\u65F6\u4E0E\u53D6\u6D88\u4F1A\u7ED3\u675F\u6574\u4E2A\u8FDB\u7A0B\u7EC4"
+};
+var DENO_SPEC = {
+  language: "deno",
+  label: "Deno",
+  executables: ["deno"],
+  versionArgs: ["--version"],
+  parseVersion: (output) => firstVersion(output, /deno\s+(\d+\.\d+\.\d+)/u),
+  scriptExtension: "ts",
+  runArgs: ["run", "--quiet"],
+  smokeProgram: "console.log(21 * 2)\n",
+  expectedSmokeStdout: "42",
+  prepareDirs: ["work", "deno"],
+  isolationEnv: (dir) => ({
+    DENO_DIR: join12(dir, "deno"),
+    DENO_NO_UPDATE_CHECK: "1"
+  }),
+  isolationNote: "Deno \u7F13\u5B58\u76EE\u5F55\uFF08DENO_DIR\uFF09\u6307\u5411\u63D2\u4EF6\u6570\u636E\u76EE\u5F55\uFF1B\u672A\u6388\u4E88 --allow-net \u7F51\u7EDC\u6743\u9650",
+  network: "unknown",
+  confinementNote: "\u5F53\u524D\u7528\u6237\u8EAB\u4EFD\u5B50\u8FDB\u7A0B\uFF1B\u672A\u6388\u6743\u7F51\u7EDC/\u5199\u6587\u4EF6\u6743\u9650\uFF1B\u65E0 CPU/\u5185\u5B58\u914D\u989D\uFF1B\u8D85\u65F6\u4E0E\u53D6\u6D88\u4F1A\u7ED3\u675F\u6574\u4E2A\u8FDB\u7A0B\u7EC4"
+};
+var EXTENDED_LANGUAGE_SPECS = [RUBY_SPEC, LUA_SPEC, DENO_SPEC];
+var GO_INSTALL_PLAN = {
+  language: "go",
+  label: "Go",
+  executables: ["go"],
+  approval: {
+    kind: "system-change",
+    description: "\u672C\u673A\u672A\u68C0\u6D4B\u5230 Go \u5DE5\u5177\u94FE\u3002\u5B89\u88C5 Go \u5C5E\u4E8E\u7CFB\u7EDF\u7EA7\u6539\u52A8\uFF0C\u4F1A\u5199\u5165\u5168\u5C40\u53EF\u6267\u884C\u8DEF\u5F84\uFF1B\u63D2\u4EF6\u4E0D\u4F1A\u4EE3\u4F60\u6267\u884C\u3002",
+    impact: [
+      "\u65B0\u589E\u5168\u5C40\u53EF\u6267\u884C\u6587\u4EF6\uFF08go\u3001gofmt\uFF09\uFF0C\u53EF\u80FD\u88AB\u5176\u4ED6\u9879\u76EE\u5171\u4EAB\u6216\u4EA7\u751F\u7248\u672C\u51B2\u7A81",
+      "\u5B89\u88C5\u5305\u4E0E\u4F9D\u8D56\u5360\u7528\u78C1\u76D8\uFF0C\u540E\u7EED\u5347\u7EA7/\u5378\u8F7D\u7531\u5B66\u751F\u81EA\u5DF1\u7BA1\u7406",
+      "\u63D2\u4EF6\u65E0\u6CD5\u4FDD\u8BC1\u5B89\u88C5\u547D\u4EE4\u3001\u7248\u672C\u4E0E\u7F51\u7EDC\u5728\u5F53\u524D\u673A\u5668\u4E0A\u53EF\u7528"
+    ],
+    alternatives: [
+      "\u6539\u7528 Python \u6216 JavaScript \u5B8C\u6210\u540C\u4E00\u6559\u5B66\u76EE\u6807",
+      "\u5728\u63D2\u4EF6\u6570\u636E\u76EE\u5F55\u5185\u4F7F\u7528\u4FBF\u643A\u5F0F\u65B9\u6848\uFF08\u9700\u8054\u7F51\u4E0B\u8F7D\u4E0E\u78C1\u76D8\u7A7A\u95F4\uFF0C\u7B2C\u4E00\u7248\u672A\u81EA\u52A8\u5B9E\u73B0\uFF09",
+      "\u5B66\u751F\u81EA\u884C\u5B89\u88C5 Go \u540E\u56DE\u5230\u63D2\u4EF6\u91CD\u65B0\u63A2\u6D4B\uFF1B\u4E0D\u9700\u8981\u91CD\u88C5\u63D2\u4EF6"
+    ],
+    commandPreview: "brew install go",
+    requiresNetwork: true,
+    executableByPlugin: false,
+    note: "\u547D\u4EE4\u4EC5\u4F5C\u8BF4\u660E\uFF0C\u672A\u5728\u672C\u673A\u9A8C\u8BC1\u6210\u529F\uFF1B\u63D2\u4EF6\u4E0D\u6267\u884C\u7CFB\u7EDF\u5305\u7BA1\u7406\u5668\u3002"
+  }
+};
+var CATALOG_INSTALL_PLANS = [
+  {
+    language: "ruby",
+    label: "Ruby",
+    executables: ["ruby", "gem"],
+    approval: {
+      kind: "system-change",
+      description: "\u672C\u673A\u672A\u68C0\u6D4B\u5230 Ruby \u8FD0\u884C\u65F6\u3002\u5B89\u88C5 Ruby \u5C5E\u4E8E\u7CFB\u7EDF\u7EA7\u6539\u52A8\uFF08\u6216\u9700\u8981\u4E0B\u8F7D\u4FBF\u643A\u8FD0\u884C\u65F6\uFF09\uFF0C\u63D2\u4EF6\u4E0D\u4F1A\u9759\u9ED8\u6267\u884C\u3002",
+      impact: [
+        "\u7CFB\u7EDF\u7EA7\u5305\u7BA1\u7406\u5668\u4F1A\u5199\u5165\u5168\u5C40\u8DEF\u5F84\uFF0C\u5F71\u54CD\u5176\u4ED6\u9879\u76EE\u4E0E\u540E\u7EED\u5347\u7EA7",
+        "\u4FBF\u643A\u8FD0\u884C\u65F6\u9700\u8981\u8054\u7F51\u4E0B\u8F7D\u5E76\u5360\u7528\u78C1\u76D8\uFF0C\u6765\u6E90\u4E0E\u6821\u9A8C\u7531\u5B66\u751F\u51B3\u5B9A"
+      ],
+      alternatives: [
+        "\u6539\u7528 Python/JavaScript \u5B8C\u6210\u540C\u4E00\u5B9E\u9A8C",
+        "\u5B66\u751F\u81EA\u884C\u5B89\u88C5 Ruby\uFF08\u7CFB\u7EDF\u5305\u7BA1\u7406\u5668\u6216\u7248\u672C\u7BA1\u7406\u5668\uFF09\u540E\u91CD\u65B0\u63A2\u6D4B",
+        "\u82E5\u8BFE\u7A0B\u53EA\u9700\u8981\u811A\u672C\u6F14\u793A\uFF0C\u53EF\u9000\u5316\u4E3A\u9010\u884C\u8D70\u67E5\u5E76\u660E\u786E\u6807\u6CE8\u672A\u771F\u5B9E\u8FD0\u884C"
+      ],
+      requiresNetwork: true,
+      executableByPlugin: false,
+      note: "\u63D2\u4EF6\u4E0D\u6267\u884C brew/\u7CFB\u7EDF\u5305\u7BA1\u7406\u5668\uFF0C\u4E5F\u4E0D\u81EA\u52A8\u4E0B\u8F7D\u89E3\u91CA\u5668\u3002"
+    }
+  },
+  {
+    language: "lua",
+    label: "Lua",
+    executables: ["lua", "luajit"],
+    approval: {
+      kind: "system-change",
+      description: "\u672C\u673A\u672A\u68C0\u6D4B\u5230 Lua \u89E3\u91CA\u5668\u3002\u5B89\u88C5 Lua \u5C5E\u4E8E\u7CFB\u7EDF\u7EA7\u6539\u52A8\uFF0C\u63D2\u4EF6\u4E0D\u4F1A\u9759\u9ED8\u6267\u884C\u3002",
+      impact: ["\u5199\u5165\u5168\u5C40\u53EF\u6267\u884C\u8DEF\u5F84\uFF0C\u53EF\u80FD\u4E0E\u5DF2\u6709 LuaJIT/\u7248\u672C\u51B2\u7A81", "\u9700\u8981\u7F51\u7EDC\u4E0B\u8F7D\u5B89\u88C5\u5305"],
+      alternatives: ["\u6539\u7528 Python/JavaScript \u5B8C\u6210\u540C\u4E00\u5B9E\u9A8C", "\u5B66\u751F\u81EA\u884C\u5B89\u88C5 Lua \u540E\u91CD\u65B0\u63A2\u6D4B"],
+      commandPreview: "brew install lua",
+      requiresNetwork: true,
+      executableByPlugin: false,
+      note: "\u547D\u4EE4\u4EC5\u4F5C\u8BF4\u660E\uFF0C\u672A\u5728\u672C\u673A\u9A8C\u8BC1\u6210\u529F\u3002"
+    }
+  },
+  {
+    language: "deno",
+    label: "Deno",
+    executables: ["deno"],
+    approval: {
+      kind: "system-change",
+      description: "\u672C\u673A\u672A\u68C0\u6D4B\u5230 Deno\u3002\u5B89\u88C5 Deno \u5C5E\u4E8E\u7CFB\u7EDF\u7EA7\u6539\u52A8\uFF0C\u63D2\u4EF6\u4E0D\u4F1A\u9759\u9ED8\u6267\u884C\u3002",
+      impact: ["\u5199\u5165\u5168\u5C40\u53EF\u6267\u884C\u8DEF\u5F84\uFF1BDeno \u7248\u672C\u5347\u7EA7\u7B56\u7565\u7531\u5B66\u751F\u7BA1\u7406", "\u5B89\u88C5\u811A\u672C\u9700\u8981\u7F51\u7EDC"],
+      alternatives: ["\u6539\u7528 JavaScript\uFF08\u5BBF\u4E3B\u5185\u7F6E Node\uFF09\u5B8C\u6210\u540C\u4E00\u5B9E\u9A8C", "\u5B66\u751F\u81EA\u884C\u5B89\u88C5 Deno \u540E\u91CD\u65B0\u63A2\u6D4B"],
+      commandPreview: "brew install deno",
+      requiresNetwork: true,
+      executableByPlugin: false,
+      note: "\u547D\u4EE4\u4EC5\u4F5C\u8BF4\u660E\uFF0C\u672A\u5728\u672C\u673A\u9A8C\u8BC1\u6210\u529F\u3002"
+    }
+  },
+  GO_INSTALL_PLAN
+];
+var DEFAULT_INSTALL_PLANS = CATALOG_INSTALL_PLANS;
+function networkInstallApproval(language, dependencies) {
+  const list = dependencies.join("\u3001");
+  return {
+    kind: "network-install",
+    description: `\u5B9E\u9A8C\u58F0\u660E\u4E86\u7B2C\u4E09\u65B9\u4F9D\u8D56\uFF08${list}\uFF09\u3002\u4F9D\u8D56\u9700\u8981\u8054\u7F51\u4E0B\u8F7D\u5230\u63D2\u4EF6\u7BA1\u7406\u7684\u72EC\u7ACB\u76EE\u5F55\uFF08${language}\uFF09\uFF0C\u7B2C\u4E00\u7248\u4E0D\u4F1A\u9759\u9ED8\u5B89\u88C5\u3002`,
+    impact: [
+      "\u9700\u8981\u7F51\u7EDC\u53EF\u8FBE\uFF1B\u955C\u50CF\u6E90\u3001\u7248\u672C\u4E0E\u6821\u9A8C\u7ED3\u679C\u4F1A\u5F71\u54CD\u53EF\u590D\u73B0\u6027",
+      "\u4F9D\u8D56\u4F1A\u5360\u7528\u63D2\u4EF6\u6570\u636E\u76EE\u5F55\u78C1\u76D8\u7A7A\u95F4\uFF0C\u6765\u6E90\u4E0D\u540C\u53EF\u80FD\u5E26\u6765\u5B89\u5168\u98CE\u9669",
+      "\u5B89\u88C5\u5931\u8D25\u4E0D\u4F1A\u7834\u574F\u5DF2\u6709\u73AF\u5883\uFF1B\u53EF\u6539\u7528\u4E0D\u4F9D\u8D56\u7B2C\u4E09\u65B9\u5305\u7684\u7B49\u4EF7\u5B9E\u9A8C"
+    ],
+    alternatives: [
+      "\u6539\u7528\u6807\u51C6\u5E93/\u5185\u7F6E\u80FD\u529B\u5373\u53EF\u5B8C\u6210\u7684\u7B49\u4EF7\u5B9E\u9A8C",
+      "\u5B66\u751F\u786E\u8BA4\u540E\u7531\u540E\u7EED\u96C6\u6210\u63D0\u4F9B\u53D7\u63A7\u5B89\u88C5\u5165\u53E3\uFF08\u5F53\u524D\u7248\u672C\u4EC5\u7ED9\u51FA\u8BF4\u660E\uFF09",
+      "\u7EE7\u7EED\u4F7F\u7528\u5DF2\u5B89\u88C5\u7684\u4F9D\u8D56\uFF08\u5982\u63D2\u4EF6\u5DF2\u5185\u7F6E\uFF09\u5E76\u8DF3\u8FC7\u81EA\u52A8\u5B89\u88C5"
+    ],
+    requiresNetwork: true,
+    executableByPlugin: false,
+    note: "\u5F53\u524D\u7248\u672C\u4E0D\u81EA\u52A8\u6267\u884C\u7F51\u7EDC\u4F9D\u8D56\u5B89\u88C5\uFF1B\u6CA1\u6709\u6210\u529F\u7387\u7684\u4FDD\u8BC1\u3002"
+  };
+}
+function pluginRepairApproval(language, detail) {
+  return {
+    kind: "plugin-repair",
+    description: `${detail}\uFF08${language} \u4F9D\u8D56\u5C5E\u4E8E\u63D2\u4EF6\u5305\u7684\u4E00\u90E8\u5206\uFF0C\u4E0D\u9700\u8981\u7CFB\u7EDF\u7EA7\u5B89\u88C5\u3002\uFF09`,
+    impact: ["\u9700\u8981\u91CD\u65B0\u5B89\u88C5/\u4FEE\u590D\u63D2\u4EF6\u5305\uFF0C\u5B66\u4E60\u6570\u636E\u4E0D\u53D7\u5F71\u54CD", "\u4FEE\u590D\u524D\u8BE5\u8BED\u8A00\u7684\u5B9E\u9A8C\u4E0D\u80FD\u771F\u5B9E\u8FD0\u884C"],
+    alternatives: [
+      "\u5728\u63D2\u4EF6\u7BA1\u7406\u91CC\u91CD\u65B0\u5B89\u88C5\u76F8\u540C\u7248\u672C\u7684\u63D2\u4EF6\u5305",
+      "\u6682\u65F6\u6539\u7528 Python/JavaScript \u5B8C\u6210\u6559\u5B66\uFF0C\u5E76\u660E\u786E\u6807\u6CE8 Scheme \u672A\u8FD0\u884C"
+    ],
+    requiresNetwork: false,
+    executableByPlugin: false,
+    note: "\u63D2\u4EF6\u4E0D\u4F1A\u81EA\u884C\u4FEE\u6539\u81EA\u5DF1\u7684\u5B89\u88C5\u76EE\u5F55\u3002"
+  };
+}
+function systemRuntimeApproval(language, missingReason) {
+  const label = language === "python" ? "Python 3" : language === "javascript" ? "Node.js" : language;
+  return {
+    kind: "system-change",
+    description: `${missingReason} \u5B89\u88C5 ${label} \u5C5E\u4E8E\u7CFB\u7EDF\u7EA7\u6539\u52A8\uFF0C\u63D2\u4EF6\u4E0D\u4F1A\u4EE3\u4F60\u6267\u884C\u3002`,
+    impact: [
+      "\u5B89\u88C5\u4F1A\u5199\u5165\u5168\u5C40\u8DEF\u5F84\uFF0C\u5F71\u54CD\u5176\u4ED6\u9879\u76EE\u4E0E\u540E\u7EED\u7248\u672C\u7BA1\u7406",
+      "\u9700\u8981\u7F51\u7EDC\u4E0B\u8F7D\u5B89\u88C5\u5305",
+      "\u63D2\u4EF6\u65E0\u6CD5\u4FDD\u8BC1\u5B89\u88C5\u547D\u4EE4\u4E0E\u7248\u672C\u5728\u6BCF\u53F0\u673A\u5668\u4E0A\u53EF\u7528"
+    ],
+    alternatives: [
+      language === "python" ? "\u6539\u7528 JavaScript \u6216 Scheme \u5B8C\u6210\u540C\u4E00\u5B9E\u9A8C" : "\u6539\u7528\u5176\u4F59\u5DF2\u5C31\u7EEA\u8BED\u8A00\u5B8C\u6210\u540C\u4E00\u5B9E\u9A8C",
+      "\u5B66\u751F\u81EA\u884C\u5B89\u88C5\u8FD0\u884C\u65F6\u540E\u91CD\u65B0\u63A2\u6D4B\uFF08\u4E0D\u9700\u8981\u91CD\u88C5\u63D2\u4EF6\uFF09"
+    ],
+    requiresNetwork: true,
+    executableByPlugin: false,
+    note: "\u7B2C\u4E00\u7248\u4E0D\u81EA\u52A8\u4E0B\u8F7D\u89E3\u91CA\u5668\uFF0C\u4E5F\u4E0D\u6267\u884C\u7CFB\u7EDF\u5305\u7BA1\u7406\u5668\uFF1B\u4E0D\u63D0\u4F9B\u5B89\u88C5\u6210\u529F\u7387\u4FDD\u8BC1\u3002"
+  };
+}
+function findExtendedSpec(language, adapters = EXTENDED_LANGUAGE_SPECS) {
+  return adapters.find((spec) => spec.language === language);
+}
+function findInstallPlan(language, plans = DEFAULT_INSTALL_PLANS) {
+  return plans.find((plan) => plan.language === language);
+}
+
+// packages/teaching-core/src/environments/persistence.ts
+import { existsSync as existsSync2 } from "node:fs";
+import { mkdir as mkdir5, readFile as readFile6, rename as rename4, writeFile as writeFile5 } from "node:fs/promises";
+import { join as join13 } from "node:path";
+var ENVIRONMENT_STATE_SCHEMA_VERSION = 1;
+var VALID_STATUS = /* @__PURE__ */ new Set([
+  "ready",
+  "missing",
+  "preparing",
+  "failed",
+  "needs-approval"
+]);
+var VALID_KINDS = /* @__PURE__ */ new Set(["system", "managed", "virtualenv", "simulated"]);
+function isEnvironmentRecord(value) {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value;
+  const execution = record.execution;
+  const isolation = record.isolation;
+  return typeof record.id === "string" && isSafeId(record.id) && typeof record.language === "string" && record.language.trim() !== "" && typeof record.status === "string" && VALID_STATUS.has(record.status) && typeof record.kind === "string" && VALID_KINDS.has(record.kind) && typeof record.createdAt === "string" && typeof record.updatedAt === "string" && typeof isolation === "object" && isolation !== null && typeof execution === "object" && execution !== null && typeof execution.timeoutMs === "number";
+}
+var EnvironmentStore = class {
+  dataDir;
+  logger;
+  writeChain = Promise.resolve();
+  writeCounter = 0;
+  constructor(dataDir, logger) {
+    this.dataDir = dataDir;
+    this.logger = logger;
+  }
+  /** Root for environment metadata and managed directories. */
+  get environmentsRoot() {
+    return join13(this.dataDir, "environments");
+  }
+  /** Versioned record snapshot. */
+  get statePath() {
+    return join13(this.environmentsRoot, "state.json");
+  }
+  /** Plugin-owned extended environment directories. */
+  get managedRoot() {
+    return join13(this.environmentsRoot, "managed");
+  }
+  /** Short-lived run directories (cleared by `cleanupStale`). */
+  get tmpRoot() {
+    return join13(this.environmentsRoot, "tmp");
+  }
+  /** Create the root directories; safe to call repeatedly. */
+  async ensureLayout() {
+    await mkdir5(this.managedRoot, { recursive: true });
+    await mkdir5(this.tmpRoot, { recursive: true });
+  }
+  /** Load persisted records; corrupt/newer files are quarantined, never deleted. */
+  async load() {
+    let raw;
+    try {
+      raw = await readFile6(this.statePath, "utf8");
+    } catch (error) {
+      if (error.code !== "ENOENT") {
+        this.logger?.("environments.state-read-failed", { message: error.message });
+      }
+      return [];
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (error) {
+      await this.quarantine("corrupt", `JSON \u89E3\u6790\u5931\u8D25\uFF1A${error.message}`);
+      return [];
+    }
+    const file = parsed;
+    if (typeof file !== "object" || file === null || file.schemaVersion !== ENVIRONMENT_STATE_SCHEMA_VERSION) {
+      await this.quarantine("unsupported", `schemaVersion=${String(file?.schemaVersion)}`);
+      return [];
+    }
+    if (!Array.isArray(file.records)) {
+      await this.quarantine("corrupt", "records \u4E0D\u662F\u6570\u7EC4");
+      return [];
+    }
+    const records = file.records.filter(isEnvironmentRecord);
+    if (records.length !== file.records.length) {
+      this.logger?.("environments.state-records-skipped", { skipped: file.records.length - records.length });
+    }
+    return records;
+  }
+  /** Persist records atomically; serialized so concurrent saves cannot interleave. */
+  save(records) {
+    const payload = {
+      schemaVersion: ENVIRONMENT_STATE_SCHEMA_VERSION,
+      updatedAt: nowIso(),
+      records
+    };
+    const run = async () => {
+      await mkdir5(this.environmentsRoot, { recursive: true });
+      this.writeCounter += 1;
+      const tmpPath = join13(
+        this.environmentsRoot,
+        `.state-${process.pid}-${String(this.writeCounter)}.tmp`
+      );
+      await writeFile5(tmpPath, `${JSON.stringify(payload, null, 2)}
+`, "utf8");
+      await rename4(tmpPath, this.statePath);
+    };
+    const next = this.writeChain.then(run, run);
+    this.writeChain = next.catch(() => void 0);
+    return next;
+  }
+  /** Wait for pending writes (tests and graceful shutdown). */
+  async flush() {
+    await this.writeChain;
+  }
+  /** Move an unreadable state file aside so it can be inspected later. */
+  async quarantine(kind, detail) {
+    if (!existsSync2(this.statePath)) return;
+    const stamp = nowIso().replace(/[:.]/gu, "-");
+    const target = join13(this.environmentsRoot, `state.${kind}-${stamp}.json`);
+    try {
+      await rename4(this.statePath, target);
+      this.logger?.("environments.state-quarantined", { kind, target, detail });
+    } catch (error) {
+      this.logger?.("environments.state-quarantine-failed", { message: error.message, detail });
+    }
+  }
+};
+
+// packages/teaching-core/src/environments/resources.ts
+import { arch, cpus, freemem, platform, totalmem } from "node:os";
+var FREE_MEMORY_RATIO = 0.5;
+var TOTAL_MEMORY_RATIO = 0.25;
+var MIN_MEMORY_BUDGET_MB = 128;
+var INTERACTIVE_RUNTIME_BUDGET_MS = 12e4;
+var BYTES_PER_PARAMETER = 16;
+function readHostFacts(overrides = {}) {
+  const facts = {
+    platform: platform(),
+    arch: arch(),
+    cpuCount: cpus().length,
+    totalMemoryMb: Math.round(totalmem() / (1024 * 1024)),
+    freeMemoryMb: Math.round(freemem() / (1024 * 1024)),
+    gpuAvailable: "unknown",
+    note: "GPU \u52A0\u901F\u80FD\u529B\u672A\u7ECF\u63A2\u6D4B\uFF08\u672A\u77E5\uFF09\uFF0CCPU/\u5185\u5B58\u6765\u81EA node:os \u5B9E\u6D4B\uFF1B\u5176\u4ED6\u8FDB\u7A0B\u5360\u7528\u4F1A\u4F7F\u53EF\u7528\u8D44\u6E90\u66F4\u5C11\u3002",
+    ...overrides
+  };
+  return facts;
+}
+function memoryBudgetMb(host) {
+  const byFree = Math.floor(host.freeMemoryMb * FREE_MEMORY_RATIO);
+  const byTotal = Math.floor(host.totalMemoryMb * TOTAL_MEMORY_RATIO);
+  return Math.max(MIN_MEMORY_BUDGET_MB, Math.min(byFree, byTotal));
+}
+function describeDeclaredResources(declared) {
+  if (declared === void 0) return "\u672A\u58F0\u660E\u8D44\u6E90\u9700\u6C42";
+  const parts = [];
+  if (declared.memoryMb !== void 0) parts.push(`\u5185\u5B58 ${declared.memoryMb} MiB`);
+  if (declared.runtimeMs !== void 0) parts.push(`\u8FD0\u884C ${Math.round(declared.runtimeMs / 1e3)}s`);
+  if (declared.datasetMb !== void 0) parts.push(`\u6570\u636E\u96C6 ${declared.datasetMb} MiB`);
+  if (declared.modelParameters !== void 0) parts.push(`\u53C2\u6570 ${declared.modelParameters}`);
+  if (declared.gpu === true) parts.push("\u9700\u8981 GPU");
+  if (declared.description !== void 0 && declared.description !== "") parts.push(declared.description);
+  return parts.length === 0 ? "\u672A\u58F0\u660E\u8D44\u6E90\u9700\u6C42" : parts.join("\uFF1B");
+}
+function assessResourceRequest(request, host) {
+  const declared = request.declared;
+  const reasons = [];
+  const budget = memoryBudgetMb(host);
+  if (declared?.memoryMb !== void 0 && declared.memoryMb > budget) {
+    reasons.push(
+      `\u5B9E\u9A8C\u58F0\u660E\u9700\u8981\u7EA6 ${declared.memoryMb} MiB \u5185\u5B58\uFF0C\u8D85\u8FC7\u672C\u673A\u89C4\u5212\u9884\u7B97 ${budget} MiB\uFF08\u7A7A\u95F2 ${host.freeMemoryMb} MiB / \u603B\u91CF ${host.totalMemoryMb} MiB\uFF0C\u6309\u4FDD\u5B88\u6BD4\u4F8B\u7559\u51FA\u4F59\u91CF\uFF09`
+    );
+  }
+  if (declared?.modelParameters !== void 0 && declared.modelParameters > 0) {
+    const estimatedMb = Math.ceil(declared.modelParameters * BYTES_PER_PARAMETER / (1024 * 1024));
+    if (estimatedMb > budget) {
+      reasons.push(
+        `\u6309\u53C2\u6570\u89C4\u6A21\u4F30\u7B97\u8BAD\u7EC3\u5185\u5B58\u7EA6 ${estimatedMb} MiB\uFF08${declared.modelParameters} \u53C2\u6570 \xD7 ${BYTES_PER_PARAMETER} B/\u53C2\u6570\uFF09\uFF0C\u8D85\u8FC7\u89C4\u5212\u9884\u7B97 ${budget} MiB`
+      );
+    }
+  }
+  if (declared?.runtimeMs !== void 0 && declared.runtimeMs > INTERACTIVE_RUNTIME_BUDGET_MS) {
+    reasons.push(
+      `\u5B9E\u9A8C\u58F0\u660E\u8FD0\u884C ${Math.round(declared.runtimeMs / 1e3)}s\uFF0C\u8D85\u8FC7\u5355\u6B21\u4EA4\u4E92\u8FD0\u884C\u4E0A\u9650 ${INTERACTIVE_RUNTIME_BUDGET_MS / 1e3}s`
+    );
+  }
+  if (declared?.gpu === true && host.gpuAvailable !== "yes") {
+    reasons.push(`\u5B9E\u9A8C\u58F0\u660E\u9700\u8981 GPU \u52A0\u901F\uFF0C\u672C\u673A GPU \u53EF\u7528\u72B6\u6001\u4E3A ${host.gpuAvailable === "no" ? "\u4E0D\u53EF\u7528" : "\u672A\u63A2\u6D4B\u5230\u53EF\u7528\u7684\u52A0\u901F\u8FD0\u884C\u65F6"}`);
+  }
+  if (reasons.length === 0) {
+    return {
+      status: "fits",
+      goal: request.goal,
+      reasons: [],
+      ...declared !== void 0 ? { declared } : {},
+      host
+    };
+  }
+  const fallback = buildResourceFallback(request, reasons, host);
+  const status = fallback.reducedExperiment === void 0 ? "none" : request.kind === "simulation" ? "simulated" : "reduced";
+  return {
+    status,
+    goal: request.goal,
+    reasons,
+    ...declared !== void 0 ? { declared } : {},
+    host,
+    fallback
+  };
+}
+function buildResourceFallback(request, reasons, host) {
+  const requirements = [];
+  const declared = request.declared;
+  if (declared?.memoryMb !== void 0) requirements.push(`\u5185\u5B58\uFF1A${declared.memoryMb} MiB\uFF08\u672C\u673A\u89C4\u5212\u9884\u7B97 ${memoryBudgetMb(host)} MiB\uFF09`);
+  if (declared?.runtimeMs !== void 0) requirements.push(`\u8FD0\u884C\u65F6\u957F\uFF1A${Math.round(declared.runtimeMs / 1e3)}s\uFF08\u5355\u6B21\u4EA4\u4E92\u4E0A\u9650 ${INTERACTIVE_RUNTIME_BUDGET_MS / 1e3}s\uFF09`);
+  if (declared?.datasetMb !== void 0) requirements.push(`\u6570\u636E\u96C6\uFF1A${declared.datasetMb} MiB`);
+  if (declared?.modelParameters !== void 0) requirements.push(`\u6A21\u578B\u53C2\u6570\uFF1A${declared.modelParameters}`);
+  if (declared?.gpu === true) requirements.push("GPU \u52A0\u901F\uFF08\u672C\u673A\u672A\u63A2\u6D4B\u5230\u53EF\u7528\u52A0\u901F\u8FD0\u884C\u65F6\uFF09");
+  if (requirements.length === 0) requirements.push("\u58F0\u660E\u7684\u8D44\u6E90\u89C4\u6A21\u8D85\u51FA\u672C\u673A\u53EF\u4EA4\u4E92\u6267\u884C\u7684\u9884\u7B97");
+  const reduced = buildReducedExperiment(request);
+  const knownDifferences = differencesFor(request.kind, reduced, declared);
+  const description = reduced === void 0 ? `\u8BE5\u5B9E\u9A8C\u8D85\u51FA\u672C\u673A\u8D44\u6E90\uFF1A${reasons.join("\uFF1B")}\u3002\u5F53\u524D\u6CA1\u6709\u81EA\u52A8\u751F\u6210\u7684\u53EF\u8FD0\u884C\u66FF\u4EE3\uFF0C\u6559\u5B66\u5E94\u6539\u7528\u4EBA\u5DE5\u63A8\u5BFC/\u4F2A\u4EE3\u7801\u6F14\u793A\u5E76\u660E\u786E\u6807\u6CE8\u201C\u672A\u771F\u5B9E\u8FD0\u884C\u201D\uFF0C\u6216\u6309\u4E0B\u9762\u7684\u66FF\u4EE3\u5EFA\u8BAE\u91CD\u65B0\u8BBE\u8BA1\u5C0F\u5B9E\u9A8C\u3002` : `\u8BE5\u5B9E\u9A8C\u8D85\u51FA\u672C\u673A\u8D44\u6E90\uFF1A${reasons.join("\uFF1B")}\u3002\u66FF\u4EE3\u65B9\u6848\u300C${reduced.title}\u300D\u4FDD\u7559\u4E86\u5B9E\u9A8C\u7684\u6838\u5FC3\u539F\u7406\uFF0C\u4F46\u89C4\u6A21\u663E\u8457\u7F29\u5C0F\uFF08${reduced.scaleNote}\uFF09\uFF1B\u5B83\u53EF\u771F\u5B9E\u8FD0\u884C\uFF0C\u4F46\u7ED3\u679C\u4E0D\u80FD\u76F4\u63A5\u5F53\u4F5C\u5B8C\u6574\u5B9E\u9A8C\u7684\u7ED3\u8BBA\u3002`;
+  const caveats = [
+    "\u66FF\u4EE3\u5B9E\u9A8C\u53EA\u7528\u4E8E\u6559\u5B66\u6F14\u793A\u539F\u7406\uFF0C\u4E0D\u80FD\u7528\u4E8E\u58F0\u79F0\u590D\u73B0\u5B8C\u6574\u5B9E\u9A8C\u7684\u6570\u503C\u6216\u6027\u80FD\u7ED3\u8BBA\u3002",
+    "\u66FF\u4EE3\u5B9E\u9A8C\u4F7F\u7528\u7684\u662F\u5408\u6210\u6570\u636E/\u7B80\u5316\u6A21\u578B/\u7F29\u5C0F\u89C4\u6A21\uFF0C\u4E0E\u771F\u5B9E\u5B9E\u9A8C\u7684\u5206\u5E03\u3001\u566A\u58F0\u548C\u89C4\u6A21\u4E0D\u540C\u3002",
+    "\u82E5\u8BFE\u7A0B\u76EE\u6807\u672C\u8EAB\u8981\u6C42\u5B8C\u6574\u89C4\u6A21\u7ED3\u679C\uFF0C\u9700\u8981\u66F4\u5F3A\u786C\u4EF6\u6216\u5916\u90E8\u8BA1\u7B97\u8D44\u6E90\uFF1B\u7B2C\u4E00\u7248\u4E0D\u7BA1\u7406\u8FDC\u7AEF\u8BA1\u7B97\u8D44\u6E90\u3002",
+    ...reduced === void 0 ? ["\u672A\u81EA\u52A8\u751F\u6210\u53EF\u8FD0\u884C\u66FF\u4EE3\uFF1B\u4E0D\u5F97\u628A\u4F2A\u4EE3\u7801\u6F14\u793A\u62A5\u544A\u4E3A\u201C\u5DF2\u8FD0\u884C\u201D\u3002"] : []
+  ];
+  return {
+    description,
+    knownDifferences,
+    fullExperimentRequirements: requirements,
+    ...reduced !== void 0 ? { reducedExperiment: reduced } : {},
+    caveats
+  };
+}
+function differencesFor(kind, reduced, declared) {
+  const scale = reduced?.scaleNote ?? "\u672A\u751F\u6210\u66FF\u4EE3\u5B9E\u9A8C";
+  const header = `\u5B8C\u6574\u5B9E\u9A8C\u89C4\u6A21\uFF1A${describeDeclaredResources(declared)}\uFF1B\u66FF\u4EE3\u5B9E\u9A8C\u89C4\u6A21\uFF1A${scale}\u3002`;
+  if (kind === "training") {
+    return [
+      header,
+      "\u66FF\u4EE3\u5B9E\u9A8C\u7528\u95ED\u5F0F\u89E3/\u6781\u5C11\u91CF\u6837\u672C\u4EE3\u66FF\u591A\u8F6E\u8FED\u4EE3\u8BAD\u7EC3\uFF1A\u6CA1\u6709 epoch\u3001\u5B66\u4E60\u7387\u3001\u4F18\u5316\u5668\u72B6\u6001\u4E0E\u771F\u5B9E\u6570\u636E\u7BA1\u7EBF\u7684\u884C\u4E3A\u3002",
+      "\u53C2\u6570\u91CF\u4E0E\u6570\u636E\u91CF\u7F29\u5C0F\u82E5\u5E72\u6570\u91CF\u7EA7\uFF0C\u8BAD\u7EC3/\u9A8C\u8BC1\u5DEE\u8DDD\u53EA\u7528\u4E8E\u89C2\u5BDF\u201C\u5BB9\u91CF\u4E0E\u6CDB\u5316\u201D\u7684\u65B9\u5411\uFF0C\u4E0D\u4EE3\u8868\u771F\u5B9E\u6A21\u578B\u7684\u7EDD\u5BF9\u7CBE\u5EA6\u3002",
+      "\u6570\u636E\u4E3A\u5408\u6210\u6570\u636E\uFF0C\u4E0E\u771F\u5B9E\u8BFE\u7A0B\u6570\u636E\u7684\u566A\u58F0\u3001\u7C7B\u522B\u5206\u5E03\u4E0D\u540C\uFF0C\u6307\u6807\u4E0D\u53EF\u76F4\u63A5\u5BF9\u6BD4\u3002"
+    ];
+  }
+  if (kind === "numerical") {
+    return [
+      header,
+      "\u66FF\u4EE3\u5B9E\u9A8C\u7684\u7F51\u683C\u70B9\u6570\u3001\u8FED\u4EE3\u6B21\u6570\u4E0E\u6B65\u957F\u8FDC\u5C0F\u4E8E\u5B8C\u6574\u5B9E\u9A8C\uFF0C\u53EA\u9A8C\u8BC1\u8BEF\u5DEE\u65B9\u5411\u548C\u516C\u5F0F\u6B63\u786E\u6027\u3002",
+      "\u672A\u8986\u76D6\u5B8C\u6574\u5B9E\u9A8C\u4E2D\u7684\u6570\u503C\u7A33\u5B9A\u6027/\u6536\u655B\u6027\u5206\u6790\uFF1B\u6781\u7AEF\u53C2\u6570\u4E0B\u7684\u884C\u4E3A\u53EF\u80FD\u4E0D\u540C\u3002"
+    ];
+  }
+  if (kind === "simulation") {
+    return [
+      header,
+      "\u66FF\u4EE3\u5B9E\u9A8C\u7528\u786E\u5B9A\u6027\u5E73\u5747\u573A/\u7B80\u5316\u89C4\u5219\u6A21\u62DF\u4EE3\u66FF\u771F\u5B9E\u968F\u673A\u7CFB\u7EDF\uFF0C\u65F6\u95F4\u6B65\u4E0E\u6837\u672C\u91CF\u7F29\u5C0F\u3002",
+      "\u4E0D\u58F0\u79F0\u7EDF\u8BA1\u663E\u8457\u6027\u3001\u4E0D\u8986\u76D6\u771F\u5B9E\u7CFB\u7EDF\u7684\u968F\u673A\u6CE2\u52A8\u4E0E\u4EA4\u4E92\u590D\u6742\u6027\u3002"
+    ];
+  }
+  return [
+    header,
+    "\u672A\u81EA\u52A8\u751F\u6210\u53EF\u8FD0\u884C\u66FF\u4EE3\uFF1A\u9700\u6559\u5B66\u8005\u63D0\u4F9B\u4FDD\u7559\u6838\u5FC3\u539F\u7406\u7684\u5C0F\u5B9E\u9A8C\uFF0C\u5E76\u660E\u786E\u6807\u6CE8\u4E0E\u5B8C\u6574\u5B9E\u9A8C\u7684\u5DEE\u522B\u3002"
+  ];
+}
+function buildReducedExperiment(request) {
+  const language = request.language === "javascript" ? "javascript" : "python";
+  if (request.kind === "training") {
+    return language === "javascript" ? javascriptTraining() : pythonTraining();
+  }
+  if (request.kind === "numerical") {
+    return language === "javascript" ? javascriptNumerical() : pythonNumerical();
+  }
+  if (request.kind === "simulation") {
+    return language === "javascript" ? javascriptSimulation() : pythonSimulation();
+  }
+  return void 0;
+}
+function pythonTraining() {
+  return {
+    title: "\u5C0F\u89C4\u6A21\u8FC7\u62DF\u5408\u6F14\u793A\uFF1A\u5BB9\u91CF\u4E0E\u6CDB\u5316",
+    language: "python",
+    scaleNote: "10 \u4E2A\u8BAD\u7EC3\u70B9 + 30 \u4E2A\u9A8C\u8BC1\u70B9\u30012 \u4E2A\u6A21\u578B\uFF081 \u6B21\u4E0E 15 \u6B21\u591A\u9879\u5F0F\uFF09\u3001\u95ED\u5F0F\u6700\u5C0F\u4E8C\u4E58\u89E3",
+    timeoutMs: 1e4,
+    expectedStdout: "REDUCED-SCALE",
+    checks: [
+      { name: "\u66FF\u4EE3\u5B9E\u9A8C\u771F\u5B9E\u8FD0\u884C", type: "stdout-contains", value: "overfit(degree=15)" },
+      { name: "\u6807\u8BB0\u964D\u89C4\u6A21\u4E8B\u5B9E", type: "stdout-contains", value: "REDUCED-SCALE" },
+      { name: "\u6B63\u5E38\u9000\u51FA", type: "exit-code", value: 0 }
+    ],
+    code: `# T06 \u964D\u89C4\u6A21\u66FF\u4EE3\uFF1A\u5C0F\u6837\u672C + \u5C0F\u6A21\u578B\uFF0C\u89C2\u5BDF\u8BAD\u7EC3/\u9A8C\u8BC1\u5DEE\u5F02\uFF08\u4FDD\u7559"\u5BB9\u91CF\u4E0E\u6CDB\u5316"\u539F\u7406\uFF09
+import random
+random.seed(11)
+
+def poly_features(x, degree):
+    return [x ** k for k in range(degree + 1)]
+
+def solve(a, b):
+    n = len(b)
+    m = [row[:] + [b[i]] for i, row in enumerate(a)]
+    for col in range(n):
+        pivot = max(range(col, n), key=lambda r: abs(m[r][col]))
+        if abs(m[pivot][col]) < 1e-12:
+            continue
+        m[col], m[pivot] = m[pivot], m[col]
+        pv = m[col][col]
+        m[col] = [v / pv for v in m[col]]
+        for r in range(n):
+            if r != col:
+                f = m[r][col]
+                m[r] = [m[r][c] - f * m[col][c] for c in range(n + 1)]
+    return [m[i][n] for i in range(n)]
+
+def fit(train, degree, ridge=1e-8):
+    size = degree + 1
+    xtx = [[0.0] * size for _ in range(size)]
+    xty = [0.0] * size
+    for x, y in train:
+        features = poly_features(x, degree)
+        for i in range(size):
+            xty[i] += features[i] * y
+            for j in range(size):
+                xtx[i][j] += features[i] * features[j]
+    for i in range(size):
+        xtx[i][i] += ridge
+    return solve(xtx, xty)
+
+def mse(coeffs, rows):
+    total = 0.0
+    for x, y in rows:
+        pred = sum(c * x ** k for k, c in enumerate(coeffs))
+        total += (pred - y) ** 2
+    return total / len(rows)
+
+def sample(n, jitter):
+    rows = []
+    for i in range(n):
+        x = -1.0 + 2.0 * i / (n - 1)
+        y = 0.6 * x ** 3 - x + random.uniform(-jitter, jitter)
+        rows.append((x, y))
+    return rows
+
+train = sample(10, 0.3)
+holdout = sample(30, 0.3)
+under = fit(train, 1)
+over = fit(train, 15)
+print(f"underfit(degree=1): train={mse(under, train):.4f} holdout={mse(under, holdout):.4f}")
+print(f"overfit(degree=15): train={mse(over, train):.4f} holdout={mse(over, holdout):.4f}")
+print("REDUCED-SCALE: 10 \u8BAD\u7EC3\u70B9 + 30 \u9A8C\u8BC1\u70B9\u3001\u7EAF Python \u95ED\u5F0F\u89E3\uFF1B\u89C2\u5BDF\u5BB9\u91CF\u4E0E\u6CDB\u5316\u7684\u5DEE\u5F02")
+`
+  };
+}
+function javascriptTraining() {
+  return {
+    title: "\u5C0F\u89C4\u6A21\u8FC7\u62DF\u5408\u6F14\u793A\uFF1A\u5BB9\u91CF\u4E0E\u6CDB\u5316\uFF08JavaScript\uFF09",
+    language: "javascript",
+    scaleNote: "10 \u4E2A\u8BAD\u7EC3\u70B9 + 30 \u4E2A\u9A8C\u8BC1\u70B9\u30011 \u6B21\u4E0E 9 \u6B21\u591A\u9879\u5F0F\u3001\u95ED\u5F0F\u89E3",
+    timeoutMs: 1e4,
+    expectedStdout: "REDUCED-SCALE",
+    checks: [
+      { name: "\u66FF\u4EE3\u5B9E\u9A8C\u771F\u5B9E\u8FD0\u884C", type: "stdout-contains", value: "overfit(degree=9)" },
+      { name: "\u6807\u8BB0\u964D\u89C4\u6A21\u4E8B\u5B9E", type: "stdout-contains", value: "REDUCED-SCALE" },
+      { name: "\u6B63\u5E38\u9000\u51FA", type: "exit-code", value: 0 }
+    ],
+    code: `// T06 \u964D\u89C4\u6A21\u66FF\u4EE3\uFF1A\u5C0F\u6837\u672C + \u5C0F\u6A21\u578B\uFF0C\u89C2\u5BDF\u8BAD\u7EC3/\u9A8C\u8BC1\u5DEE\u5F02\uFF08\u4FDD\u7559"\u5BB9\u91CF\u4E0E\u6CDB\u5316"\u539F\u7406\uFF09
+let state = 11
+function random() { state = (state * 1103515245 + 12345) % 2147483648; return state / 2147483648 }
+
+function sample(n, jitter) {
+  const rows = []
+  for (let i = 0; i < n; i += 1) {
+    const x = -1 + (2 * i) / (n - 1)
+    const y = 0.6 * x ** 3 - x + (random() * 2 - 1) * jitter
+    rows.push([x, y])
+  }
+  return rows
+}
+function solve(a, b) {
+  const n = b.length
+  const m = a.map((row, i) => [...row, b[i]])
+  for (let col = 0; col < n; col += 1) {
+    let pivot = col
+    for (let r = col + 1; r < n; r += 1) if (Math.abs(m[r][col]) > Math.abs(m[pivot][col])) pivot = r
+    if (Math.abs(m[pivot][col]) < 1e-12) continue
+    ;[m[col], m[pivot]] = [m[pivot], m[col]]
+    const pv = m[col][col]
+    for (let c = col; c <= n; c += 1) m[col][c] /= pv
+    for (let r = 0; r < n; r += 1) {
+      if (r === col) continue
+      const f = m[r][col]
+      for (let c = col; c <= n; c += 1) m[r][c] -= f * m[col][c]
+    }
+  }
+  return m.map(row => row[n])
+}
+function fit(rows, degree) {
+  const size = degree + 1
+  const xtx = Array.from({ length: size }, () => new Array(size).fill(0))
+  const xty = new Array(size).fill(0)
+  for (const [x, y] of rows) {
+    const f = Array.from({ length: size }, (_, k) => x ** k)
+    for (let i = 0; i < size; i += 1) { xty[i] += f[i] * y; for (let j = 0; j < size; j += 1) xtx[i][j] += f[i] * f[j] }
+  }
+  return solve(xtx, xty)
+}
+function mse(coeffs, rows) {
+  let total = 0
+  for (const [x, y] of rows) {
+    let pred = 0
+    for (let k = 0; k < coeffs.length; k += 1) pred += coeffs[k] * x ** k
+    total += (pred - y) ** 2
+  }
+  return total / rows.length
+}
+const train = sample(10, 0.3)
+const holdout = sample(30, 0.3)
+const under = fit(train, 1)
+const over = fit(train, 9)
+console.log('underfit(degree=1): train=' + mse(under, train).toFixed(4) + ' holdout=' + mse(under, holdout).toFixed(4))
+console.log('overfit(degree=9):  train=' + mse(over, train).toFixed(4) + ' holdout=' + mse(over, holdout).toFixed(4))
+console.log('REDUCED-SCALE: 10 \u8BAD\u7EC3\u70B9 + 30 \u9A8C\u8BC1\u70B9\u3001\u7EAF JavaScript \u95ED\u5F0F\u89E3\uFF1B\u89C2\u5BDF\u5BB9\u91CF\u4E0E\u6CDB\u5316\u7684\u5DEE\u5F02')
+`
+  };
+}
+function pythonNumerical() {
+  return {
+    title: "\u5C0F\u89C4\u6A21\u6570\u503C\u9A8C\u8BC1\uFF1A\u5DEE\u5206\u8FD1\u4F3C\u4E0E\u89E3\u6790\u89E3\u5BF9\u6BD4",
+    language: "python",
+    scaleNote: "4 \u4E2A\u91C7\u6837\u70B9 + 3 \u4E2A\u6B65\u957F\u7684\u4E2D\u5FC3\u5DEE\u5206\uFF0C\u95ED\u5F0F\u89E3\u6790\u5BFC\u6570\u5BF9\u7167",
+    timeoutMs: 1e4,
+    expectedStdout: "REDUCED-SCALE",
+    checks: [
+      { name: "\u66FF\u4EE3\u5B9E\u9A8C\u771F\u5B9E\u8FD0\u884C", type: "stdout-contains", value: "max_abs_error=" },
+      { name: "\u6807\u8BB0\u964D\u89C4\u6A21\u4E8B\u5B9E", type: "stdout-contains", value: "REDUCED-SCALE" },
+      { name: "\u6B63\u5E38\u9000\u51FA", type: "exit-code", value: 0 }
+    ],
+    code: `# T06 \u964D\u89C4\u6A21\u66FF\u4EE3\uFF1A\u7528\u5C11\u91CF\u70B9\u4E0E\u6B65\u957F\u7684\u4E2D\u5FC3\u5DEE\u5206\u9A8C\u8BC1\u5BFC\u6570\u7684\u6570\u503C\u8FD1\u4F3C
+import math
+
+def f(x):
+    return math.sin(x) * x
+
+def df(x):
+    return math.cos(x) * x + math.sin(x)
+
+for h in (0.1, 0.01, 0.001):
+    errors = [abs((f(x + h) - f(x - h)) / (2 * h) - df(x)) for x in (-1.0, -0.2, 0.3, 1.1)]
+    print(f"h={h:<6} max_abs_error={max(errors):.3e}")
+print("REDUCED-SCALE: 4 \u4E2A\u70B9 + 3 \u4E2A\u6B65\u957F\u7684\u4E2D\u5FC3\u5DEE\u5206\uFF1B\u89C2\u5BDF\u7CBE\u5EA6\u4E0E\u6B65\u957F\u7684\u5173\u7CFB\uFF08\u672A\u505A\u5B8C\u6574\u7A33\u5B9A\u6027\u5206\u6790\uFF09")
+`
+  };
+}
+function javascriptNumerical() {
+  return {
+    title: "\u5C0F\u89C4\u6A21\u6570\u503C\u9A8C\u8BC1\uFF1A\u5DEE\u5206\u8FD1\u4F3C\u4E0E\u89E3\u6790\u89E3\u5BF9\u6BD4\uFF08JavaScript\uFF09",
+    language: "javascript",
+    scaleNote: "4 \u4E2A\u91C7\u6837\u70B9 + 3 \u4E2A\u6B65\u957F\u7684\u4E2D\u5FC3\u5DEE\u5206\uFF0C\u95ED\u5F0F\u89E3\u6790\u5BFC\u6570\u5BF9\u7167",
+    timeoutMs: 1e4,
+    expectedStdout: "REDUCED-SCALE",
+    checks: [
+      { name: "\u66FF\u4EE3\u5B9E\u9A8C\u771F\u5B9E\u8FD0\u884C", type: "stdout-contains", value: "max_abs_error=" },
+      { name: "\u6807\u8BB0\u964D\u89C4\u6A21\u4E8B\u5B9E", type: "stdout-contains", value: "REDUCED-SCALE" },
+      { name: "\u6B63\u5E38\u9000\u51FA", type: "exit-code", value: 0 }
+    ],
+    code: `// T06 \u964D\u89C4\u6A21\u66FF\u4EE3\uFF1A\u7528\u5C11\u91CF\u70B9\u4E0E\u6B65\u957F\u7684\u4E2D\u5FC3\u5DEE\u5206\u9A8C\u8BC1\u5BFC\u6570\u7684\u6570\u503C\u8FD1\u4F3C
+const f = (x) => Math.sin(x) * x
+const df = (x) => Math.cos(x) * x + Math.sin(x)
+for (const h of [0.1, 0.01, 0.001]) {
+  const xs = [-1.0, -0.2, 0.3, 1.1]
+  const errors = xs.map((x) => Math.abs((f(x + h) - f(x - h)) / (2 * h) - df(x)))
+  console.log('h=' + String(h).padEnd(6) + ' max_abs_error=' + Math.max(...errors).toExponential(3))
+}
+console.log('REDUCED-SCALE: 4 \u4E2A\u70B9 + 3 \u4E2A\u6B65\u957F\u7684\u4E2D\u5FC3\u5DEE\u5206\uFF1B\u89C2\u5BDF\u7CBE\u5EA6\u4E0E\u6B65\u957F\u7684\u5173\u7CFB\uFF08\u672A\u505A\u5B8C\u6574\u7A33\u5B9A\u6027\u5206\u6790\uFF09')
+`
+  };
+}
+function pythonSimulation() {
+  return {
+    title: "\u5C0F\u89C4\u6A21\u6A21\u62DF\uFF1A\u786E\u5B9A\u6027 SIR \u5E73\u5747\u573A\u6A21\u578B",
+    language: "python",
+    scaleNote: "200 \u4EBA\u300160 \u5929\u3001\u786E\u5B9A\u6027\u5E73\u5747\u573A\u9012\u63A8\uFF08\u65E0\u968F\u673A\u6027\u4E0E\u771F\u5B9E\u6570\u636E\uFF09",
+    timeoutMs: 1e4,
+    expectedStdout: "SIMULATED",
+    checks: [
+      { name: "\u6A21\u62DF\u771F\u5B9E\u8FD0\u884C", type: "stdout-contains", value: "peak_infected=" },
+      { name: "\u6807\u8BB0\u6A21\u62DF\u4E8B\u5B9E", type: "stdout-contains", value: "SIMULATED" },
+      { name: "\u6B63\u5E38\u9000\u51FA", type: "exit-code", value: 0 }
+    ],
+    code: `# T06 \u964D\u89C4\u6A21\u66FF\u4EE3\uFF1A\u786E\u5B9A\u6027 SIR \u5E73\u5747\u573A\u6A21\u62DF\uFF08\u4FDD\u7559\u4F20\u67D3/\u6062\u590D\u673A\u5236\uFF0C\u4E0D\u505A\u771F\u5B9E\u6570\u636E\u4EFF\u771F\uFF09
+N = 200
+beta = 0.35
+gamma = 0.12
+susceptible, infected, recovered = N - 1, 1, 0
+peak = 0.0
+for day in range(60):
+    new_infections = beta * susceptible * infected / N
+    new_recoveries = gamma * infected
+    susceptible -= new_infections
+    infected += new_infections - new_recoveries
+    recovered += new_recoveries
+    peak = max(peak, infected)
+print(f"peak_infected={peak:.1f} final_recovered={recovered:.1f}")
+print("SIMULATED: \u786E\u5B9A\u6027 SIR \u5E73\u5747\u573A\uFF08200 \u4EBA\u300160 \u5929\uFF09\uFF1B\u975E\u771F\u5B9E\u6570\u636E\u3001\u975E\u968F\u673A\u4E2A\u4F53\u6A21\u578B")
+`
+  };
+}
+function javascriptSimulation() {
+  return {
+    title: "\u5C0F\u89C4\u6A21\u6A21\u62DF\uFF1A\u786E\u5B9A\u6027 SIR \u5E73\u5747\u573A\u6A21\u578B\uFF08JavaScript\uFF09",
+    language: "javascript",
+    scaleNote: "200 \u4EBA\u300160 \u5929\u3001\u786E\u5B9A\u6027\u5E73\u5747\u573A\u9012\u63A8\uFF08\u65E0\u968F\u673A\u6027\u4E0E\u771F\u5B9E\u6570\u636E\uFF09",
+    timeoutMs: 1e4,
+    expectedStdout: "SIMULATED",
+    checks: [
+      { name: "\u6A21\u62DF\u771F\u5B9E\u8FD0\u884C", type: "stdout-contains", value: "peak_infected=" },
+      { name: "\u6807\u8BB0\u6A21\u62DF\u4E8B\u5B9E", type: "stdout-contains", value: "SIMULATED" },
+      { name: "\u6B63\u5E38\u9000\u51FA", type: "exit-code", value: 0 }
+    ],
+    code: `// T06 \u964D\u89C4\u6A21\u66FF\u4EE3\uFF1A\u786E\u5B9A\u6027 SIR \u5E73\u5747\u573A\u6A21\u62DF\uFF08\u4FDD\u7559\u4F20\u67D3/\u6062\u590D\u673A\u5236\uFF0C\u4E0D\u505A\u771F\u5B9E\u6570\u636E\u4EFF\u771F\uFF09
+const N = 200
+const beta = 0.35
+const gamma = 0.12
+let susceptible = N - 1
+let infected = 1
+let recovered = 0
+let peak = 0
+for (let day = 0; day < 60; day += 1) {
+  const newInfections = (beta * susceptible * infected) / N
+  const newRecoveries = gamma * infected
+  susceptible -= newInfections
+  infected += newInfections - newRecoveries
+  recovered += newRecoveries
+  peak = Math.max(peak, infected)
+}
+console.log('peak_infected=' + peak.toFixed(1) + ' final_recovered=' + recovered.toFixed(1))
+console.log('SIMULATED: \u786E\u5B9A\u6027 SIR \u5E73\u5747\u573A\uFF08200 \u4EBA\u300160 \u5929\uFF09\uFF1B\u975E\u771F\u5B9E\u6570\u636E\u3001\u975E\u968F\u673A\u4E2A\u4F53\u6A21\u578B')
+`
+  };
+}
+
+// packages/teaching-core/src/environments/manager.ts
+var DEFAULT_TIMEOUT_MS2 = 1e4;
+var MAX_TIMEOUT_MS2 = 12e4;
+var MIN_TIMEOUT_MS2 = 100;
+var DEFAULT_MAX_OUTPUT_BYTES = 256 * 1024;
+var MAX_OUTPUT_BYTES2 = 4 * 1024 * 1024;
+var SMOKE_TIMEOUT_MS = 8e3;
+var PROBE_TIMEOUT_MS = 8e3;
+var SYSTEM_CHANGE_TIMEOUT_MS = 12e4;
+var MAX_CONCURRENT_RUNS = 4;
+var RUN_HISTORY2 = 50;
+var BUILTIN_LABELS = {
+  python: "Python",
+  javascript: "JavaScript",
+  scheme: "Scheme\uFF08SICP \u65B9\u8A00\uFF09"
+};
+var INHERITED_ENV_KEYS2 = [
+  "PATH",
+  "HOME",
+  "TMPDIR",
+  "TMP",
+  "TEMP",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "TZ",
+  "SHELL",
+  "SystemRoot",
+  "ComSpec",
+  "SYSTEMROOT"
+];
+function childEnv(extra) {
+  const env = {};
+  for (const key of INHERITED_ENV_KEYS2) {
+    const value = process.env[key];
+    if (value !== void 0) env[key] = value;
+  }
+  if (extra !== void 0) {
+    for (const [key, value] of Object.entries(extra)) env[key] = value;
+  }
+  return env;
+}
+function clamp2(value, min, max2) {
+  return Math.min(max2, Math.max(min, value));
+}
+function normalizeLanguage(value) {
+  if (typeof value !== "string") return void 0;
+  const trimmed = value.trim().toLowerCase();
+  if (trimmed === "" || trimmed.length > 64) return void 0;
+  return trimmed;
+}
+function normalizeDialect(value) {
+  if (typeof value !== "string") return void 0;
+  const trimmed = value.trim();
+  return trimmed === "" ? void 0 : trimmed.slice(0, 64);
+}
+function normalizeDependencies(value) {
+  if (!Array.isArray(value)) return [];
+  const deps = [];
+  for (const entry of value) {
+    if (typeof entry !== "string") continue;
+    const trimmed = entry.trim();
+    if (trimmed !== "" && trimmed.length <= 200 && !deps.includes(trimmed)) deps.push(trimmed);
+  }
+  return deps;
+}
+function sanitizeSegment(value) {
+  return value.replace(/[^A-Za-z0-9_-]+/gu, "-").slice(0, 48);
+}
+function isDeclaredResourceEnvelope(value) {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value;
+  for (const key of ["memoryMb", "runtimeMs", "datasetMb", "modelParameters"]) {
+    const entry = record[key];
+    if (entry !== void 0 && (typeof entry !== "number" || !Number.isFinite(entry) || entry < 0)) return false;
+  }
+  if (record.gpu !== void 0 && typeof record.gpu !== "boolean") return false;
+  if (record.description !== void 0 && typeof record.description !== "string") return false;
+  return true;
+}
+function toRunRecord2(state) {
+  return {
+    id: state.id,
+    environmentId: state.environment.id,
+    language: state.request.language,
+    ...state.request.dialect !== void 0 ? { dialect: state.request.dialect } : {},
+    code: state.request.code,
+    ...state.request.stdin !== void 0 ? { stdin: state.request.stdin } : {},
+    ...state.request.sessionId !== void 0 ? { sessionId: state.request.sessionId } : {},
+    ...state.request.courseId !== void 0 ? { courseId: state.request.courseId } : {},
+    ...state.request.activityId !== void 0 ? { activityId: state.request.activityId } : {},
+    ...state.request.activityRevision !== void 0 ? { activityRevision: state.request.activityRevision } : {},
+    startedAt: state.startedAt,
+    ...state.endedAt !== void 0 ? { endedAt: state.endedAt } : {},
+    status: state.status,
+    stdout: state.stdout,
+    stderr: state.stderr,
+    ...state.exitCode !== void 0 ? { exitCode: state.exitCode } : {},
+    ...state.durationMs !== void 0 ? { durationMs: state.durationMs } : {},
+    ...state.checks !== void 0 ? { checks: state.checks } : {},
+    verification: state.verification,
+    limits: state.limits,
+    ...state.resourceNote !== void 0 ? { resourceNote: state.resourceNote } : {}
+  };
+}
+function runStatusOf(outcome) {
+  if (outcome.cancelled) return "cancelled";
+  if (outcome.timedOut) return "timed-out";
+  if (outcome.spawnError !== void 0) return "failed";
+  return outcome.exitCode === 0 ? "succeeded" : "failed";
+}
+function evaluateChecks2(checks, status, stdout, exitCode) {
+  const completed = status === "succeeded" || status === "failed";
+  return checks.map((check) => {
+    if (!completed) {
+      return { name: check.name, type: check.type, status: "not-run", detail: "\u8FD0\u884C\u672A\u6B63\u5E38\u7ED3\u675F\uFF0C\u672A\u6267\u884C\u68C0\u67E5" };
+    }
+    if (check.type === "stdout-contains") {
+      const pass2 = stdout.includes(String(check.value));
+      return {
+        name: check.name,
+        type: check.type,
+        status: pass2 ? "pass" : "fail",
+        ...pass2 ? {} : { detail: `stdout \u4E2D\u672A\u627E\u5230 ${JSON.stringify(String(check.value))}` }
+      };
+    }
+    if (check.type === "stdout-equals") {
+      const actual = stdout.replace(/\r\n/gu, "\n").trimEnd();
+      const expected = String(check.value).replace(/\r\n/gu, "\n").trimEnd();
+      const pass2 = actual === expected;
+      return {
+        name: check.name,
+        type: check.type,
+        status: pass2 ? "pass" : "fail",
+        ...pass2 ? {} : { detail: `\u671F\u671B ${JSON.stringify(expected)}\uFF0C\u5B9E\u9645 ${JSON.stringify(actual.slice(0, 400))}` }
+      };
+    }
+    const pass = exitCode === Number(check.value);
+    return {
+      name: check.name,
+      type: check.type,
+      status: pass ? "pass" : "fail",
+      ...pass ? {} : { detail: `\u671F\u671B\u9000\u51FA\u7801 ${String(check.value)}\uFF0C\u5B9E\u9645 ${String(exitCode ?? "\u65E0")}` }
+    };
+  });
+}
+function verificationOf2(checks, status) {
+  if (checks.length === 0) return status === "succeeded" || status === "failed" ? "exploratory" : "unverified";
+  return status === "succeeded" || status === "failed" ? "objective" : "unverified";
+}
+function findOnPath(name2) {
+  if (name2.includes("/") || name2.includes("\\")) {
+    if (!isAbsolute5(name2)) return void 0;
+    try {
+      accessSync2(name2, constants2.X_OK);
+      return name2;
+    } catch {
+      return void 0;
+    }
+  }
+  const pathValue = process.env.PATH ?? "";
+  for (const entry of pathValue.split(delimiter3)) {
+    if (entry === "") continue;
+    const candidate = join14(entry, name2);
+    try {
+      accessSync2(candidate, constants2.X_OK);
+      return candidate;
+    } catch {
+    }
+  }
+  return void 0;
+}
+function findOnPathEntries(names) {
+  for (const name2 of names) {
+    const found = findOnPath(name2);
+    if (found !== void 0) return found;
+  }
+  return void 0;
+}
+function missingRuntimeApproval(language, label) {
+  return {
+    kind: "system-change",
+    description: `\u672C\u673A\u672A\u68C0\u6D4B\u5230 ${label} \u8FD0\u884C\u65F6\uFF08${language}\uFF09\u3002\u5B89\u88C5\u6216\u4E0B\u8F7D\u8FD0\u884C\u65F6\u5C5E\u4E8E\u63D2\u4EF6\u76EE\u5F55\u4E4B\u5916\u7684\u6539\u52A8\uFF0C\u63D2\u4EF6\u4E0D\u4F1A\u9759\u9ED8\u6267\u884C\u3002`,
+    impact: [
+      "\u9700\u8981\u7CFB\u7EDF\u7EA7\u5305\u7BA1\u7406\u5668\u6216\u8054\u7F51\u4E0B\u8F7D\u4FBF\u643A\u8FD0\u884C\u65F6\uFF0C\u4F1A\u5360\u7528\u5168\u5C40\u8DEF\u5F84/\u78C1\u76D8",
+      "\u63D2\u4EF6\u65E0\u6CD5\u4FDD\u8BC1\u5B89\u88C5\u547D\u4EE4\u3001\u7248\u672C\u4E0E\u7F51\u7EDC\u53EF\u7528\u6027"
+    ],
+    alternatives: [
+      "\u6539\u7528 Python \u6216 JavaScript \u5B8C\u6210\u540C\u4E00\u6559\u5B66\u76EE\u6807",
+      "\u5B66\u751F\u81EA\u884C\u5B89\u88C5/\u4E0B\u8F7D\u8FD0\u884C\u65F6\u540E\u91CD\u65B0\u63A2\u6D4B\uFF08\u4E0D\u9700\u8981\u91CD\u88C5\u63D2\u4EF6\uFF09",
+      "\u82E5\u53EA\u9700\u6F14\u793A\u8BED\u6CD5\uFF0C\u53EF\u9000\u5316\u4E3A\u9010\u884C\u8D70\u67E5\u5E76\u660E\u786E\u6807\u6CE8\u201C\u672A\u771F\u5B9E\u8FD0\u884C\u201D"
+    ],
+    requiresNetwork: true,
+    executableByPlugin: false,
+    note: "\u7B2C\u4E00\u7248\u4E0D\u81EA\u52A8\u4E0B\u8F7D\u89E3\u91CA\u5668\uFF0C\u4E5F\u4E0D\u6267\u884C\u7CFB\u7EDF\u5305\u7BA1\u7406\u5668\uFF1B\u4E0D\u63D0\u4F9B\u5B89\u88C5\u6210\u529F\u7387\u4FDD\u8BC1\u3002"
+  };
+}
+function builtinSmokeProgram(language) {
+  if (language === "python") return "print(21 * 2)\n";
+  if (language === "javascript") return "console.log(21 * 2)\n";
+  return "(display (* 21 2))\n(newline)\n";
+}
+function mergeAdapters(extra) {
+  if (extra === void 0 || extra.length === 0) return EXTENDED_LANGUAGE_SPECS;
+  const overridden = new Set(extra.map((item) => item.language));
+  return [...extra, ...EXTENDED_LANGUAGE_SPECS.filter((item) => !overridden.has(item.language))];
+}
+function mergeInstallPlans(extra) {
+  if (extra === void 0 || extra.length === 0) return DEFAULT_INSTALL_PLANS;
+  const overridden = new Set(extra.map((item) => item.language));
+  return [...extra, ...DEFAULT_INSTALL_PLANS.filter((item) => !overridden.has(item.language))];
+}
+var Manager = class {
+  options;
+  runners;
+  store;
+  logger;
+  adapters;
+  installPlans;
+  executableOverrides;
+  host;
+  defaultTimeoutMs;
+  maxOutputBytes;
+  records = /* @__PURE__ */ new Map();
+  preparing = /* @__PURE__ */ new Map();
+  active = /* @__PURE__ */ new Map();
+  runs = /* @__PURE__ */ new Map();
+  probeCache = /* @__PURE__ */ new Map();
+  loadTask;
+  staleCleanupTask;
+  disposed = false;
+  constructor(options) {
+    this.options = options;
+    this.runners = options.runners;
+    this.store = new EnvironmentStore(resolve4(options.dataDir), options.logger);
+    this.logger = options.logger ?? (() => void 0);
+    this.adapters = mergeAdapters(options.adapters);
+    this.installPlans = mergeInstallPlans(options.installPlans);
+    this.executableOverrides = options.executables ?? {};
+    this.host = readHostFacts(options.hostFacts);
+    this.defaultTimeoutMs = clamp2(options.defaultTimeoutMs ?? DEFAULT_TIMEOUT_MS2, MIN_TIMEOUT_MS2, MAX_TIMEOUT_MS2);
+    this.maxOutputBytes = clamp2(options.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES, 1024, MAX_OUTPUT_BYTES2);
+  }
+  // ---- needs classification ---------------------------------------------
+  async detectNeeds(declared) {
+    if (!Array.isArray(declared)) return err("invalid-input", "needs \u5FC5\u987B\u662F\u6570\u7EC4");
+    await this.ensureLoaded();
+    const needs = [];
+    for (let index = 0; index < declared.length; index += 1) {
+      const item = declared[index];
+      if (item === void 0 || typeof item !== "object") return err("invalid-input", `\u7B2C ${index + 1} \u9879\u9700\u6C42\u4E0D\u662F\u5BF9\u8C61`);
+      const language = normalizeLanguage(item.language);
+      if (language === void 0) return err("invalid-input", `\u7B2C ${index + 1} \u9879\u9700\u6C42\u7F3A\u5C11\u6709\u6548 language`);
+      if (typeof item.reason !== "string" || item.reason.trim() === "") {
+        return err("invalid-input", `\u7B2C ${index + 1} \u9879\u9700\u6C42\u7F3A\u5C11 reason`);
+      }
+      if (item.source !== "course" && item.source !== "material" && item.source !== "activity" && item.source !== "student") {
+        return err("invalid-input", `\u7B2C ${index + 1} \u9879\u9700\u6C42\u7684 source \u65E0\u6548`);
+      }
+      if (item.dependencies !== void 0 && !Array.isArray(item.dependencies)) {
+        return err("invalid-input", `\u7B2C ${index + 1} \u9879\u9700\u6C42\u7684 dependencies \u5FC5\u987B\u662F\u6570\u7EC4`);
+      }
+      if (item.resources !== void 0 && !isDeclaredResourceEnvelope(item.resources)) {
+        return err("invalid-input", `\u7B2C ${index + 1} \u9879\u9700\u6C42\u7684 resources \u65E0\u6548`);
+      }
+      const dialect = normalizeDialect(item.dialect);
+      const need = await this.classifyNeed({
+        ...item,
+        language,
+        ...dialect !== void 0 ? { dialect } : {},
+        dependencies: normalizeDependencies(item.dependencies)
+      }, index);
+      if (item.resources !== void 0) {
+        const assessment = this.assessResources({
+          goal: item.reason,
+          kind: item.experimentKind ?? "other",
+          language,
+          declared: item.resources
+        });
+        if (assessment.status !== "fits") {
+          needs.push({ ...need, resources: assessment });
+          continue;
+        }
+      }
+      needs.push(need);
+    }
+    return ok(needs);
+  }
+  async classifyNeed(declared, index) {
+    const language = declared.language;
+    const dialect = declared.dialect;
+    const base = {
+      index,
+      language,
+      ...dialect !== void 0 ? { dialect } : {},
+      reason: declared.reason,
+      source: declared.source,
+      ...declared.courseId !== void 0 ? { courseId: declared.courseId } : {},
+      ...declared.conceptIds !== void 0 ? { conceptIds: declared.conceptIds } : {},
+      ...declared.activityId !== void 0 ? { activityId: declared.activityId } : {}
+    };
+    const dependencies = normalizeDependencies(declared.dependencies);
+    const ready = this.findReadyRecord(language, dialect) ?? (this.isBuiltin(language) ? this.runners.getEnvironment(language, dialect) : void 0);
+    if (ready !== void 0 && ready.status === "ready") {
+      return {
+        ...base,
+        status: "available",
+        nextAction: "use-existing",
+        detail: `\u5DF2\u6709\u53EF\u7528\u7684\u6301\u4E45\u5316\u73AF\u5883\u8BB0\u5F55\uFF08${ready.kind}\uFF0C${ready.version ?? "\u7248\u672C\u672A\u77E5"}\uFF09`,
+        environmentId: ready.id,
+        ...ready.version !== void 0 ? { version: ready.version } : {},
+        kind: ready.kind
+      };
+    }
+    if (this.isBuiltin(language)) {
+      return { ...base, ...await this.classifyBuiltin(language, dialect, dependencies) };
+    }
+    const spec = findExtendedSpec(language, this.adapters);
+    if (spec !== void 0) {
+      if (dependencies.length > 0) {
+        const probe2 = await this.probeExtended(spec);
+        if (!probe2.available) {
+          const plan2 = findInstallPlan(language, this.installPlans);
+          return {
+            ...base,
+            status: "needs-approval",
+            nextAction: "request-approval",
+            detail: `\u8FD0\u884C\u65F6\u7F3A\u5931\uFF08${spec.label} \u672A\u5728\u5BBF\u4E3B PATH \u4E2D\u63A2\u6D4B\u5230\uFF09\uFF0C\u4E14\u58F0\u660E\u4E86\u7B2C\u4E09\u65B9\u4F9D\u8D56\uFF1A${dependencies.join("\u3001")}`,
+            approval: plan2?.approval ?? missingRuntimeApproval(language, spec.label)
+          };
+        }
+        return {
+          ...base,
+          status: "needs-approval",
+          nextAction: "request-approval",
+          detail: `\u8FD0\u884C\u65F6\u53EF\u7528\uFF08${spec.label} ${probe2.version ?? "\u7248\u672C\u672A\u77E5"}\uFF09\uFF0C\u4F46\u7B2C\u4E09\u65B9\u4F9D\u8D56\u9700\u8981\u8054\u7F51\u5B89\u88C5\u5230\u72EC\u7ACB\u76EE\u5F55`,
+          ...probe2.version !== void 0 ? { version: probe2.version } : {},
+          kind: "managed",
+          approval: networkInstallApproval(language, dependencies)
+        };
+      }
+      const probe = await this.probeExtended(spec);
+      if (!probe.available) {
+        const plan2 = findInstallPlan(language, this.installPlans);
+        return {
+          ...base,
+          status: "needs-approval",
+          nextAction: "request-approval",
+          detail: `\u672A\u5728\u5BBF\u4E3B PATH \u63A2\u6D4B\u5230 ${spec.label} \u8FD0\u884C\u65F6\uFF08\u5DF2\u5C1D\u8BD5 ${spec.executables.join("\u3001")}\uFF09`,
+          approval: plan2?.approval ?? missingRuntimeApproval(language, spec.label)
+        };
+      }
+      return {
+        ...base,
+        status: "available",
+        nextAction: "prepare",
+        detail: `${spec.label} ${probe.version ?? "\u7248\u672C\u672A\u77E5"}\uFF08\u771F\u5B9E\u63A2\u6D4B\uFF09\uFF1Bprepare \u4F1A\u5728\u63D2\u4EF6\u6570\u636E\u76EE\u5F55\u521B\u5EFA\u72EC\u7ACB\u8FD0\u884C\u76EE\u5F55\uFF08${spec.isolationNote ?? "\u4F9D\u8D56/\u7F13\u5B58\u9694\u79BB"}\uFF09\uFF0C\u4E0D\u5199\u7CFB\u7EDF\u4F9D\u8D56`,
+        ...probe.version !== void 0 ? { version: probe.version } : {},
+        kind: "managed"
+      };
+    }
+    const plan = findInstallPlan(language, this.installPlans);
+    if (plan !== void 0) {
+      const found = findOnPathEntries(plan.executables);
+      if (found !== void 0) {
+        return {
+          ...base,
+          status: "unsupported",
+          nextAction: "none",
+          detail: `\u5DF2\u68C0\u6D4B\u5230 ${plan.label} \u5DE5\u5177\u94FE\uFF08${found}\uFF09\uFF0C\u4F46\u7B2C\u4E00\u7248\u6CA1\u6709\u8BE5\u8BED\u8A00\u7684\u8FD0\u884C\u9002\u914D\u5668\uFF1B\u4E0D\u4F1A\u731C\u6D4B\u8FD0\u884C\u65B9\u5F0F`
+        };
+      }
+      return {
+        ...base,
+        status: "needs-approval",
+        nextAction: "request-approval",
+        detail: `\u672A\u5728\u5BBF\u4E3B PATH \u68C0\u6D4B\u5230 ${plan.label}\uFF1B\u5B89\u88C5\u5C5E\u4E8E\u7CFB\u7EDF\u7EA7\u6539\u52A8\uFF0C\u63D2\u4EF6\u4E0D\u4F1A\u6267\u884C`,
+        approval: plan.approval
+      };
+    }
+    return {
+      ...base,
+      status: "unsupported",
+      nextAction: "none",
+      detail: `\u63D2\u4EF6\u6CA1\u6709 ${language} \u7684\u9002\u914D\u5668\uFF0C\u4E5F\u6CA1\u6709\u5DF2\u767B\u8BB0\u7684\u72EC\u7ACB\u5B89\u88C5\u65B9\u6848\uFF1B\u4E0D\u4F1A\u731C\u6D4B\u73AF\u5883\u6216\u9759\u9ED8\u5B89\u88C5`
+    };
+  }
+  async classifyBuiltin(language, dialect, dependencies) {
+    const probe = await this.runners.probe(language, dialect);
+    const label = BUILTIN_LABELS[language] ?? language;
+    if (!probe.available) {
+      if (language === "scheme") {
+        return {
+          status: "needs-approval",
+          nextAction: "request-approval",
+          detail: probe.missingReason ?? "Scheme \u89E3\u91CA\u5668\u4F9D\u8D56\u7F3A\u5931",
+          approval: pluginRepairApproval(language, probe.missingReason ?? "Scheme \u89E3\u91CA\u5668\u4F9D\u8D56\uFF08biwascheme\uFF09\u7F3A\u5931")
+        };
+      }
+      return {
+        status: "needs-approval",
+        nextAction: "request-approval",
+        detail: probe.missingReason ?? `${label} \u8FD0\u884C\u65F6\u7F3A\u5931`,
+        approval: systemRuntimeApproval(language, probe.missingReason ?? `${label} \u8FD0\u884C\u65F6\u7F3A\u5931`)
+      };
+    }
+    if (dependencies.length > 0) {
+      return {
+        status: "needs-approval",
+        nextAction: "request-approval",
+        detail: `\u8FD0\u884C\u65F6\u53EF\u7528\uFF08${label} ${probe.version ?? "\u7248\u672C\u672A\u77E5"}\uFF09\uFF0C\u4F46\u58F0\u660E\u7684\u7B2C\u4E09\u65B9\u4F9D\u8D56\u9700\u8981\u8054\u7F51\u5B89\u88C5\u5230\u72EC\u7ACB venv`,
+        ...probe.version !== void 0 ? { version: probe.version } : {},
+        kind: "virtualenv",
+        approval: networkInstallApproval(language, dependencies)
+      };
+    }
+    const isolationNote = language === "python" ? "\uFF1B\u8FD0\u884C\u5668\u4EE5 -I \u9694\u79BB\u6A21\u5F0F\u542F\u52A8\uFF0C\u5FFD\u7565 PYTHON* \u4E0E\u7528\u6237 site-packages" : language === "javascript" ? "\uFF1B\u4F7F\u7528\u5BBF\u4E3B/\u7CFB\u7EDF Node\uFF0C\u65E0\u7B2C\u4E09\u65B9\u4F9D\u8D56" : "\uFF1Bbiwascheme \u4E3A\u63D2\u4EF6 npm \u4F9D\u8D56\uFF08\u4E0E\u5BBF\u4E3B\u5171\u4EAB node_modules\uFF09\uFF0C\u89E3\u91CA\u5668\u5728\u72EC\u7ACB\u5B50\u8FDB\u7A0B\u8FD0\u884C";
+    return {
+      status: "available",
+      nextAction: "prepare",
+      detail: `${label} ${probe.version ?? "\u7248\u672C\u672A\u77E5"}\uFF08\u771F\u5B9E\u63A2\u6D4B\uFF09${isolationNote}`,
+      ...probe.version !== void 0 ? { version: probe.version } : {},
+      kind: "system"
+    };
+  }
+  // ---- preparation -------------------------------------------------------
+  async prepare(request, options = {}) {
+    if (this.disposed) return err("failed", "\u73AF\u5883\u7BA1\u7406\u5668\u5DF2\u5173\u95ED");
+    const language = normalizeLanguage(request.language);
+    if (language === void 0) return err("invalid-input", "language \u5FC5\u987B\u662F\u975E\u7A7A\u5B57\u7B26\u4E32\uFF08\u226464 \u5B57\u7B26\uFF09");
+    if (request.conceptIds !== void 0 && !Array.isArray(request.conceptIds)) {
+      return err("invalid-input", "conceptIds \u5FC5\u987B\u662F\u6570\u7EC4");
+    }
+    await this.ensureLoaded();
+    await this.ensureStaleCleaned();
+    const dialect = normalizeDialect(request.dialect);
+    const dependencies = normalizeDependencies(request.dependencies);
+    const timeoutMs = clamp2(request.timeoutMs ?? this.defaultTimeoutMs, MIN_TIMEOUT_MS2, MAX_TIMEOUT_MS2);
+    const existing = this.findReadyRecord(language, dialect);
+    const modeSatisfied = existing !== void 0 && (request.mode !== "venv" || existing.kind === "virtualenv");
+    if (existing !== void 0 && modeSatisfied) return ok(existing);
+    const id = environmentId();
+    const controller = new AbortController();
+    const externalAbort = () => controller.abort();
+    if (options.signal !== void 0) {
+      if (options.signal.aborted) controller.abort();
+      else options.signal.addEventListener("abort", externalAbort, { once: true });
+    }
+    const context = {
+      id,
+      language,
+      ...dialect !== void 0 ? { dialect } : {},
+      dependencies,
+      ...request.courseId !== void 0 ? { courseId: request.courseId } : {},
+      ...request.conceptIds !== void 0 ? { conceptIds: request.conceptIds } : {},
+      timeoutMs,
+      controller,
+      ...options.onProgress !== void 0 ? { onProgress: options.onProgress } : {}
+    };
+    const promise = this.prepareCore(context, request, options);
+    this.preparing.set(id, { environmentId: id, controller, promise });
+    try {
+      return ok(await promise);
+    } catch (error) {
+      this.logger("environments.prepare-error", { language, message: error.message });
+      return err("failed", "\u73AF\u5883\u51C6\u5907\u5931\u8D25", { details: { message: error.message }, retryable: false });
+    } finally {
+      if (options.signal !== void 0) options.signal.removeEventListener("abort", externalAbort);
+      this.preparing.delete(id);
+    }
+  }
+  async prepareCore(context, request, options) {
+    const need = await this.classifyNeed({
+      language: context.language,
+      ...context.dialect !== void 0 ? { dialect: context.dialect } : {},
+      reason: "\u51C6\u5907\u8BF7\u6C42",
+      source: "student",
+      dependencies: context.dependencies,
+      ...request.courseId !== void 0 ? { courseId: request.courseId } : {},
+      ...request.conceptIds !== void 0 ? { conceptIds: request.conceptIds } : {}
+    }, 0);
+    const kind = this.isBuiltin(context.language) ? context.language === "python" && request.mode === "venv" ? "virtualenv" : "system" : "managed";
+    const placeholder = this.placeholderRecord(context, kind);
+    this.remember(placeholder);
+    await this.persistRecords();
+    this.emitProgress(context, "probe", placeholder, need.detail);
+    if (context.controller.signal.aborted) {
+      return await this.finalizeCancelled(context, placeholder, "\u51C6\u5907\u5728\u63A2\u6D4B\u9636\u6BB5\u88AB\u53D6\u6D88", void 0);
+    }
+    if (need.status === "unsupported") {
+      this.records.delete(placeholder.id);
+      const record = this.unsupportedRecord(context, need.detail, kind);
+      this.remember(record);
+      await this.persistRecords();
+      this.emitProgress(context, "done", record, "\u73AF\u5883\u4E0D\u53D7\u652F\u6301\uFF0C\u672A\u505A\u4EFB\u4F55\u5B89\u88C5");
+      return record;
+    }
+    if (need.status === "needs-approval") {
+      const approval = need.approval ?? missingRuntimeApproval(context.language, context.language);
+      if (options.approveSystemChange !== true) {
+        this.records.delete(placeholder.id);
+        const existingApproval = this.findRecordByStatus(context.language, context.dialect, "needs-approval");
+        if (existingApproval !== void 0) {
+          await this.persistRecords();
+          this.emitProgress(context, "approval", existingApproval, "\u590D\u7528\u5DF2\u5B58\u5728\u7684\u5F85\u786E\u8BA4\u8BB0\u5F55\uFF0C\u672A\u6267\u884C\u4EFB\u4F55\u5B89\u88C5");
+          this.emitProgress(context, "done", existingApproval, "\u7B49\u5F85\u5B66\u751F\u786E\u8BA4");
+          return existingApproval;
+        }
+        const record = this.approvalRecord(context, approval, kind);
+        this.remember(record);
+        await this.persistRecords();
+        this.emitProgress(context, "approval", record, "\u9700\u8981\u5B66\u751F\u786E\u8BA4\uFF0C\u672A\u6267\u884C\u4EFB\u4F55\u5B89\u88C5");
+        this.emitProgress(context, "done", record, "\u7B49\u5F85\u5B66\u751F\u786E\u8BA4");
+        return record;
+      }
+      this.emitProgress(context, "approval", placeholder, "\u5B66\u751F\u5DF2\u786E\u8BA4\uFF1B\u68C0\u67E5\u662F\u5426\u6709\u53D7\u63A7\u6267\u884C\u5668");
+      const executor = this.options.systemChangeExecutor;
+      if (approval.kind !== "system-change" || executor === void 0) {
+        this.records.delete(placeholder.id);
+        const record = this.approvalRecord(context, approval, kind, {
+          note: executor === void 0 ? "\u63D2\u4EF6\u672A\u914D\u7F6E\u7CFB\u7EDF\u7EA7\u5B89\u88C5\u6267\u884C\u5668\uFF0C\u4E0D\u4F1A\u6267\u884C\uFF1B\u8BF7\u6309\u8BF4\u660E\u81EA\u884C\u5B8C\u6210\u5B89\u88C5\u540E\u91CD\u8BD5\u3002" : "\u7B2C\u4E00\u7248\u4E0D\u4F1A\u81EA\u52A8\u6267\u884C\u8054\u7F51\u4F9D\u8D56\u5B89\u88C5\uFF1B\u8BF7\u6309\u8BF4\u660E\u5904\u7406\u540E\u91CD\u8BD5\u3002"
+        });
+        this.remember(record);
+        await this.persistRecords();
+        this.emitProgress(context, "done", record, "\u672A\u6267\u884C\u5B89\u88C5\uFF1B\u7B49\u5F85\u5B66\u751F\u6309\u8BF4\u660E\u5904\u7406");
+        return record;
+      }
+      const execution = await this.awaitCancellable(
+        executor(approval, {
+          language: context.language,
+          timeoutMs: SYSTEM_CHANGE_TIMEOUT_MS,
+          signal: context.controller.signal
+        }).catch((error) => ({ ok: false, message: error.message })),
+        context.controller.signal
+      );
+      if (execution.cancelled) {
+        return await this.finalizeCancelled(context, placeholder, "\u7CFB\u7EDF\u7EA7\u6539\u52A8\u6267\u884C\u671F\u95F4\u53D6\u6D88", void 0);
+      }
+      if (!execution.value.ok) {
+        return await this.finalizeFailure(
+          context,
+          placeholder,
+          "system-change-failed",
+          `\u5DF2\u786E\u8BA4\u7684\u7CFB\u7EDF\u7EA7\u6539\u52A8\u5931\u8D25\uFF1A${execution.value.message}`,
+          void 0,
+          "not-needed"
+        );
+      }
+      this.probeCache.delete(context.language);
+      const refreshed = await this.classifyNeed({
+        language: context.language,
+        ...context.dialect !== void 0 ? { dialect: context.dialect } : {},
+        reason: "\u51C6\u5907\u8BF7\u6C42\uFF08\u786E\u8BA4\u540E\u91CD\u65B0\u63A2\u6D4B\uFF09",
+        source: "student",
+        dependencies: context.dependencies
+      }, 0);
+      if (refreshed.status === "unsupported") {
+        return await this.finalizeFailure(
+          context,
+          placeholder,
+          "unsupported-after-change",
+          `\u7CFB\u7EDF\u7EA7\u6539\u52A8\u5DF2\u6267\u884C\uFF08${execution.value.message}\uFF09\uFF0C\u4F46\u63D2\u4EF6\u4ECD\u6CA1\u6709\u8BE5\u8BED\u8A00\u7684\u8FD0\u884C\u9002\u914D\u5668\uFF1A${refreshed.detail}`,
+          void 0,
+          "not-needed"
+        );
+      }
+      if (refreshed.status === "needs-approval") {
+        return await this.finalizeFailure(
+          context,
+          placeholder,
+          "system-change-unsatisfied",
+          `\u7CFB\u7EDF\u7EA7\u6539\u52A8\u8FD4\u56DE\u6210\u529F\uFF08${execution.value.message}\uFF09\uFF0C\u4F46\u91CD\u65B0\u63A2\u6D4B\u4ECD\u4E0D\u53EF\u7528\uFF1A${refreshed.detail}`,
+          void 0,
+          "not-needed"
+        );
+      }
+      return await this.finishPreparation(context, request, kind);
+    }
+    return await this.finishPreparation(context, request, kind);
+  }
+  async finishPreparation(context, request, kind) {
+    const spec = findExtendedSpec(context.language, this.adapters);
+    if (spec !== void 0 && !this.isBuiltin(context.language)) {
+      return await this.prepareExtended(context, spec);
+    }
+    return await this.prepareBuiltin(context, request, kind);
+  }
+  /** Delegate to the frozen registry; its preparation cannot be interrupted mid-flight. */
+  async prepareBuiltin(context, request, kind) {
+    const input = {
+      language: context.language,
+      ...context.dialect !== void 0 ? { dialect: context.dialect } : {},
+      ...request.courseId !== void 0 ? { courseId: request.courseId } : {},
+      ...request.conceptIds !== void 0 ? { conceptIds: request.conceptIds } : {},
+      timeoutMs: context.timeoutMs,
+      ...request.mode !== void 0 && context.language === "python" ? { mode: request.mode } : {}
+    };
+    const placeholder = this.findPlaceholder(context.id) ?? this.placeholderRecord(context, kind);
+    this.emitProgress(context, "prepare", placeholder, "\u59D4\u6258\u5185\u7F6E\u8FD0\u884C\u5668\u51C6\u5907\u73AF\u5883");
+    const pending = this.runners.prepare(input);
+    const raced = await this.awaitCancellable(pending, context.controller.signal);
+    if (raced.cancelled) {
+      void pending.then(async (record) => {
+        if (record.status === "ready") {
+          this.remember(record);
+          await this.persistRecords();
+          this.logger("environments.late-builtin-ready", { language: context.language, environmentId: record.id });
+        }
+      }).catch(() => void 0);
+      return await this.finalizeCancelled(
+        context,
+        placeholder,
+        "\u5185\u7F6E\u8FD0\u884C\u5668\u4E0D\u652F\u6301\u4E2D\u65AD\u51C6\u5907\uFF1A\u5DF2\u53D6\u6D88\u7B49\u5F85\uFF0C\u5E95\u5C42\u51C6\u5907\u53EF\u80FD\u7EE7\u7EED\uFF1B\u82E5\u968F\u540E\u6210\u529F\uFF0C\u5237\u65B0\u73AF\u5883\u5217\u8868\u53EF\u89C1",
+        void 0
+      );
+    }
+    this.records.delete(placeholder.id);
+    this.remember(raced.value);
+    await this.persistRecords();
+    this.emitProgress(
+      context,
+      "smoke",
+      raced.value,
+      raced.value.status === "ready" ? `\u5192\u70DF\u68C0\u67E5\u7531\u8FD0\u884C\u5668\u63A2\u6D4B\u5B8C\u6210\uFF1A${raced.value.version ?? "\u7248\u672C\u672A\u77E5"}` : "\u73AF\u5883\u4E0D\u53EF\u7528"
+    );
+    this.emitProgress(
+      context,
+      "done",
+      raced.value,
+      raced.value.status === "ready" ? "\u73AF\u5883\u5DF2\u5C31\u7EEA" : `\u73AF\u5883\u72B6\u6001\uFF1A${raced.value.status}`
+    );
+    return raced.value;
+  }
+  /** Prepare an extended runtime inside its own managed directory. */
+  async prepareExtended(context, spec) {
+    const placeholder = this.findPlaceholder(context.id) ?? this.placeholderRecord(context, "managed");
+    if (context.controller.signal.aborted) {
+      return await this.finalizeCancelled(context, placeholder, "\u51C6\u5907\u5728\u521B\u5EFA\u76EE\u5F55\u524D\u53D6\u6D88", void 0);
+    }
+    await this.store.ensureLayout();
+    const managedDir = join14(this.store.managedRoot, `${sanitizeSegment(spec.language)}-${context.id}`);
+    const probe = await this.probeExtended(spec);
+    if (!probe.available || probe.executable === void 0) {
+      return await this.finalizeFailure(
+        context,
+        placeholder,
+        "probe-lost",
+        `\u51C6\u5907\u671F\u95F4\u518D\u6B21\u63A2\u6D4B ${spec.label} \u5931\u8D25\uFF08\u8FD0\u884C\u65F6\u53EF\u80FD\u88AB\u79FB\u9664\uFF09`,
+        void 0,
+        "not-needed"
+      );
+    }
+    const base = {
+      ...placeholder,
+      isolation: {
+        dependencies: "isolated",
+        path: managedDir,
+        note: spec.isolationNote ?? "\u4F9D\u8D56/\u7F13\u5B58\u4F4D\u4E8E\u63D2\u4EF6\u6570\u636E\u76EE\u5F55\uFF0C\u4E0D\u5199\u7CFB\u7EDF\u4F9D\u8D56"
+      },
+      execution: {
+        mode: "process",
+        executable: probe.executable,
+        args: [...spec.runArgs],
+        timeoutMs: context.timeoutMs,
+        cancellable: true,
+        network: spec.network ?? "unknown",
+        confinement: spec.confinementNote ?? "\u5F53\u524D\u7528\u6237\u8EAB\u4EFD\u5B50\u8FDB\u7A0B\uFF1B\u65E0 CPU/\u5185\u5B58\u914D\u989D\uFF1B\u8D85\u65F6\u4E0E\u53D6\u6D88\u4F1A\u7ED3\u675F\u6574\u4E2A\u8FDB\u7A0B\u7EC4"
+      },
+      updatedAt: nowIso()
+    };
+    this.remember(base);
+    await this.persistRecords();
+    this.emitProgress(context, "prepare", base, `\u521B\u5EFA\u72EC\u7ACB\u8FD0\u884C\u76EE\u5F55 ${managedDir}`);
+    try {
+      await mkdir6(join14(managedDir, "work"), { recursive: true });
+      for (const dir of spec.prepareDirs ?? []) await mkdir6(join14(managedDir, dir), { recursive: true });
+    } catch (error) {
+      return await this.finalizeFailure(
+        context,
+        base,
+        "prepare-failed",
+        `\u521B\u5EFA\u72EC\u7ACB\u76EE\u5F55\u5931\u8D25\uFF1A${error.message}`,
+        managedDir,
+        void 0
+      );
+    }
+    const smokeFile = `smoke.${spec.scriptExtension}`;
+    try {
+      await writeFile6(join14(managedDir, "work", smokeFile), spec.smokeProgram, "utf8");
+    } catch (error) {
+      return await this.finalizeFailure(
+        context,
+        base,
+        "prepare-failed",
+        `\u5199\u5165\u5192\u70DF\u7A0B\u5E8F\u5931\u8D25\uFF1A${error.message}`,
+        managedDir,
+        void 0
+      );
+    }
+    this.emitProgress(
+      context,
+      "smoke",
+      base,
+      `\u8FD0\u884C\u771F\u5B9E\u5192\u70DF\u7A0B\u5E8F\uFF08\u671F\u671B\u8F93\u51FA ${JSON.stringify(spec.expectedSmokeStdout)}\uFF09`
+    );
+    const outcome = await runProcess({
+      command: probe.executable,
+      args: [...spec.runArgs, smokeFile],
+      cwd: join14(managedDir, "work"),
+      env: childEnv(spec.isolationEnv?.(managedDir)),
+      timeoutMs: Math.min(SMOKE_TIMEOUT_MS, Math.max(MIN_TIMEOUT_MS2, context.timeoutMs)),
+      maxOutputBytes: this.maxOutputBytes,
+      signal: context.controller.signal
+    });
+    if (outcome.cancelled) {
+      return await this.finalizeCancelled(context, base, "\u5192\u70DF\u9A8C\u8BC1\u671F\u95F4\u53D6\u6D88", managedDir);
+    }
+    if (outcome.spawnError !== void 0) {
+      return await this.finalizeFailure(
+        context,
+        base,
+        "smoke-failed",
+        `\u65E0\u6CD5\u542F\u52A8 ${spec.label}\uFF1A${outcome.spawnError}`,
+        managedDir,
+        void 0,
+        outcome.stderr
+      );
+    }
+    if (outcome.timedOut) {
+      return await this.finalizeFailure(
+        context,
+        base,
+        "smoke-failed",
+        `\u5192\u70DF\u7A0B\u5E8F\u8D85\u65F6\uFF08${String(Math.min(SMOKE_TIMEOUT_MS, context.timeoutMs))}ms\uFF09`,
+        managedDir,
+        void 0,
+        outcome.stderr
+      );
+    }
+    if (outcome.exitCode !== 0 || !outcome.stdout.includes(spec.expectedSmokeStdout)) {
+      return await this.finalizeFailure(
+        context,
+        base,
+        "smoke-failed",
+        `\u5192\u70DF\u8F93\u51FA\u4E0D\u7B26\u5408\u9884\u671F\uFF1A\u9000\u51FA\u7801 ${String(outcome.exitCode ?? "\u65E0")}\uFF0C\u671F\u671B stdout \u5305\u542B ${JSON.stringify(spec.expectedSmokeStdout)}`,
+        managedDir,
+        void 0,
+        `${outcome.stdout}${outcome.stderr}`
+      );
+    }
+    const record = {
+      ...base,
+      status: "ready",
+      ...probe.version !== void 0 ? { version: probe.version } : {},
+      updatedAt: nowIso()
+    };
+    this.remember(record);
+    await this.persistRecords();
+    this.emitProgress(
+      context,
+      "done",
+      record,
+      `\u73AF\u5883\u5DF2\u5C31\u7EEA\uFF08${spec.label} ${probe.version ?? "\u7248\u672C\u672A\u77E5"}\uFF09\uFF0C\u5192\u70DF\u8F93\u51FA\u5DF2\u9A8C\u8BC1`
+    );
+    return record;
+  }
+  placeholderRecord(context, kind) {
+    const now = nowIso();
+    return {
+      id: context.id,
+      language: context.language,
+      ...context.dialect !== void 0 ? { dialect: context.dialect } : {},
+      kind,
+      status: "preparing",
+      isolation: { dependencies: kind === "system" ? "none" : "isolated", note: "\u51C6\u5907\u4E2D\uFF0C\u5C1A\u672A\u5B8C\u6210" },
+      execution: {
+        mode: "process",
+        timeoutMs: context.timeoutMs,
+        cancellable: true,
+        network: "unknown",
+        confinement: "\u51C6\u5907\u4E2D\uFF1B\u5C1A\u672A\u542F\u52A8\u5B9E\u9A8C\u8FDB\u7A0B"
+      },
+      ...context.courseId !== void 0 ? { courseId: context.courseId } : {},
+      ...context.conceptIds !== void 0 ? { conceptIds: context.conceptIds } : {},
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+  approvalRecord(context, approval, kind, extra = {}) {
+    const now = nowIso();
+    const label = BUILTIN_LABELS[context.language] ?? context.language;
+    return {
+      id: context.id,
+      language: context.language,
+      ...context.dialect !== void 0 ? { dialect: context.dialect } : {},
+      kind,
+      status: "needs-approval",
+      isolation: {
+        dependencies: kind === "managed" ? "isolated" : "none",
+        note: extra.note ?? "\u672A\u521B\u5EFA\u4EFB\u4F55\u63D2\u4EF6\u6216\u7CFB\u7EDF\u76EE\u5F55\uFF1B\u73AF\u5883\u672A\u5C31\u7EEA"
+      },
+      execution: {
+        mode: "process",
+        timeoutMs: context.timeoutMs,
+        cancellable: false,
+        network: "unknown",
+        confinement: "\u73AF\u5883\u672A\u5C31\u7EEA\uFF0C\u672A\u542F\u52A8\u8FDB\u7A0B"
+      },
+      systemChange: { required: true, description: approval.description },
+      fallback: {
+        description: `${label} \u73AF\u5883\u9700\u8981\u5B66\u751F\u786E\u8BA4\u540E\u624D\u80FD\u4F7F\u7528\uFF1A${approval.description}`,
+        knownDifferences: [
+          ...approval.impact,
+          ...approval.alternatives.map((item) => `\u66FF\u4EE3\u65B9\u6848\uFF1A${item}`),
+          ...approval.commandPreview !== void 0 ? [`\u5EFA\u8BAE\u547D\u4EE4\uFF08\u63D2\u4EF6\u4E0D\u4F1A\u6267\u884C\uFF09\uFF1A${approval.commandPreview}`] : []
+        ]
+      },
+      ...context.courseId !== void 0 ? { courseId: context.courseId } : {},
+      ...context.conceptIds !== void 0 ? { conceptIds: context.conceptIds } : {},
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+  unsupportedRecord(context, detail, kind) {
+    const now = nowIso();
+    return {
+      id: context.id,
+      language: context.language,
+      ...context.dialect !== void 0 ? { dialect: context.dialect } : {},
+      kind,
+      status: "missing",
+      isolation: { dependencies: "none", note: "\u672A\u521B\u5EFA\u4EFB\u4F55\u76EE\u5F55" },
+      execution: {
+        mode: "process",
+        timeoutMs: context.timeoutMs,
+        cancellable: false,
+        network: "unknown",
+        confinement: "\u73AF\u5883\u4E0D\u53D7\u652F\u6301\uFF0C\u672A\u542F\u52A8\u8FDB\u7A0B"
+      },
+      failure: { message: detail, code: "unsupported", cleanup: "not-needed" },
+      fallback: {
+        description: `\u8BE5\u73AF\u5883\u4E0D\u53D7\u652F\u6301\uFF1A${detail}`,
+        knownDifferences: [
+          "\u5B9E\u9A8C\u672A\u771F\u5B9E\u8FD0\u884C\uFF0C\u4E0D\u80FD\u63D0\u4F9B\u771F\u5B9E stdout \u4E0E\u9000\u51FA\u7801\u3002",
+          "\u63D2\u4EF6\u4E0D\u4F1A\u731C\u6D4B\u5B89\u88C5\u65B9\u5F0F\u6216\u9759\u9ED8\u5B89\u88C5\uFF1B\u53EF\u6539\u7528\u5DF2\u652F\u6301\u7684\u8BED\u8A00\u5B8C\u6210\u7B49\u4EF7\u6559\u5B66\u3002"
+        ]
+      },
+      ...context.courseId !== void 0 ? { courseId: context.courseId } : {},
+      ...context.conceptIds !== void 0 ? { conceptIds: context.conceptIds } : {},
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+  async finalizeFailure(context, base, code, message, cleanupTarget, cleanupOverride, stderrSample) {
+    const cleaned = cleanupOverride !== void 0 ? { cleanup: cleanupOverride, note: void 0 } : await this.cleanupDirectory(cleanupTarget);
+    const record = {
+      ...base,
+      status: "failed",
+      failure: {
+        message,
+        code,
+        cleanup: cleaned.cleanup,
+        ...cleaned.note !== void 0 ? { cleanupNote: cleaned.note } : {}
+      },
+      fallback: {
+        description: `${base.language} \u73AF\u5883\u51C6\u5907\u5931\u8D25\uFF1A${message}`,
+        knownDifferences: [
+          "\u5B9E\u9A8C\u4E0D\u4F1A\u771F\u5B9E\u8FD0\u884C\uFF0C\u4E0D\u80FD\u63D0\u4F9B\u771F\u5B9E\u8F93\u51FA\u3002",
+          `\u672A\u5B8C\u6210\u76EE\u5F55\u6E05\u7406\u72B6\u6001\uFF1A${cleaned.cleanup}\u3002`,
+          ...stderrSample !== void 0 && stderrSample.trim() !== "" ? [`\u51C6\u5907\u8F93\u51FA\uFF1A${stderrSample.slice(0, 300)}`] : [],
+          "\u5176\u4ED6\u5DF2\u5C31\u7EEA\u7684\u73AF\u5883\u4E0D\u53D7\u5F71\u54CD\uFF1B\u53EF\u4FEE\u6B63\u95EE\u9898\u540E\u91CD\u8BD5\u3002"
+        ]
+      },
+      updatedAt: nowIso()
+    };
+    this.remember(record);
+    await this.persistRecords();
+    this.emitProgress(context, "done", record, `\u51C6\u5907\u5931\u8D25\uFF08${code}\uFF09\uFF1A${message}`);
+    return record;
+  }
+  async finalizeCancelled(context, base, message, cleanupTarget) {
+    const cleaned = await this.cleanupDirectory(cleanupTarget);
+    const record = {
+      ...base,
+      status: "failed",
+      failure: {
+        message: `\u51C6\u5907\u5DF2\u53D6\u6D88\uFF1A${message}`,
+        code: "cancelled",
+        cleanup: cleaned.cleanup,
+        ...cleaned.note !== void 0 ? { cleanupNote: cleaned.note } : {}
+      },
+      fallback: {
+        description: `\u51C6\u5907\u5DF2\u53D6\u6D88\uFF08${message}\uFF09\u3002\u672A\u5B8C\u6210\u7684\u76EE\u5F55\u5DF2\u6309\u72B6\u6001\u6E05\u7406\uFF1B\u4E4B\u524D\u5DF2\u5C31\u7EEA\u7684\u73AF\u5883\u4E0D\u53D7\u5F71\u54CD\u3002`,
+        knownDifferences: [
+          "\u73AF\u5883\u672A\u5C31\u7EEA\uFF0C\u5B9E\u9A8C\u4E0D\u4F1A\u8FD0\u884C\u3002",
+          `\u6E05\u7406\u72B6\u6001\uFF1A${cleaned.cleanup}\u3002`,
+          "\u91CD\u65B0\u53D1\u8D77\u51C6\u5907\u4F1A\u521B\u5EFA\u65B0\u7684\u73AF\u5883\u8BB0\u5F55\uFF0C\u4E0D\u4F1A\u590D\u7528\u672A\u5B8C\u6210\u76EE\u5F55\u3002"
+        ]
+      },
+      updatedAt: nowIso()
+    };
+    this.remember(record);
+    await this.persistRecords();
+    this.emitProgress(context, "done", record, `\u51C6\u5907\u5DF2\u53D6\u6D88\uFF08\u6E05\u7406\uFF1A${cleaned.cleanup}\uFF09`);
+    return record;
+  }
+  /** Remove a managed directory and report the truthful cleanup status. */
+  async cleanupDirectory(path2) {
+    if (path2 === void 0) return { cleanup: "not-needed" };
+    if (!this.isInsideManagedRoot(path2)) {
+      return { cleanup: "failed", note: `\u62D2\u7EDD\u6E05\u7406\u975E\u63D2\u4EF6\u7BA1\u7406\u76EE\u5F55\uFF1A${path2}` };
+    }
+    if (!existsSync3(path2)) return { cleanup: "not-needed" };
+    try {
+      await rm6(path2, { recursive: true, force: true });
+    } catch (error) {
+      return { cleanup: "failed", note: `\u6E05\u7406\u5931\u8D25\uFF1A${error.message}` };
+    }
+    if (!existsSync3(path2)) return { cleanup: "cleaned" };
+    try {
+      const left = await readdir4(path2);
+      return left.length === 0 ? { cleanup: "cleaned" } : { cleanup: "partial", note: `\u4ECD\u6B8B\u7559 ${String(left.length)} \u4E2A\u6761\u76EE` };
+    } catch (error) {
+      return { cleanup: "partial", note: error.message };
+    }
+  }
+  isInsideManagedRoot(path2) {
+    const root = resolve4(this.store.managedRoot);
+    const target = resolve4(path2);
+    return target !== root && target.startsWith(`${root}${sep3}`);
+  }
+  // ---- probing -----------------------------------------------------------
+  isBuiltin(language) {
+    return SUPPORTED_LANGUAGES.some((item) => item.language === language);
+  }
+  async probeExtended(spec) {
+    const cached = this.probeCache.get(spec.language);
+    if (cached !== void 0) return cached;
+    const override = this.executableOverrides[spec.language];
+    const candidates = [];
+    if (override !== void 0 && override.trim() !== "") candidates.push(override.trim());
+    for (const name2 of spec.executables) if (!candidates.includes(name2)) candidates.push(name2);
+    let result = {
+      available: false,
+      note: `\u672A\u627E\u5230\u53EF\u6267\u884C\u6587\u4EF6\uFF08\u5C1D\u8BD5\uFF1A${candidates.join("\u3001")}\uFF09`
+    };
+    for (const candidate of candidates) {
+      const outcome = await runProcess({
+        command: candidate,
+        args: [...spec.versionArgs],
+        env: childEnv(),
+        timeoutMs: PROBE_TIMEOUT_MS,
+        maxOutputBytes: 64 * 1024
+      });
+      if (outcome.spawnError !== void 0 || outcome.timedOut) continue;
+      const version3 = spec.parseVersion(`${outcome.stdout}
+${outcome.stderr}`);
+      if (version3 === void 0 || version3 === "") continue;
+      result = {
+        available: true,
+        executable: candidate,
+        version: version3,
+        note: `\u771F\u5B9E\u63A2\u6D4B\uFF1A${candidate} ${spec.versionArgs.join(" ")} \u2192 ${version3}`
+      };
+      break;
+    }
+    this.probeCache.set(spec.language, result);
+    return result;
+  }
+  findPlaceholder(id) {
+    const record = this.records.get(id);
+    return record?.status === "preparing" ? record : void 0;
+  }
+  emitProgress(context, phase, record, detail) {
+    if (context.onProgress === void 0) return;
+    try {
+      context.onProgress({ phase, record, ...detail !== void 0 ? { detail } : {} });
+    } catch (error) {
+      this.logger("environments.progress-callback-error", { message: error.message });
+    }
+  }
+  // ---- smoke / run -------------------------------------------------------
+  async smoke(environmentId2, options = {}) {
+    await this.ensureLoaded();
+    const record = this.records.get(environmentId2);
+    if (record === void 0) return err("not-found", "\u672A\u627E\u5230\u8BE5\u73AF\u5883\u8BB0\u5F55\uFF1B\u8BF7\u5148\u51C6\u5907\u73AF\u5883");
+    if (record.status !== "ready") {
+      return err("capability-missing", `\u73AF\u5883\u72B6\u6001\u4E3A ${record.status}\uFF0C\u4E0D\u80FD\u8FD0\u884C\u5192\u70DF\u68C0\u67E5`);
+    }
+    const language = record.language;
+    const spec = findExtendedSpec(language, this.adapters);
+    const code = this.isBuiltin(language) ? builtinSmokeProgram(language) : spec?.smokeProgram;
+    if (code === void 0) return err("capability-missing", `\u6CA1\u6709 ${language} \u7684\u5192\u70DF\u7A0B\u5E8F`);
+    const run = await this.run({
+      language,
+      ...record.dialect !== void 0 ? { dialect: record.dialect } : {},
+      code,
+      timeoutMs: SMOKE_TIMEOUT_MS,
+      checks: [
+        { name: "\u5192\u70DF\u8F93\u51FA", type: "stdout-contains", value: "42" },
+        { name: "\u9000\u51FA\u7801", type: "exit-code", value: 0 }
+      ]
+    }, options);
+    return ok(run);
+  }
+  async run(request, options = {}) {
+    const language = normalizeLanguage(request.language) ?? "";
+    if (this.isBuiltin(language)) {
+      const runnerOptions = {
+        ...options.signal !== void 0 ? { signal: options.signal } : {},
+        ...options.onOutput !== void 0 ? { onOutput: options.onOutput } : {},
+        ...options.timeoutMs !== void 0 ? { limits: { timeoutMs: options.timeoutMs } } : {}
+      };
+      return await this.runners.run(request, runnerOptions);
+    }
+    await this.ensureLoaded();
+    const spec = findExtendedSpec(language, this.adapters);
+    if (spec === void 0) {
+      return this.failedRunRequest(
+        request,
+        `\u6682\u4E0D\u652F\u6301\u7684\u8BED\u8A00\uFF1A${request.language}\u3002\u5185\u7F6E\u652F\u6301 Python/JavaScript/Scheme\uFF1B\u6269\u5C55\u9002\u914D\u5668\u4E3A ${this.adapters.map((item) => item.language).join("/")}\u3002`
+      );
+    }
+    const dialect = normalizeDialect(request.dialect);
+    const environment = this.findReadyRecord(language, dialect);
+    if (environment === void 0) {
+      return this.failedRunRequest(
+        request,
+        `\u6269\u5C55\u73AF\u5883 ${spec.label} \u5C1A\u672A\u51C6\u5907\uFF1B\u8BF7\u5148\u8C03\u7528 environments.prepare \u5B8C\u6210\u63A2\u6D4B\u4E0E\u5192\u70DF\u3002`
+      );
+    }
+    if (this.active.size >= MAX_CONCURRENT_RUNS) {
+      return this.failedRunRequest(
+        request,
+        `\u540C\u65F6\u8FD0\u884C\u6570\u91CF\u5DF2\u8FBE\u4E0A\u9650\uFF08${String(MAX_CONCURRENT_RUNS)}\uFF09\uFF1B\u8BF7\u7B49\u5F85\u5F53\u524D\u5B9E\u9A8C\u7ED3\u675F\u6216\u53D6\u6D88\u540E\u518D\u8BD5\u3002`
+      );
+    }
+    const timeoutMs = clamp2(
+      request.timeoutMs ?? options.timeoutMs ?? this.defaultTimeoutMs,
+      MIN_TIMEOUT_MS2,
+      MAX_TIMEOUT_MS2
+    );
+    const runId2 = runId();
+    const controller = new AbortController();
+    const externalAbort = () => controller.abort();
+    if (options.signal !== void 0) {
+      if (options.signal.aborted) controller.abort();
+      else options.signal.addEventListener("abort", externalAbort, { once: true });
+    }
+    const state = {
+      id: runId2,
+      request,
+      environment,
+      startedAt: nowIso(),
+      status: "running",
+      stdout: "",
+      stderr: "",
+      verification: "unverified",
+      limits: { timeoutMs }
+    };
+    const promise = this.executeExtendedRun(state, spec, timeoutMs, controller.signal, options).catch((error) => {
+      state.status = "failed";
+      state.stderr = `${state.stderr}${state.stderr === "" ? "" : "\n"}\u6269\u5C55\u8FD0\u884C\u5668\u5185\u90E8\u9519\u8BEF\uFF1A${error.message}`;
+      state.endedAt = nowIso();
+      return toRunRecord2(state);
+    }).then((record) => {
+      this.rememberRun(record);
+      return record;
+    }).finally(() => {
+      if (options.signal !== void 0) options.signal.removeEventListener("abort", externalAbort);
+      this.active.delete(runId2);
+    });
+    this.active.set(runId2, {
+      runId: runId2,
+      controller,
+      promise,
+      snapshot: toRunRecord2(state)
+    });
+    return promise;
+  }
+  async executeExtendedRun(state, spec, timeoutMs, signal, options) {
+    const managedDir = state.environment.isolation.path;
+    if (managedDir === void 0 || !existsSync3(managedDir)) {
+      state.status = "failed";
+      state.stderr = "\u6269\u5C55\u73AF\u5883\u76EE\u5F55\u4E0D\u5B58\u5728\uFF08\u53EF\u80FD\u5DF2\u88AB\u6E05\u7406\uFF09\uFF1B\u8BF7\u91CD\u65B0\u51C6\u5907\u73AF\u5883\u3002\n";
+      state.endedAt = nowIso();
+      state.resourceNote = "\u8FD0\u884C\u672A\u5F00\u59CB\uFF0C\u672A\u4EA7\u751F\u771F\u5B9E\u8F93\u51FA\u3002";
+      return toRunRecord2(state);
+    }
+    await this.store.ensureLayout();
+    const runDir = await mkdtemp4(join14(this.store.tmpRoot, `run-${state.id}-`));
+    let outcome;
+    let cleanupNote;
+    try {
+      const fileName = `program.${spec.scriptExtension}`;
+      await writeFile6(join14(runDir, fileName), state.request.code, "utf8");
+      outcome = await runProcess({
+        command: state.environment.execution.executable ?? spec.executables[0] ?? spec.language,
+        args: [...spec.runArgs, fileName],
+        cwd: runDir,
+        env: childEnv(spec.isolationEnv?.(managedDir)),
+        ...state.request.stdin !== void 0 ? { stdin: state.request.stdin } : {},
+        timeoutMs,
+        maxOutputBytes: this.maxOutputBytes,
+        signal,
+        ...options.onOutput !== void 0 ? { onChunk: options.onOutput } : {}
+      });
+    } catch (error) {
+      state.status = "failed";
+      state.stderr = `\u6269\u5C55\u8FD0\u884C\u5668\u9519\u8BEF\uFF1A${error.message}
+`;
+      state.endedAt = nowIso();
+      return toRunRecord2(state);
+    } finally {
+      try {
+        await rm6(runDir, { recursive: true, force: true });
+      } catch (error) {
+        cleanupNote = `\u4E34\u65F6\u76EE\u5F55\u6E05\u7406\u5931\u8D25\uFF1A${error.message}`;
+      }
+    }
+    const observed = outcome ?? {
+      stdout: "",
+      stderr: "\u6269\u5C55\u8FD0\u884C\u5668\u672A\u4EA7\u751F\u7ED3\u679C",
+      durationMs: 0,
+      timedOut: false,
+      cancelled: false,
+      truncated: false
+    };
+    state.status = runStatusOf(observed);
+    state.stdout = observed.stdout;
+    state.stderr = `${observed.stderr}${observed.spawnError !== void 0 ? `${observed.stderr === "" ? "" : "\n"}\u65E0\u6CD5\u542F\u52A8\u8FDB\u7A0B\uFF1A${observed.spawnError}` : ""}`;
+    if (cleanupNote !== void 0) state.stderr = `${state.stderr}${state.stderr === "" ? "" : "\n"}[${cleanupNote}]`;
+    state.exitCode = observed.exitCode;
+    state.durationMs = observed.durationMs;
+    state.endedAt = nowIso();
+    const checks = state.request.checks ?? [];
+    state.checks = evaluateChecks2(checks, state.status, observed.stdout, observed.exitCode);
+    state.verification = verificationOf2(checks, state.status);
+    const notes = [
+      `\u6269\u5C55\u73AF\u5883 ${spec.label}\uFF1A\u4F9D\u8D56/\u7F13\u5B58\u4F4D\u4E8E\u63D2\u4EF6\u6570\u636E\u76EE\u5F55\uFF08${spec.isolationNote ?? "\u72EC\u7ACB\u76EE\u5F55"}\uFF09\uFF1B\u672A\u505A CPU/\u5185\u5B58\u914D\u989D\u9694\u79BB\u3002`
+    ];
+    if (observed.truncated) notes.push("\u8F93\u51FA\u8D85\u8FC7\u4E0A\u9650\uFF0C\u5DF2\u622A\u65AD\u663E\u793A\u3002");
+    state.resourceNote = notes.join(" ");
+    return toRunRecord2(state);
+  }
+  async cancelRun(runId2) {
+    const active = this.active.get(runId2);
+    if (active !== void 0) {
+      active.controller.abort();
+      try {
+        return await active.promise;
+      } catch {
+        return this.runs.get(runId2);
+      }
+    }
+    const builtin = await this.runners.cancel(runId2);
+    return builtin ?? this.runs.get(runId2);
+  }
+  getRun(runId2) {
+    return this.runs.get(runId2) ?? this.runners.getRun(runId2);
+  }
+  activeRuns() {
+    const extended = [...this.active.values()].map((entry) => entry.snapshot);
+    return [...extended, ...this.runners.activeRuns()];
+  }
+  failedRunRequest(request, message) {
+    const timeoutMs = clamp2(
+      request.timeoutMs ?? this.defaultTimeoutMs,
+      MIN_TIMEOUT_MS2,
+      MAX_TIMEOUT_MS2
+    );
+    const now = nowIso();
+    const record = {
+      id: runId(),
+      environmentId: environmentId(),
+      language: request.language,
+      ...request.dialect !== void 0 ? { dialect: request.dialect } : {},
+      code: request.code,
+      ...request.sessionId !== void 0 ? { sessionId: request.sessionId } : {},
+      ...request.courseId !== void 0 ? { courseId: request.courseId } : {},
+      ...request.activityId !== void 0 ? { activityId: request.activityId } : {},
+      ...request.activityRevision !== void 0 ? { activityRevision: request.activityRevision } : {},
+      startedAt: now,
+      endedAt: nowIso(),
+      status: "failed",
+      stdout: "",
+      stderr: `${message}
+`,
+      verification: "unverified",
+      limits: { timeoutMs },
+      ...request.checks !== void 0 ? { checks: request.checks.map((check) => ({ name: check.name, type: check.type, status: "not-run", detail: "\u73AF\u5883/\u5E76\u53D1\u9650\u5236\u5BFC\u81F4\u672A\u8FD0\u884C" })) } : {},
+      resourceNote: "\u8FD0\u884C\u672A\u5F00\u59CB\uFF0C\u672A\u4EA7\u751F\u771F\u5B9E\u8F93\u51FA\u3002"
+    };
+    this.rememberRun(record);
+    return record;
+  }
+  rememberRun(record) {
+    this.runs.set(record.id, record);
+    while (this.runs.size > RUN_HISTORY2) {
+      const oldest = this.runs.keys().next();
+      if (oldest.done === true) break;
+      this.runs.delete(oldest.value);
+    }
+  }
+  // ---- records / directory / cleanup ------------------------------------
+  async get(environmentId2) {
+    await this.ensureLoaded();
+    return this.records.get(environmentId2);
+  }
+  async getEnvironment(language, dialect) {
+    const normalized = normalizeLanguage(language);
+    if (normalized === void 0) return void 0;
+    await this.ensureLoaded();
+    return this.findReadyRecord(normalized, normalizeDialect(dialect)) ?? this.runners.getEnvironment(normalized, dialect);
+  }
+  async listRecords() {
+    await this.ensureLoaded();
+    return [...this.records.values()];
+  }
+  findRecordByStatus(language, dialect, status) {
+    for (const record of this.records.values()) {
+      if (record.language !== language || record.status !== status) continue;
+      if (dialect !== void 0 && record.dialect !== dialect) continue;
+      return record;
+    }
+    return void 0;
+  }
+  findReadyRecord(language, dialect) {
+    for (const record of this.records.values()) {
+      if (record.language !== language || record.status !== "ready") continue;
+      if (dialect !== void 0) {
+        if (record.dialect === dialect) return record;
+        continue;
+      }
+      if (record.dialect === void 0) return record;
+    }
+    return void 0;
+  }
+  async directory() {
+    await this.ensureLoaded();
+    await this.ensureStaleCleaned();
+    const base = await this.runners.directory();
+    const environments2 = [...base.environments];
+    const supportedLanguages = [...base.supportedLanguages];
+    for (const spec of this.adapters) {
+      if (this.isBuiltin(spec.language)) continue;
+      const persisted = [...this.records.values()].filter((record) => record.language === spec.language);
+      for (const record of persisted) environments2.push(record);
+      const ready = persisted.find((record) => record.status === "ready");
+      const approval = persisted.find((record) => record.status === "needs-approval");
+      const failed = persisted.find((record) => record.status === "failed");
+      let status;
+      let note;
+      let environmentId2;
+      if (ready !== void 0) {
+        status = "ready";
+        environmentId2 = ready.id;
+        note = `${spec.label} ${ready.version ?? "\u7248\u672C\u672A\u77E5"}\uFF08\u63D2\u4EF6\u72EC\u7ACB\u76EE\u5F55\uFF09`;
+      } else if (approval !== void 0) {
+        status = "needs-approval";
+        environmentId2 = approval.id;
+        note = `\u9700\u8981\u5B66\u751F\u786E\u8BA4\uFF1A${approval.systemChange?.description?.slice(0, 120) ?? "\u7CFB\u7EDF\u7EA7/\u8054\u7F51\u6539\u52A8"}`;
+      } else if (failed !== void 0) {
+        status = "failed";
+        environmentId2 = failed.id;
+        note = `\u4E0A\u6B21\u51C6\u5907\u5931\u8D25\uFF1A${failed.failure?.message.slice(0, 120) ?? "\u89C1\u73AF\u5883\u8BB0\u5F55"}`;
+      } else {
+        const probe = await this.probeExtended(spec);
+        status = probe.available ? "missing" : "needs-approval";
+        note = probe.available ? `${spec.label} ${probe.version ?? "\u7248\u672C\u672A\u77E5"} \u5DF2\u63A2\u6D4B\uFF0C\u5C1A\u672A\u51C6\u5907\uFF08prepare \u4F1A\u5728\u63D2\u4EF6\u6570\u636E\u76EE\u5F55\u5EFA\u7ACB\u72EC\u7ACB\u76EE\u5F55\uFF09` : `${spec.label} \u8FD0\u884C\u65F6\u7F3A\u5931\uFF1B\u9700\u8981\u5B66\u751F\u786E\u8BA4\u7684\u7CFB\u7EDF\u7EA7\u5B89\u88C5\u6216\u81EA\u884C\u5B89\u88C5`;
+      }
+      supportedLanguages.push({
+        language: spec.language,
+        label: spec.label,
+        status,
+        ...environmentId2 !== void 0 ? { environmentId: environmentId2 } : {},
+        note
+      });
+    }
+    const failedRecords = [...this.records.values()].filter((record) => record.status === "failed");
+    const approvalRecords = [...this.records.values()].filter((record) => record.status === "needs-approval");
+    const gaps = [
+      ...base.gaps,
+      `T06 \u6269\u5C55\u9002\u914D\u5668\uFF08${this.adapters.map((item) => item.label).join("/")}\uFF09\u5728\u63D2\u4EF6\u6570\u636E\u76EE\u5F55\u5185\u51C6\u5907\u72EC\u7ACB\u76EE\u5F55\uFF1B\u7CFB\u7EDF\u7EA7\u5B89\u88C5\u4E0E\u8054\u7F51\u4F9D\u8D56\u5B89\u88C5\u4E0D\u4F1A\u81EA\u52A8\u6267\u884C\uFF0C\u9700\u8981\u5B66\u751F\u786E\u8BA4\u3002`,
+      "\u73AF\u5883\u8BB0\u5F55\u6301\u4E45\u5316\u5728\u63D2\u4EF6\u6570\u636E\u76EE\u5F55\uFF08environments/state.json\uFF09\uFF1B\u51C6\u5907\u5931\u8D25\u7684\u8BB0\u5F55\u4FDD\u7559\uFF0C\u672A\u5B8C\u6210\u76EE\u5F55\u6309 not-needed/cleaned/partial/failed \u5982\u5B9E\u8BB0\u5F55\u3002",
+      "\u6267\u884C\u662F\u5F53\u524D\u7528\u6237\u8EAB\u4EFD\u7684\u771F\u5B9E\u5B50\u8FDB\u7A0B\uFF1A\u6709\u8D85\u65F6\u3001\u53D6\u6D88\u3001\u8F93\u51FA\u4E0A\u9650\uFF0C\u4F46\u6CA1\u6709 CPU/\u5185\u5B58\u914D\u989D\u6216\u7CFB\u7EDF\u7EA7\u6C99\u7BB1\u3002",
+      "\u6269\u5C55\u73AF\u5883\u7684\u7F51\u7EDC\u53EF\u8FBE\u6027\u672A\u63A2\u6D4B\uFF08unknown\uFF09\uFF1B\u4E0D\u628A\u67D0\u9879\u5B89\u88C5\u6210\u529F\u5F53\u4F5C\u666E\u904D\u4FDD\u8BC1\u3002",
+      "\u8D85\u51FA\u672C\u673A\u8D44\u6E90\u7684\u5B9E\u9A8C\u4E0D\u4F1A\u771F\u5B9E\u8FD0\u884C\uFF1A\u8FD4\u56DE\u4FDD\u7559\u6838\u5FC3\u539F\u7406\u7684\u964D\u89C4\u6A21/\u6A21\u62DF\u66FF\u4EE3\uFF0C\u5E76\u5217\u51FA\u4E0E\u5B8C\u6574\u5B9E\u9A8C\u7684\u5DEE\u522B\uFF08assessResources\uFF09\u3002",
+      ...failedRecords.length > 0 ? [`\u5B58\u5728\u51C6\u5907\u5931\u8D25/\u53D6\u6D88\u7684\u73AF\u5883\u8BB0\u5F55\uFF1A${[...new Set(failedRecords.map((record) => `${record.language}(${record.failure?.code ?? "failed"})`))].join("\u3001")}\uFF1B\u672A\u5B8C\u6210\u76EE\u5F55\u5DF2\u6309\u72B6\u6001\u6E05\u7406\uFF0C\u53EF\u91CD\u8BD5\u3002`] : [],
+      ...approvalRecords.length > 0 ? [`\u5B58\u5728\u9700\u8981\u5B66\u751F\u786E\u8BA4\u7684\u73AF\u5883\uFF1A${[...new Set(approvalRecords.map((record) => record.language))].join("\u3001")}\uFF1B\u63D2\u4EF6\u672A\u6267\u884C\u4EFB\u4F55\u7CFB\u7EDF\u7EA7/\u8054\u7F51\u5B89\u88C5\u3002`] : []
+    ];
+    return { environments: environments2, supportedLanguages, gaps };
+  }
+  async cleanup(environmentId2) {
+    await this.ensureLoaded();
+    const record = this.records.get(environmentId2);
+    if (record === void 0) {
+      return {
+        environmentId: environmentId2,
+        status: "not-found",
+        removedPaths: [],
+        failedPaths: [],
+        message: "\u672A\u627E\u5230\u8BE5\u73AF\u5883\u8BB0\u5F55"
+      };
+    }
+    const path2 = record.isolation.path;
+    if (path2 === void 0) {
+      return {
+        environmentId: environmentId2,
+        status: "not-needed",
+        removedPaths: [],
+        failedPaths: [],
+        message: "\u8BE5\u73AF\u5883\u6CA1\u6709\u63D2\u4EF6\u7BA1\u7406\u7684\u76EE\u5F55\uFF08\u7CFB\u7EDF\u8FD0\u884C\u65F6\u65E0\u9700\u6E05\u7406\uFF09",
+        record
+      };
+    }
+    if (!this.isInsideManagedRoot(path2)) {
+      return {
+        environmentId: environmentId2,
+        status: "not-needed",
+        removedPaths: [],
+        failedPaths: [],
+        message: `\u8BE5\u76EE\u5F55\u7531\u5185\u7F6E\u8FD0\u884C\u5668\u7BA1\u7406\uFF08\u4E0D\u5C5E\u4E8E T06 \u72EC\u7ACB\u73AF\u5883\u76EE\u5F55\uFF09\uFF0C\u672C\u7BA1\u7406\u5668\u4E0D\u505A\u5220\u9664\uFF1A${path2}`,
+        record
+      };
+    }
+    if (!existsSync3(path2)) {
+      const updated = {
+        ...record,
+        status: "missing",
+        updatedAt: nowIso(),
+        fallback: record.fallback ?? {
+          description: "\u73AF\u5883\u76EE\u5F55\u5DF2\u4E0D\u5B58\u5728\uFF0C\u8BB0\u5F55\u6807\u8BB0\u4E3A missing\uFF1B\u53EF\u91CD\u65B0\u51C6\u5907\u73AF\u5883\u3002",
+          knownDifferences: ["\u5B9E\u9A8C\u4E0D\u4F1A\u771F\u5B9E\u8FD0\u884C\uFF0C\u76F4\u5230\u91CD\u65B0\u51C6\u5907\u5B8C\u6210\u3002"]
+        }
+      };
+      this.remember(updated);
+      await this.persistRecords();
+      return {
+        environmentId: environmentId2,
+        status: "not-needed",
+        removedPaths: [],
+        failedPaths: [],
+        message: "\u76EE\u5F55\u5DF2\u4E0D\u5B58\u5728\uFF1B\u8BB0\u5F55\u5DF2\u6807\u8BB0\u4E3A missing",
+        record: updated
+      };
+    }
+    const cleaned = await this.cleanupDirectory(path2);
+    if (cleaned.cleanup === "cleaned") {
+      const updated = {
+        ...record,
+        status: "missing",
+        isolation: { ...record.isolation, note: `\u5DF2\u6E05\u7406\u63D2\u4EF6\u7BA1\u7406\u76EE\u5F55\uFF1A${path2}` },
+        updatedAt: nowIso(),
+        fallback: {
+          description: "\u73AF\u5883\u5DF2\u6309\u5B66\u751F/\u5BBF\u4E3B\u8BF7\u6C42\u6E05\u7406\uFF1B\u91CD\u65B0\u51C6\u5907\u4F1A\u521B\u5EFA\u5168\u65B0\u7684\u72EC\u7ACB\u76EE\u5F55\u3002",
+          knownDifferences: ["\u6E05\u7406\u540E\u5B9E\u9A8C\u4E0D\u80FD\u8FD0\u884C\uFF0C\u76F4\u5230\u91CD\u65B0\u51C6\u5907\u5B8C\u6210\u3002"]
+        }
+      };
+      this.remember(updated);
+      await this.persistRecords();
+      return {
+        environmentId: environmentId2,
+        status: "cleaned",
+        removedPaths: [path2],
+        failedPaths: [],
+        message: "\u5DF2\u6E05\u7406\u63D2\u4EF6\u7BA1\u7406\u76EE\u5F55",
+        record: updated
+      };
+    }
+    if (cleaned.cleanup === "failed" || cleaned.cleanup === "partial") {
+      const updated = {
+        ...record,
+        status: "failed",
+        failure: {
+          message: `\u6E05\u7406\u672A\u5B8C\u5168\u6210\u529F\uFF1A${cleaned.note ?? "\u672A\u77E5\u539F\u56E0"}`,
+          code: "cleanup-failed",
+          cleanup: cleaned.cleanup,
+          ...cleaned.note !== void 0 ? { cleanupNote: cleaned.note } : {}
+        },
+        updatedAt: nowIso()
+      };
+      this.remember(updated);
+      await this.persistRecords();
+      return {
+        environmentId: environmentId2,
+        status: cleaned.cleanup,
+        removedPaths: [],
+        failedPaths: [path2],
+        message: `\u6E05\u7406\u672A\u5B8C\u5168\u6210\u529F\uFF08${cleaned.cleanup}\uFF09`,
+        record: updated
+      };
+    }
+    return {
+      environmentId: environmentId2,
+      status: "not-needed",
+      removedPaths: [],
+      failedPaths: [],
+      message: "\u65E0\u9700\u6E05\u7406",
+      record
+    };
+  }
+  async cleanupStale() {
+    await this.ensureLoaded();
+    const removed = [];
+    const failed = [];
+    const recordsUpdated = [];
+    let changed = false;
+    for (const record of [...this.records.values()]) {
+      if (record.status !== "preparing") continue;
+      if (this.preparing.has(record.id)) continue;
+      const path2 = record.isolation.path;
+      const cleaned = path2 !== void 0 && this.isInsideManagedRoot(path2) ? await this.cleanupDirectory(path2) : { cleanup: "not-needed", note: void 0 };
+      if (cleaned.cleanup === "cleaned" && path2 !== void 0) removed.push(path2);
+      else if ((cleaned.cleanup === "failed" || cleaned.cleanup === "partial") && path2 !== void 0) failed.push(path2);
+      const updated = {
+        ...record,
+        status: "failed",
+        failure: {
+          message: "\u4E0A\u6B21\u5BBF\u4E3B\u8FDB\u7A0B\u4E2D\u65AD\uFF0C\u73AF\u5883\u51C6\u5907\u672A\u5B8C\u6210\uFF1B\u5DF2\u6E05\u7406\u672A\u5B8C\u6210\u76EE\u5F55\u3002",
+          code: "interrupted",
+          cleanup: cleaned.cleanup,
+          ...cleaned.note !== void 0 ? { cleanupNote: cleaned.note } : {}
+        },
+        updatedAt: nowIso()
+      };
+      this.remember(updated);
+      recordsUpdated.push(updated.id);
+      changed = true;
+    }
+    try {
+      await this.store.ensureLayout();
+      const managedEntries = await readdir4(this.store.managedRoot);
+      const referenced = /* @__PURE__ */ new Set();
+      for (const record of this.records.values()) {
+        if (record.status !== "ready" || record.isolation.path === void 0) continue;
+        referenced.add(resolve4(record.isolation.path));
+      }
+      for (const entry of managedEntries) {
+        const path2 = join14(this.store.managedRoot, entry);
+        if (referenced.has(resolve4(path2))) continue;
+        if ([...this.preparing.values()].some((active) => path2.includes(active.environmentId))) continue;
+        const cleaned = await this.cleanupDirectory(path2);
+        if (cleaned.cleanup === "cleaned") removed.push(path2);
+        else if (cleaned.cleanup === "failed" || cleaned.cleanup === "partial") failed.push(path2);
+      }
+    } catch (error) {
+      this.logger("environments.stale-managed-scan-failed", { message: error.message });
+    }
+    try {
+      const tmpEntries = await readdir4(this.store.tmpRoot);
+      for (const entry of tmpEntries) {
+        if ([...this.active.keys()].some((runId2) => entry.includes(runId2))) continue;
+        const path2 = join14(this.store.tmpRoot, entry);
+        try {
+          await rm6(path2, { recursive: true, force: true });
+          removed.push(path2);
+        } catch {
+          failed.push(path2);
+        }
+      }
+    } catch {
+    }
+    if (changed) await this.persistRecords();
+    if (removed.length > 0 || failed.length > 0 || recordsUpdated.length > 0) {
+      this.logger("environments.stale-cleaned", { removed: removed.length, failed: failed.length, recordsUpdated });
+    }
+    return { removed, failed, recordsUpdated };
+  }
+  cancelPreparation(environmentId2) {
+    const active = this.preparing.get(environmentId2);
+    if (active === void 0) return false;
+    active.controller.abort();
+    return true;
+  }
+  // ---- resources / lifecycle --------------------------------------------
+  assessResources(request) {
+    return assessResourceRequest(request, this.host);
+  }
+  hostFacts() {
+    return this.host;
+  }
+  async dispose() {
+    if (!this.disposed) {
+      this.disposed = true;
+      for (const preparation of this.preparing.values()) preparation.controller.abort();
+      for (const run of this.active.values()) run.controller.abort();
+    }
+    const pending = [
+      ...[...this.preparing.values()].map((preparation) => preparation.promise),
+      ...[...this.active.values()].map((run) => run.promise)
+    ];
+    await Promise.allSettled(pending);
+    await this.store.flush();
+  }
+  // ---- internal plumbing -------------------------------------------------
+  ensureLoaded() {
+    if (this.loadTask === void 0) {
+      this.loadTask = (async () => {
+        try {
+          const records = await this.store.load();
+          for (const record of records) this.records.set(record.id, record);
+        } catch (error) {
+          this.logger("environments.load-failed", { message: error.message });
+        }
+      })();
+    }
+    return this.loadTask;
+  }
+  ensureStaleCleaned() {
+    if (this.staleCleanupTask === void 0) {
+      this.staleCleanupTask = this.cleanupStale().catch((error) => {
+        this.logger("environments.stale-cleanup-failed", { message: error.message });
+        return { removed: [], failed: [], recordsUpdated: [] };
+      });
+    }
+    return this.staleCleanupTask;
+  }
+  remember(record) {
+    this.records.set(record.id, record);
+  }
+  async persistRecords() {
+    try {
+      await this.store.save([...this.records.values()]);
+    } catch (error) {
+      this.logger("environments.persist-failed", { message: error.message });
+    }
+  }
+  async awaitCancellable(promise, signal) {
+    if (signal.aborted) return { cancelled: true };
+    let listener;
+    const aborted2 = new Promise((resolveAborted) => {
+      listener = () => resolveAborted({ cancelled: true });
+      signal.addEventListener("abort", listener, { once: true });
+    });
+    try {
+      return await Promise.race([
+        promise.then((value) => ({ cancelled: false, value })),
+        aborted2
+      ]);
+    } finally {
+      if (listener !== void 0) signal.removeEventListener("abort", listener);
+    }
+  }
+};
+function createEnvironmentManager(options) {
+  return new Manager(options);
+}
+
 // packages/dsh-plugin/src/host/model-adapter.ts
-var DEFAULT_TIMEOUT_MS2 = 18e4;
+var DEFAULT_TIMEOUT_MS3 = 18e4;
 var MAX_ATTEMPTS = 2;
 function toGenerateOptions(request, selection, routingSessionId) {
   const auxPurpose = request.purpose !== void 0 && request.purpose !== "chat";
@@ -58018,7 +60312,7 @@ var HarnessModelAdapter = class {
       attempt += 1;
       const startedAt = Date.now();
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS2);
+      const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS3);
       const onAbort = () => controller.abort();
       signal?.addEventListener("abort", onAbort, { once: true });
       let text2 = "";
@@ -58096,8 +60390,8 @@ var HarnessModelAdapter = class {
             try {
               const { writeFileSync } = process.getBuiltinModule("node:fs");
               const { tmpdir: tmpdir2 } = process.getBuiltinModule("node:os");
-              const { join: join13 } = process.getBuiltinModule("node:path");
-              writeFileSync(join13(tmpdir2(), `teaching-chat-${Date.now()}.txt`), text2, "utf8");
+              const { join: join16 } = process.getBuiltinModule("node:path");
+              writeFileSync(join16(tmpdir2(), `teaching-chat-${Date.now()}.txt`), text2, "utf8");
             } catch {
             }
           }
@@ -58219,7 +60513,7 @@ import { basename as basename5 } from "node:path";
 // packages/dsh-plugin/src/host/minimal.ts
 import "node:crypto";
 import { createHash as createHash4 } from "node:crypto";
-import { readFile as readFile6, stat as stat5 } from "node:fs/promises";
+import { readFile as readFile7, stat as stat5 } from "node:fs/promises";
 import { spawn as spawn3 } from "node:child_process";
 import { basename as basename4, extname as extname5 } from "node:path";
 function hitToEvidence(hit) {
@@ -58637,6 +60931,9 @@ function registerRoutes(services) {
     if (course === void 0) throw notFoundError("\u8BFE\u7A0B");
     const profile = await services.profiles.get();
     const active = await services.courses.getActiveRevision(course);
+    const draftRevision = course.draftRevisionId === void 0 ? void 0 : await services.courses.getRevision(course.id, course.draftRevisionId);
+    const goalSource = active?.goals ?? draftRevision?.goals;
+    const goalText = goalSource !== void 0 && goalSource.length > 0 ? goalSource.join("\uFF1B") : course.description !== "" ? course.description : `\u7CFB\u7EDF\u5B66\u4E60\u300A${course.title}\u300B`;
     const handle = services.tasks.start({
       kind: "course-draft",
       label: "\u5206\u6790\u8D44\u6599\u5E76\u751F\u6210\u8BFE\u7A0B\u8349\u6848",
@@ -58653,8 +60950,8 @@ function registerRoutes(services) {
       const proposed = await services.corpus.proposeCourseStructure({
         courseId: course.id,
         courseTitle: course.title,
-        goal: active?.goals.join("\uFF1B") ?? course.description,
-        ...active?.background === void 0 ? {} : { background: active.background },
+        goal: goalText,
+        ...(active?.background ?? draftRevision?.background) === void 0 ? {} : { background: active?.background ?? draftRevision?.background },
         language: profile.language,
         ...input.instruction === void 0 ? {} : { instruction: input.instruction }
       }, context.signal);
@@ -59253,35 +61550,56 @@ function registerRoutes(services) {
     if (input?.patch === void 0 || typeof input.patch !== "object") throw appError("invalid-input", "\u7F3A\u5C11 profile patch");
     return envelope({ profile: await services.profiles.patch(input.patch) });
   });
-  route("environments.list", async () => envelope(await services.experiments.directory()));
+  route("environments.list", async () => envelope(await services.environments.directory()));
   route("environments.prepare", async ({ body }) => {
     const input = body;
-    if (typeof input?.language !== "string") throw appError("invalid-input", "\u7F3A\u5C11\u8BED\u8A00");
+    if (typeof input?.language !== "string" || input.language.trim() === "") {
+      throw appError("invalid-input", "\u7F3A\u5C11\u8BED\u8A00");
+    }
     const handle = services.tasks.start({
       kind: "environment-prepare",
       label: `\u51C6\u5907 ${input.language} \u8FD0\u884C\u73AF\u5883`,
       steps: [
         { id: "probe", label: "\u63A2\u6D4B\u5DF2\u6709\u8FD0\u884C\u65F6" },
+        { id: "approval", label: "\u7CFB\u7EDF\u6539\u52A8\u786E\u8BA4\uFF08\u5982\u9700\uFF09" },
         { id: "prepare", label: "\u51C6\u5907\u72EC\u7ACB\u73AF\u5883" },
-        { id: "verify", label: "\u5192\u70DF\u9A8C\u8BC1" }
+        { id: "smoke", label: "\u5192\u70DF\u9A8C\u8BC1" }
       ]
     }, async (context) => {
-      context.step("probe", { status: "running" });
-      const environment = await services.experiments.prepare({
+      const phaseToStep = {
+        probe: "probe",
+        approval: "approval",
+        prepare: "prepare",
+        smoke: "smoke",
+        done: "smoke"
+      };
+      const result = await services.environments.prepare({
         language: input.language,
         ...input.dialect === void 0 ? {} : { dialect: input.dialect },
         ...input.courseId === void 0 ? {} : { courseId: input.courseId }
+      }, {
+        signal: context.signal,
+        ...input.approveSystemChange === void 0 ? {} : { approveSystemChange: input.approveSystemChange },
+        onProgress: (event) => {
+          const stepId = phaseToStep[event.phase];
+          if (stepId !== void 0) {
+            context.step(stepId, {
+              status: event.phase === "done" ? "done" : "running",
+              ...event.detail === void 0 ? {} : { detail: event.detail }
+            });
+          }
+        }
       });
-      context.step("probe", { status: environment.status === "failed" ? "failed" : "done", detail: environment.version });
-      context.step("prepare", { status: environment.status === "failed" ? "failed" : "done" });
-      context.step("verify", { status: environment.status === "ready" ? "done" : "skipped" });
-      context.result({ environmentId: environment.id, status: environment.status });
-      return { environment };
+      if (!result.ok) throw appError(result.error.code, result.error.message, result.error.details);
+      const record = result.value;
+      context.step("smoke", {
+        status: record.status === "ready" ? "done" : record.status === "failed" ? "failed" : "done",
+        ...record.version === void 0 ? {} : { detail: record.version }
+      });
+      context.result({ environmentId: record.id, status: record.status, version: record.version });
+      return { environmentId: record.id };
     });
-    return envelope({ task: handle, environment: await services.experiments.prepare({
-      language: input.language,
-      ...input.dialect === void 0 ? {} : { dialect: input.dialect }
-    }) });
+    return envelope({ task: handle });
   });
   route("tasks.get", async ({ query }) => {
     const taskId2 = requireQuery(query, "taskId");
@@ -59464,6 +61782,23 @@ async function runExperiment(services, input) {
     if (check.type !== "stdout-contains" && check.type !== "stdout-equals" && check.type !== "exit-code") return [];
     return [{ name: check.name, type: check.type, value: check.value }];
   });
+  const builtin = ["python", "javascript", "scheme"].includes(input.language);
+  if (!builtin) {
+    const run2 = await services.environments.run({
+      ...input.sessionId === void 0 ? {} : { sessionId: input.sessionId },
+      ...input.courseId === void 0 ? {} : { courseId: input.courseId },
+      ...input.activityId === void 0 ? {} : { activityId: input.activityId },
+      ...input.activityRevision === void 0 ? {} : { activityRevision: input.activityRevision },
+      language: input.language,
+      ...input.dialect === void 0 ? {} : { dialect: input.dialect },
+      code: input.code,
+      ...input.stdin === void 0 ? {} : { stdin: input.stdin },
+      ...checks.length === 0 ? {} : { checks },
+      ...input.timeoutMs === void 0 ? {} : { timeoutMs: input.timeoutMs }
+    });
+    await services.state.writeJson(runFile(services.state.dataDir, run2.id), run2);
+    return run2;
+  }
   const run = await services.experiments.run({
     ...input.sessionId === void 0 ? {} : { sessionId: input.sessionId },
     ...input.courseId === void 0 ? {} : { courseId: input.courseId },
@@ -59722,8 +62057,8 @@ var inject = ["connection", "llm", "agentDefaultModel"];
 function resolveDataDir(config) {
   const overridden = typeof config.dataDir === "string" && config.dataDir.trim() !== "" ? config.dataDir.trim() : void 0;
   if (overridden !== void 0) return overridden;
-  const home = process.env.DSH_HOME?.trim() || join12(homedir(), ".dsh");
-  return join12(home, "teaching");
+  const home = process.env.DSH_HOME?.trim() || join15(homedir(), ".dsh");
+  return join15(home, "teaching");
 }
 function apply(ctx, config = {}) {
   const dataDir = resolveDataDir(config);
@@ -59739,6 +62074,7 @@ function apply(ctx, config = {}) {
   const web = createWebBridge(ctx);
   const teaching = createTeachingService({ maxTokens: 12e3 });
   const experiments = createRunnerRegistry({ dataDir });
+  const environments2 = createEnvironmentManager({ dataDir, runners: experiments, logger: (event, details) => logger(event, details) });
   const usageBySession = /* @__PURE__ */ new Map();
   const model = new HarnessModelAdapter(ctx, {
     routingSessionId: "session-teaching-plugin",
@@ -59807,6 +62143,7 @@ function apply(ctx, config = {}) {
     corpus,
     teaching,
     experiments,
+    environments: environments2,
     portability,
     createLearningFor,
     takeUsage,
@@ -59825,12 +62162,16 @@ function apply(ctx, config = {}) {
     },
     ready
   });
+  ready.then(() => environments2.cleanupStale()).catch((cause) => {
+    logger("environment cleanup failed", { message: cause instanceof Error ? cause.message : String(cause) });
+  });
   ready.then(() => experiments.cleanupStale()).catch((cause) => {
     logger("experiment cleanup failed", { message: cause instanceof Error ? cause.message : String(cause) });
   });
   ctx.effect(() => () => {
     void tasks.dispose();
     void experiments.dispose();
+    void environments2.dispose();
     logger("disposed");
   }, "ai-teaching: lifetime");
 }

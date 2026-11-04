@@ -5,7 +5,7 @@
  */
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import type { EnvironmentApproval } from '../../src/environments/index.ts'
@@ -46,6 +46,7 @@ test('without approval only a needs-approval record is produced and nothing is e
     },
   })
   assert.equal(executorCalls.length, 0)
+  await rm(binDir, { recursive: true, force: true })
 })
 
 test('approval invokes the injected executor once, then probe → prepare → smoke succeeds', async () => {
@@ -89,6 +90,7 @@ test('approval invokes the injected executor once, then probe → prepare → sm
     },
   })
   assert.equal(executorCalls.length, 1)
+  await rm(binDir, { recursive: true, force: true })
 })
 
 test('a failing approved executor is recorded as a system-change failure without a fake environment', async () => {
@@ -113,6 +115,7 @@ test('a failing approved executor is recorded as a system-change failure without
     executables: { 't06-approve-fail': join(binDir, 't06-approve-fail-bin') },
     systemChangeExecutor: async () => ({ ok: false, message: '模拟安装失败' }),
   })
+  await rm(binDir, { recursive: true, force: true })
 })
 
 test('network dependency installs are never executed even when approval is requested', async () => {
@@ -155,4 +158,5 @@ test('approval without an injected executor never executes anything', async () =
     installPlans: [plan],
     executables: { 't06-noexec': wrapper },
   })
+  await rm(binDir, { recursive: true, force: true })
 })

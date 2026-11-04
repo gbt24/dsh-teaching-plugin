@@ -21,6 +21,7 @@ import { createTeachingService } from '@deepseek-teaching/core/teaching'
 import { createLearningService, createModelRubricAssessor, rubricFromActivityPayload } from '@deepseek-teaching/core/learning'
 import { createRunnerRegistry } from '@deepseek-teaching/core/experiments'
 import { createPortabilityService } from '@deepseek-teaching/core/portability'
+import { createEnvironmentManager } from '@deepseek-teaching/core/environments'
 import { registerRoutes } from '../../src/host/routes.ts'
 import type { RouteServices } from '../../src/host/routes.ts'
 import { TaskManager } from '../../src/host/tasks.ts'
@@ -124,6 +125,7 @@ async function createHarness(replies: ConstructorParameters<typeof ScriptedModel
   const corpus = createCorpusService({ state, courses, learning, model })
   const teaching = createTeachingService()
   const experiments = createRunnerRegistry({ dataDir: dir })
+  const environments = createEnvironmentManager({ dataDir: dir, runners: experiments })
   const portability = createPortabilityService({
     state,
     courses,
@@ -162,6 +164,7 @@ async function createHarness(replies: ConstructorParameters<typeof ScriptedModel
     corpus: corpus as never,
     teaching,
     experiments,
+    environments,
     portability,
     createLearningFor: createLearningFor as never,
     takeUsage: () => undefined,

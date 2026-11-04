@@ -27,6 +27,7 @@ import type { ModelClient } from '@deepseek-teaching/core'
 import { validationFromRun } from '@deepseek-teaching/core/experiments'
 import type { RunnerRegistry } from '@deepseek-teaching/core/experiments'
 import type { PortabilityService } from '@deepseek-teaching/core'
+import type { EnvironmentManager } from '@deepseek-teaching/core/environments'
 import { detectRequestedForm } from '@deepseek-teaching/core/teaching'
 import type { TaskManager } from './tasks.ts'
 import type { WebBridge } from './web.ts'
@@ -58,6 +59,7 @@ export interface RouteServices {
   readonly corpus: CorpusServiceApi
   readonly teaching: TeachingService
   readonly experiments: RunnerRegistry
+  readonly environments: EnvironmentManager
   readonly portability: PortabilityService
   /** Build a learning service bound to the activity an attempt answers. */
   readonly createLearningFor: (activity?: LessonActivity) => LearningService
@@ -420,6 +422,15 @@ export function registerRoutes(services: RouteServices): void {
     if (course === undefined) throw notFoundError('课程')
     const profile = await services.profiles.get()
     const active = await services.courses.getActiveRevision(course)
+    // New courses have only a draft revision: its goals/background are the
+    // student input that the draft prompt must receive.
+    const draftRevision = course.draftRevisionId === undefined
+      ? undefined
+      : await services.courses.getRevision(course.id, course.draftRevisionId)
+    const goalSource = active?.goals ?? draftRevision?.goals
+    const goalText = goalSource !== undefined && goalSource.length > 0
+      ? goalSource.join('；')
+      : (course.description !== '' ? course.description : `系统学习《${course.title}》`)
     const handle = services.tasks.start({
       kind: 'course-draft',
       label: '分析资料并生成课程草案',
@@ -436,8 +447,10 @@ export function registerRoutes(services: RouteServices): void {
       const proposed = await services.corpus.proposeCourseStructure({
         courseId: course.id,
         courseTitle: course.title,
-        goal: active?.goals.join('；') ?? course.description,
-        ...(active?.background === undefined ? {} : { background: active.background }),
+        goal: goalText,
+        ...((active?.background ?? draftRevision?.background) === undefined
+          ? {}
+          : { background: (active?.background ?? draftRevision?.background) as string }),
         language: profile.language,
         ...(input.instruction === undefined ? {} : { instruction: input.instruction }),
       }, context.signal)
@@ -1104,36 +1117,53 @@ export function registerRoutes(services: RouteServices): void {
     return envelope({ profile: await services.profiles.patch(input.patch) })
   })
 
-  route('environments.list', async () => envelope(await services.experiments.directory()))
+  route('environments.list', async () => envelope(await services.environments.directory()))
 
   route('environments.prepare', async ({ body }) => {
     const input = body as ApiRequests['environments.prepare']['body']
-    if (typeof input?.language !== 'string') throw appError('invalid-input', '缺少语言')
+    if (typeof input?.language !== 'string' || input.language.trim() === '') {
+      throw appError('invalid-input', '缺少语言')
+    }
     const handle = services.tasks.start({
       kind: 'environment-prepare',
       label: `准备 ${input.language} 运行环境`,
       steps: [
         { id: 'probe', label: '探测已有运行时' },
+        { id: 'approval', label: '系统改动确认（如需）' },
         { id: 'prepare', label: '准备独立环境' },
-        { id: 'verify', label: '冒烟验证' },
+        { id: 'smoke', label: '冒烟验证' },
       ],
     }, async context => {
-      context.step('probe', { status: 'running' })
-      const environment = await services.experiments.prepare({
+      const phaseToStep: Record<string, string> = {
+        probe: 'probe', approval: 'approval', prepare: 'prepare', smoke: 'smoke', done: 'smoke',
+      }
+      const result = await services.environments.prepare({
         language: input.language,
         ...(input.dialect === undefined ? {} : { dialect: input.dialect }),
         ...(input.courseId === undefined ? {} : { courseId: input.courseId as never }),
+      }, {
+        signal: context.signal,
+        ...(input.approveSystemChange === undefined ? {} : { approveSystemChange: input.approveSystemChange }),
+        onProgress: event => {
+          const stepId = phaseToStep[event.phase]
+          if (stepId !== undefined) {
+            context.step(stepId, {
+              status: event.phase === 'done' ? 'done' : 'running',
+              ...(event.detail === undefined ? {} : { detail: event.detail }),
+            })
+          }
+        },
       })
-      context.step('probe', { status: environment.status === 'failed' ? 'failed' : 'done', detail: environment.version })
-      context.step('prepare', { status: environment.status === 'failed' ? 'failed' : 'done' })
-      context.step('verify', { status: environment.status === 'ready' ? 'done' : 'skipped' })
-      context.result({ environmentId: environment.id, status: environment.status })
-      return { environment }
+      if (!result.ok) throw appError(result.error.code, result.error.message, result.error.details)
+      const record = result.value
+      context.step('smoke', {
+        status: record.status === 'ready' ? 'done' : (record.status === 'failed' ? 'failed' : 'done'),
+        ...(record.version === undefined ? {} : { detail: record.version }),
+      })
+      context.result({ environmentId: record.id, status: record.status, version: record.version })
+      return { environmentId: record.id }
     })
-    return envelope({ task: handle, environment: await services.experiments.prepare({
-      language: input.language,
-      ...(input.dialect === undefined ? {} : { dialect: input.dialect }),
-    }) })
+    return envelope({ task: handle })
   })
 
   route('tasks.get', async ({ query }) => {
@@ -1349,6 +1379,25 @@ async function runExperiment(
     if (check.type !== 'stdout-contains' && check.type !== 'stdout-equals' && check.type !== 'exit-code') return []
     return [{ name: check.name, type: check.type, value: check.value }]
   })
+  const builtin = ['python', 'javascript', 'scheme'].includes(input.language)
+  if (!builtin) {
+    // Extended languages (ruby/lua/deno/...) are prepared and executed by the
+    // environment manager; it records the same ExperimentRun shape.
+    const run = await services.environments.run({
+      ...(input.sessionId === undefined ? {} : { sessionId: input.sessionId as never }),
+      ...(input.courseId === undefined ? {} : { courseId: input.courseId as never }),
+      ...(input.activityId === undefined ? {} : { activityId: input.activityId as never }),
+      ...(input.activityRevision === undefined ? {} : { activityRevision: input.activityRevision }),
+      language: input.language,
+      ...(input.dialect === undefined ? {} : { dialect: input.dialect }),
+      code: input.code,
+      ...(input.stdin === undefined ? {} : { stdin: input.stdin }),
+      ...(checks.length === 0 ? {} : { checks }),
+      ...(input.timeoutMs === undefined ? {} : { timeoutMs: input.timeoutMs }),
+    } as import('@deepseek-teaching/core').RunRequest)
+    await services.state.writeJson(runFile(services.state.dataDir, run.id), run)
+    return run
+  }
   const run = await services.experiments.run({
     ...(input.sessionId === undefined ? {} : { sessionId: input.sessionId as never }),
     ...(input.courseId === undefined ? {} : { courseId: input.courseId as never }),

@@ -588,8 +588,11 @@ class Manager implements EnvironmentManager {
     const dialect = normalizeDialect(request.dialect)
     const dependencies = normalizeDependencies(request.dependencies)
     const timeoutMs = clamp(request.timeoutMs ?? this.defaultTimeoutMs, MIN_TIMEOUT_MS, MAX_TIMEOUT_MS)
+    // Venv mode is a distinct isolation fact: do not reuse a system record for it.
     const existing = this.findReadyRecord(language, dialect)
-    if (existing !== undefined) return ok(existing)
+    const modeSatisfied = existing !== undefined
+      && (request.mode !== 'venv' || existing.kind === 'virtualenv')
+    if (existing !== undefined && modeSatisfied) return ok(existing)
     const id = newEnvironmentId()
     const controller = new AbortController()
     const externalAbort = (): void => controller.abort()
@@ -1237,7 +1240,7 @@ class Manager implements EnvironmentManager {
       return toRunRecord(state)
     }
     await this.store.ensureLayout()
-    const runDir = await mkdtemp(join(this.store.tmpRoot, 'run-'))
+    const runDir = await mkdtemp(join(this.store.tmpRoot, `run-${state.id}-`))
     let outcome: Awaited<ReturnType<typeof runProcess>> | undefined
     let cleanupNote: string | undefined
     try {
@@ -1485,10 +1488,10 @@ class Manager implements EnvironmentManager {
     if (!this.isInsideManagedRoot(path)) {
       return {
         environmentId,
-        status: 'failed',
+        status: 'not-needed',
         removedPaths: [],
-        failedPaths: [path],
-        message: `拒绝清理非插件管理目录：${path}`,
+        failedPaths: [],
+        message: `该目录由内置运行器管理（不属于 T06 独立环境目录），本管理器不做删除：${path}`,
         record,
       }
     }
@@ -1577,6 +1580,7 @@ class Manager implements EnvironmentManager {
     let changed = false
     for (const record of [...this.records.values()]) {
       if (record.status !== 'preparing') continue
+      if (this.preparing.has(record.id)) continue
       const path = record.isolation.path
       const cleaned = path !== undefined && this.isInsideManagedRoot(path)
         ? await this.cleanupDirectory(path)

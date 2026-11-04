@@ -131,6 +131,19 @@ test('builtin Python environment facts and cleanup semantics stay separate', { t
     const cleanup = await manager.cleanup(record.id)
     assert.equal(cleanup.status, 'not-needed')
     assert.match(cleanup.message, /系统运行时/u)
+
+    // Independent Python configuration: an isolated virtualenv prepared by the
+    // builtin runner is a different isolation fact; T06 does not delete it.
+    const venv = await manager.prepare({ language: 'python', mode: 'venv' })
+    assert.equal(venv.ok, true)
+    if (venv.ok && venv.value.status === 'ready') {
+      assert.equal(venv.value.kind, 'virtualenv')
+      assert.equal(venv.value.isolation.dependencies, 'isolated')
+      assert.ok((venv.value.isolation.path ?? '').length > 0)
+      const venvCleanup = await manager.cleanup(venv.value.id)
+      assert.equal(venvCleanup.status, 'not-needed')
+      assert.match(venvCleanup.message, /内置运行器管理/u)
+    }
   })
 })
 

@@ -325,7 +325,7 @@ export interface ApiResponses {
   'profile.get': { readonly profile: StudentProfile }
   'profile.set': { readonly profile: StudentProfile }
   'environments.list': EnvironmentDirectory
-  'environments.prepare': { readonly task: TaskHandle; readonly environment: EnvironmentRecord }
+  'environments.prepare': { readonly task: TaskHandle; readonly environment?: EnvironmentRecord }
   'experiments.run': { readonly run: ExperimentRun }
   'experiments.cancel': { readonly run: ExperimentRun }
   'tasks.get': { readonly task: TaskSnapshot }

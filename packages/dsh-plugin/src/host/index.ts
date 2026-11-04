@@ -20,6 +20,7 @@ import { createTeachingService } from '@deepseek-teaching/core/teaching'
 import { createLearningService, createModelRubricAssessor, rubricFromActivityPayload } from '@deepseek-teaching/core/learning'
 import { createRunnerRegistry } from '@deepseek-teaching/core/experiments'
 import { createPortabilityService } from '@deepseek-teaching/core/portability'
+import { createEnvironmentManager } from '@deepseek-teaching/core/environments'
 import type { LearningService } from '@deepseek-teaching/core'
 import type { LessonActivity } from '@deepseek-teaching/core'
 import { HarnessModelAdapter } from './model-adapter.ts'
@@ -83,6 +84,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
   // Teaching turns are long-form: give the model room for reasoning + text.
   const teaching = createTeachingService({ maxTokens: 12000 })
   const experiments = createRunnerRegistry({ dataDir })
+  const environments = createEnvironmentManager({ dataDir, runners: experiments, logger: (event, details) => logger(event, details) })
   const usageBySession = new Map<string, import('@deepseek-teaching/core').UsageEntry>()
   const model = new HarnessModelAdapter(ctx, {
     routingSessionId: 'session-teaching-plugin',
@@ -164,6 +166,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
     corpus,
     teaching,
     experiments,
+    environments,
     portability,
     createLearningFor,
     takeUsage,
@@ -183,6 +186,10 @@ export function apply(ctx: HostContext, config: Config = {}): void {
     ready,
   })
 
+  ready.then(() => environments.cleanupStale()).catch(cause => {
+    logger('environment cleanup failed', { message: cause instanceof Error ? cause.message : String(cause) })
+  })
+
   ready.then(() => experiments.cleanupStale()).catch(cause => {
     logger('experiment cleanup failed', { message: cause instanceof Error ? cause.message : String(cause) })
   })
@@ -190,6 +197,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
   ctx.effect(() => () => {
     void tasks.dispose()
     void experiments.dispose()
+    void environments.dispose()
     logger('disposed')
   }, 'ai-teaching: lifetime')
 }
