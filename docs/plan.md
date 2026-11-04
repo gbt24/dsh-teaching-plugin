@@ -30,7 +30,7 @@ flowchart LR
 | 阶段 | 状态 | 证据 |
 | --- | --- | --- |
 | P0 / T00 | 部分通过：bundled runtime 关键通路通过；Electron 进程内装载与 desktop profile 安装待做 | `docs/evidence/T00.md` |
-| P1 / T01 | 未开始 | — |
+| P1 / T01 | Host/契约/存储/自动化通过；页面 UI 与 T05 合并验收 | `docs/evidence/T01.md` |
 
 ## 阶段与退出条件
 
