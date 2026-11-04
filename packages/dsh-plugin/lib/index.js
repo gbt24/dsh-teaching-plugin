@@ -623,10 +623,15 @@ function extractJson(text) {
 var DEFAULT_TIMEOUT_MS = 18e4;
 var MAX_ATTEMPTS = 2;
 function toGenerateOptions(request, selection, routingSessionId) {
-  const messages = request.messages.map((message) => ({
+  const messages = request.messages.map((message, index) => message.role === "assistant" ? {
+    id: `teaching-assistant-${index}`,
+    role: "assistant",
+    content: [{ type: "text", text: message.text }],
+    source: { kind: "model", provider: selection.provider, model: selection.model }
+  } : {
     role: message.role,
     content: [{ type: "text", text: message.text }]
-  }));
+  });
   const options = {
     provider: selection.provider,
     model: selection.model,
@@ -818,6 +823,49 @@ var HarnessModelAdapter = class {
 };
 function numberOrUndefined(value) {
   return typeof value === "number" && Number.isFinite(value) ? value : void 0;
+}
+
+// packages/dsh-plugin/src/host/web.ts
+function createWebBridge(ctx) {
+  return {
+    available: () => ctx.get("web") !== void 0,
+    async search(query, options) {
+      const service = ctx.get("web");
+      if (service === void 0) {
+        return fail("capability-missing", "\u5F53\u524D Harness \u914D\u7F6E\u6CA1\u6709\u542F\u7528\u8054\u7F51\u80FD\u529B\uFF0C\u65E0\u6CD5\u67E5\u8BC1\u5916\u90E8\u8D44\u6599");
+      }
+      const trimmed = query.trim();
+      if (trimmed === "") return fail("invalid-input", "\u8054\u7F51\u67E5\u8BE2\u5185\u5BB9\u4E3A\u7A7A");
+      try {
+        const result = await service.search({ query: trimmed, maxResults: options?.maxResults ?? 5 }, options?.signal);
+        const sources = result.sources.filter((source) => typeof source.url === "string" && source.url.length > 0).slice(0, options?.maxResults ?? 5).map((source) => ({
+          title: source.title ?? new URL(source.url).hostname,
+          url: source.url,
+          snippet: (source.snippet ?? "").slice(0, 600)
+        }));
+        return { ok: true, value: sources };
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : String(cause);
+        const code = typeof cause === "object" && cause !== null && typeof cause.code === "string" ? String(cause.code) : "";
+        if (/cancel|abort/i.test(message) || /CANCEL|ABORT/i.test(code)) {
+          return fail("cancelled", "\u8054\u7F51\u67E5\u8BE2\u5DF2\u53D6\u6D88");
+        }
+        if (/unavailable|no provider|not configured/i.test(message) || /UNAVAILABLE|MISSING/i.test(code)) {
+          return fail("capability-missing", "\u8054\u7F51\u80FD\u529B\u4E0D\u53EF\u7528\uFF1A\u6CA1\u6709\u53EF\u7528\u7684\u641C\u7D22\u63D0\u4F9B\u65B9");
+        }
+        return fail("network", "\u8054\u7F51\u67E5\u8BE2\u5931\u8D25\uFF0C\u672C\u5730\u8D44\u6599\u5185\u5BB9\u4E0D\u53D7\u5F71\u54CD", { message: message.slice(0, 300) });
+      }
+    }
+  };
+}
+function fail(code, message, details) {
+  return { ok: false, error: { code, message, ...details === void 0 ? {} : { details } } };
+}
+function wantsWebLookup(text) {
+  return /联网|上网|网上|搜索一下|查一下|查证|核实|最新(的)?(资料|进展|消息)|外部资料|网页|official docs|search the web|look up online/i.test(text);
+}
+function toSearchQuery(text) {
+  return text.replace(/请?你?(帮我)?(联网|上网|搜索一下|查一下|查证|核实|在网上找|帮我找)/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
 }
 
 // packages/dsh-plugin/src/host/minimal.ts
@@ -1159,6 +1207,11 @@ function buildTeachingMessages(input) {
     `\u4F4D\u7F6E: ${JSON.stringify(item.anchor.locator)}`,
     `\u539F\u6587: ${item.anchor.excerpt}`
   ].join("\n")).join("\n\n");
+  const webBlock = (input.webResults ?? []).length === 0 ? "" : [
+    "\u5916\u90E8\u7F51\u9875\u67E5\u8BC1\u7ED3\u679C\uFF08\u5FC5\u987B\u6807\u6CE8\u4E3A\u201C\u5916\u90E8\u8D44\u6599\u201D\uFF0C\u5E76\u4E0E\u672C\u5730\u8D44\u6599\u533A\u5206\uFF09\uFF1A",
+    ...(input.webResults ?? []).map((item, index) => `[\u5916\u90E8${index + 1}] ${item.title} \u2014 ${item.url}
+\u6458\u8981: ${item.snippet}`)
+  ].join("\n");
   const messages = [];
   for (const message of input.history.slice(-10)) {
     if (message.role === "student") messages.push({ role: "user", text: message.text });
@@ -1173,6 +1226,7 @@ function buildTeachingMessages(input) {
       "",
       "\u53EF\u7528\u8BFE\u7A0B\u8D44\u6599\u7247\u6BB5\uFF1A",
       materialBlock,
+      ...webBlock === "" ? [] : ["", webBlock],
       "",
       `\u5B66\u751F\u7684\u95EE\u9898/\u56DE\u7B54\uFF1A${input.studentText}`
     ].filter((line) => line !== "").join("\n")
@@ -1607,7 +1661,7 @@ function registerRoutes(services) {
       language: profile.language,
       features: {
         imageOcr: false,
-        webSearch: false,
+        webSearch: services.web.available(),
         experiments: true,
         offlineExport: false
       },
@@ -2012,6 +2066,25 @@ function registerRoutes(services) {
           const hits = await services.corpus.search(input.text, [course.id], 6);
           const material = hits.map((hit) => ({ anchor: hit.anchor, documentTitle: hit.anchor.label.split(" \xB7 ")[0] ?? hit.anchor.label }));
           const evidenceRefs = hits.map(hitToEvidence);
+          let webResults = [];
+          let webNote;
+          if (wantsWebLookup(input.text)) {
+            if (!services.web.available()) {
+              webNote = "\u672C\u8F6E\u8BF7\u6C42\u6D89\u53CA\u8054\u7F51\u67E5\u8BC1\uFF0C\u4F46\u5F53\u524D Harness \u914D\u7F6E\u6CA1\u6709\u53EF\u7528\u7684\u8054\u7F51\u80FD\u529B\uFF1B\u4EE5\u4E0B\u56DE\u7B54\u4EC5\u57FA\u4E8E\u672C\u5730\u8D44\u6599\u4E0E\u6A21\u578B\u77E5\u8BC6\u3002";
+            } else {
+              send({ type: "progress", label: "\u8054\u7F51\u67E5\u8BC1\uFF08\u6309\u9700\uFF09" });
+              const searched = await services.web.search(toSearchQuery(input.text), { maxResults: 4, signal: controller.signal });
+              if (searched.ok) {
+                webResults = [...searched.value];
+                for (const hit of searched.value) {
+                  evidenceRefs.push({ kind: "external-web", label: hit.title, url: hit.url, note: hit.snippet.slice(0, 240) });
+                }
+                if (searched.value.length === 0) webNote = "\u8054\u7F51\u67E5\u8BE2\u6CA1\u6709\u8FD4\u56DE\u53EF\u7528\u6765\u6E90\uFF0C\u56DE\u7B54\u672A\u5F15\u7528\u5916\u90E8\u8D44\u6599\u3002";
+              } else {
+                webNote = `\u8054\u7F51\u67E5\u8BC1\u672A\u5B8C\u6210\uFF08${searched.error.code}\uFF09\uFF1A${searched.error.message}`;
+              }
+            }
+          }
           if (hits.length === 0) {
             evidenceRefs.push({ kind: "model-knowledge", label: "\u6A21\u578B\u8865\u5145", note: "\u672C\u8F6E\u672A\u5728\u672C\u5730\u8D44\u6599\u4E2D\u68C0\u7D22\u5230\u76F8\u5173\u7247\u6BB5" });
           }
@@ -2023,6 +2096,7 @@ function registerRoutes(services) {
             profile,
             history,
             material,
+            webResults,
             studentText: input.text.trim(),
             currentConceptTitle: currentConcept?.title
           });
@@ -2091,7 +2165,8 @@ function registerRoutes(services) {
           }
           const uncertainty = [
             ...(parsed.meta?.uncertainty ?? []).filter((item) => typeof item === "string"),
-            ...limitations
+            ...limitations,
+            ...webNote === void 0 ? [] : [webNote]
           ];
           const teacher = teacherMessage({
             sessionId: session.id,
@@ -2748,12 +2823,13 @@ function notFoundError(what) {
 
 // packages/dsh-plugin/src/host/tasks.ts
 var TaskManager = class {
+  active = /* @__PURE__ */ new Map();
+  logger;
+  state;
   constructor(state, logger) {
     this.state = state;
     this.logger = logger ?? (() => void 0);
   }
-  active = /* @__PURE__ */ new Map();
-  logger;
   /** Mark tasks left running by a previous Host process as interrupted. */
   async recoverInterrupted() {
     const files = (await this.state.list("tasks")).filter((name2) => name2.endsWith(".json"));
@@ -2954,6 +3030,7 @@ function apply(ctx, config = {}) {
   const learning = new LearningRepository(state);
   const tasks = new TaskManager(state, logger);
   const corpus = new MinimalCorpus(state);
+  const web = createWebBridge(ctx);
   const model = new HarnessModelAdapter(ctx, {
     routingSessionId: "session-teaching-plugin",
     onUsage: (entry) => {
@@ -2975,6 +3052,7 @@ function apply(ctx, config = {}) {
     ctx,
     state,
     model,
+    web,
     tasks,
     corpus,
     profiles,

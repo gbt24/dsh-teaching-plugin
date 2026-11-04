@@ -23,8 +23,10 @@ export function isCjkChar(char: string): boolean {
 }
 
 const CJK_RUN = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]+/g
-const ASCII_WORD = /[a-z0-9]+(?:[._'-][a-z0-9]+)*/g
-const MATH_SYMBOLS = /[+\-*/^_=<>≤≥≠≈→←↔∂∇√∫∑∏∞∈∉⊂⊆∪∩]+/g
+// '-' 作为分隔符处理（避免连字符/列表符号产生噪声 token）；'.' '_' 保留在标识符内
+const ASCII_WORD = /[a-z0-9]+(?:[._'][a-z0-9]+)*/g
+// 只把真正的公式符号编入索引；单独的 '-' 不索引，避免匹配所有列表/连字符文本
+const MATH_SYMBOLS = /[+*/^=<>≤≥≠≈→←↔∂∇√∫∑∏∞∈∉⊂⊆∪∩]+/g
 
 /** 极简英文词干化：只处理高频屈折后缀，保证同词根命中（不追求语言学正确）。 */
 export function stemEnglish(word: string): string {
@@ -128,8 +130,8 @@ export function excerptAround(text: string, terms: readonly string[], max = 240)
   return `${start > 0 ? '…' : ''}${body}${start + keep < clean.length ? '…' : ''}`
 }
 
-const STRONG_MATH_CHARS = /[=^_∫∑√≤≥≠≈∞∂∇→←↔πλθαβγδσφωμ×÷±∈∉⊂⊆∪∩]/g
-const STRONG_MATH_CHARS_ONLY = /[=^_∫∑√≤≥≠≈∞∂∇→←↔πλθαβγδσφωμ×÷±∈∉⊂⊆∪∩]/
+const STRONG_MATH_CHARS = /[=^∫∑√≤≥≠≈∞∂∇→←↔πλθαβγδσφωμ×÷±∈∉⊂⊆∪∩]/g
+const STRONG_MATH_CHARS_ONLY = /[=^∫∑√≤≥≠≈∞∂∇→←↔πλθαβγδσφωμ×÷±∈∉⊂⊆∪∩]/
 const TEX_COMMAND = /\\(?:frac|lim|sum|int|sqrt|alpha|beta|theta|lambda|mu|pi|sigma|phi|omega|cdot|times|div|leq|geq|neq|approx|infty|partial|nabla|rightarrow|leftarrow|leftrightarrow|forall|exists|in|notin|subset|subseteq|cup|cap|left|right)\b/
 
 /** 判断一段文本是否更像公式而不是自然语言句子（保守启发式）。 */

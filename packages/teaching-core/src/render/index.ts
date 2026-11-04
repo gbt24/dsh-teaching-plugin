@@ -30,7 +30,8 @@ export type {
   AnswerTaskHandle, AnswerTaskMountOptions, ContentHandle, TaskMountOptions,
 } from './tasks.ts'
 export {
-  appendInlineTokens, parseInlineMarkdown, parseMarkdown, renderInlineMarkdown, renderMarkdown,
+  appendInlineTokens, appendMarkdownBlocks, parseInlineMarkdown, parseMarkdown,
+  renderInlineMarkdown, renderMarkdown,
 } from './markdown.ts'
 export type { MarkdownBlock, MarkdownInline } from './markdown.ts'
 export { compileExpression, evaluateExpression, ExpressionError, isValidExpression } from './expr.ts'

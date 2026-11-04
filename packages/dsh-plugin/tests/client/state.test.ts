@@ -1,0 +1,167 @@
+/**
+ * Workspace reducer tests: streaming lifecycle, activity persistence, session
+ * restore, progress derivation and error/cancel semantics.
+ */
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
+import type {
+  ActivityState, ChatMessage, ChatStreamEvent, CourseDetail, LessonActivity, SessionView,
+} from '@deepseek-teaching/core/contracts'
+import {
+  INITIAL_WORKSPACE_STATE, applyChatStreamEvent, appendMessage, computeCourseProgress,
+  latestActivity, mergeEvidence, selectedActivity, sortedReview, upsertActivity, workspaceReducer,
+  type WorkspaceState,
+} from '../../src/client/state.ts'
+
+const NOW = '2026-11-04T08:00:00.000Z'
+
+function message(id: string, role: ChatMessage['role'], text: string): ChatMessage {
+  return {
+    id: id as never, sessionId: 'sess-1' as never, role,
+    kind: role === 'student' ? 'student-question' : 'teacher-explanation', text, createdAt: NOW,
+  }
+}
+
+function activity(id: string, revision: number, updatedAt = NOW): LessonActivity {
+  return {
+    id: id as never, kind: 'explanation', sessionId: 'sess-1' as never, courseId: 'course-1' as never,
+    conceptIds: [], goal: 'g', title: `活动 ${id}`, createdAt: NOW, updatedAt,
+    revision, status: 'active', sourceRefs: [], verification: { kind: 'none' },
+    payload: { type: 'explanation', markdown: '**x**' },
+  }
+}
+
+test('streaming lifecycle: start → progress → delta → done', () => {
+  let state: WorkspaceState = { ...INITIAL_WORKSPACE_STATE, phase: 'ready' }
+  const events: ChatStreamEvent[] = [
+    { type: 'start', studentMessage: message('msg-1', 'student', '问题') },
+    { type: 'progress', label: '检索资料' },
+    { type: 'delta', text: '第一段' },
+    { type: 'delta', text: '第二段' },
+    { type: 'done', message: message('msg-2', 'teacher', '第一段第二段') },
+  ]
+  for (const event of events) state = applyChatStreamEvent(state, event)
+  assert.deepEqual(state.messages.map(item => item.id), ['msg-1', 'msg-2'])
+  assert.equal(state.chat.status, 'idle')
+  assert.equal(state.chat.text, '')
+  // progress is transient: it is shown while streaming and cleared on done.
+  assert.equal(state.chat.progressLabel, undefined)
+})
+
+test('a streamed activity becomes the selected persistent activity', () => {
+  let state: WorkspaceState = { ...INITIAL_WORKSPACE_STATE, phase: 'ready' }
+  state = applyChatStreamEvent(state, { type: 'activity', activity: activity('act-1', 1) })
+  assert.equal(state.activities.length, 1)
+  assert.equal(state.selectedActivityId, 'act-1')
+  assert.equal(state.selectedTab, 'activity')
+  // A later revision replaces instead of duplicating.
+  state = applyChatStreamEvent(state, { type: 'activity', activity: activity('act-1', 2, '2026-11-04T08:00:01.000Z') })
+  assert.equal(state.activities.length, 1)
+  assert.equal(selectedActivity(state)?.revision, 2)
+})
+
+test('error keeps the partial text and exposes the AppError', () => {
+  let state: WorkspaceState = { ...INITIAL_WORKSPACE_STATE, phase: 'ready' }
+  state = applyChatStreamEvent(state, { type: 'start', studentMessage: message('msg-1', 'student', '问') })
+  state = applyChatStreamEvent(state, { type: 'delta', text: '部分回答' })
+  state = applyChatStreamEvent(state, { type: 'error', error: { code: 'network', message: '断网', retryable: true } })
+  assert.equal(state.chat.status, 'idle')
+  assert.equal(state.chat.text, '部分回答')
+  assert.equal(state.chat.error?.code, 'network')
+  // Starting a new turn clears the stale partial text.
+  state = applyChatStreamEvent(state, { type: 'start', studentMessage: message('msg-3', 'student', '再问') })
+  assert.equal(state.chat.text, '')
+  assert.equal(state.chat.error, undefined)
+})
+
+test('evidence accumulates without duplicates', () => {
+  const ref = { kind: 'course-source' as const, label: 'SICP.pdf · 第 1 章' }
+  const merged = mergeEvidence([ref], [ref, { kind: 'model-knowledge' as const, label: '模型补充' }])
+  assert.equal(merged.length, 2)
+})
+
+test('messages are appended once by id', () => {
+  const existing = [message('msg-1', 'student', '问')]
+  assert.equal(appendMessage(existing, message('msg-1', 'student', '问')).length, 1)
+  assert.equal(appendMessage(existing, message('msg-2', 'teacher', '答')).length, 2)
+})
+
+test('session load restores messages, activities, state and learning data', () => {
+  const state = workspaceReducer(INITIAL_WORKSPACE_STATE, {
+    type: 'session/loaded',
+    session: {
+      session: {
+        id: 'sess-1' as never, courseId: 'course-1' as never, courseRevisionId: 'crev-1' as never,
+        title: '会话', createdAt: NOW, updatedAt: NOW, status: 'active',
+        position: { stage: 'teaching', activityId: 'act-1' as never, updatedAt: NOW },
+        messageIds: [], coveredConceptIds: ['concept-1' as never],
+      },
+      messages: [message('msg-1', 'student', '问')],
+      activities: [activity('act-1', 1), activity('act-2', 1, '2026-11-04T07:00:00.000Z')],
+      states: [{
+        activityId: 'act-1' as never, activityRevision: 1, params: { a: 2 }, updatedAt: NOW,
+      }],
+      course: {} as never, courseRevision: {} as never,
+      mastery: [], review: [],
+    } satisfies SessionView,
+  })
+  assert.equal(state.messages.length, 1)
+  assert.equal(state.activities.length, 2)
+  assert.equal(state.selectedActivityId, 'act-1') // restored position wins over newest
+  assert.deepEqual(state.activityStates['act-1']?.params, { a: 2 })
+})
+
+test('activity state upsert is keyed by activity id', () => {
+  const activityState: ActivityState = {
+    activityId: 'act-1' as never, activityRevision: 2, code: 'print(1)', updatedAt: NOW,
+  }
+  const state = workspaceReducer(INITIAL_WORKSPACE_STATE, { type: 'activity/state', state: activityState })
+  assert.equal(state.activityStates['act-1']?.code, 'print(1)')
+})
+
+test('cancel transitions streaming → stopping', () => {
+  let state: WorkspaceState = { ...INITIAL_WORKSPACE_STATE, phase: 'ready', chat: { status: 'streaming', text: '', evidence: [] } }
+  state = workspaceReducer(state, { type: 'chat/cancel-requested' })
+  assert.equal(state.chat.status, 'stopping')
+  state = workspaceReducer(state, { type: 'chat/stream-event', event: { type: 'error', error: { code: 'cancelled', message: '已停止生成' } } })
+  assert.equal(state.chat.status, 'idle')
+})
+
+test('course progress counts covered concepts and is resilient to missing revision', () => {
+  const detail = {
+    course: { id: 'course-1' } as never,
+    revisions: [], sources: [],
+    learning: { courseId: 'course-1', courseRevisionId: 'crev-1', attempts: [], mastery: [], review: [], notes: [], updatedAt: NOW } as never,
+    activeRevision: {
+      id: 'crev-1' as never, courseId: 'course-1' as never, version: 1, createdAt: NOW,
+      state: 'confirmed', provenance: 'ai-draft', goals: [], language: 'zh', sources: [], sequence: [],
+      concepts: [
+        { id: 'c1' as never, title: 'A', summary: '', prerequisites: [], sourceAnchors: [] },
+        { id: 'c2' as never, title: 'B', summary: '', prerequisites: [], sourceAnchors: [] },
+      ],
+      basedOn: [],
+    },
+  } satisfies CourseDetail
+  const session = {
+    session: { coveredConceptIds: ['c1' as never] },
+  } as unknown as SessionView
+  assert.deepEqual(computeCourseProgress({ courseDetail: detail, session, mastery: [] }), { covered: 1, total: 2, percent: 50 })
+  assert.deepEqual(computeCourseProgress({}), { covered: 0, total: 0, percent: 0 })
+})
+
+test('latest activity and sorted review helpers', () => {
+  assert.equal(latestActivity([activity('a', 1, NOW), activity('b', 1, '2026-11-04T09:00:00.000Z')])?.id, 'b')
+  assert.equal(latestActivity([]), undefined)
+  const review = [
+    { conceptId: 'c' as never, courseId: 'course' as never, dueAt: '2026-11-05T00:00:00Z', intervalDays: 2, reason: 'spaced' as const },
+    { conceptId: 'd' as never, courseId: 'course' as never, dueAt: '2026-11-04T00:00:00Z', intervalDays: 1, reason: 'low-mastery' as const },
+  ]
+  assert.deepEqual(sortedReview(review).map(item => item.conceptId), ['d', 'c'])
+})
+
+test('upsertActivity keeps order for updates and appends new activities', () => {
+  const list = [activity('a', 1), activity('b', 1)]
+  const updated = upsertActivity(list, activity('a', 2))
+  assert.deepEqual(updated.map(item => `${item.id}:${item.revision}`), ['a:2', 'b:1'])
+  assert.equal(upsertActivity(list, activity('c', 1)).length, 3)
+})

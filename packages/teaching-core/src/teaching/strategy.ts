@@ -153,15 +153,14 @@ export function detectRequestedForm(text: string | undefined): { form: TeachingF
 /** 从目标、基础、概念与课程信息识别本轮任务形态。 */
 export function detectTaskShape(input: TeachingTurnInput): TaskShape {
   const concept = currentConcept(input)
+  // 只使用“本轮任务”信号：学生原话、形式要求、学习目标、课程/概念标题。
+  // 学生长期基础（如“会一点 Python”）不决定当前任务形态。
   const haystack = [
     input.requestedForm ?? '',
     input.studentText,
     input.profile.goals ?? '',
-    input.profile.background ?? '',
     input.course.title,
-    input.course.description,
     concept?.title ?? '',
-    concept?.summary ?? '',
     ...input.courseRevision.goals,
   ].join('\n')
   for (const entry of SHAPE_PATTERNS) {
@@ -225,6 +224,11 @@ export function planTeachingTurn(input: TeachingTurnInput): TeachingPlan {
   } else {
     form = BASE_FORM[shape]
     formReason = `按任务形态「${shape}」选择「${FORM_LABELS[form]}」。`
+  }
+  // 阅读任务依赖可定位原文；本轮没有检索到资料时改为模型知识讲解并明确标注。
+  if (requested === undefined && input.material.length === 0 && form === 'reading-guided') {
+    form = 'intuition-first'
+    formReason += ' 本轮没有检索到可定位的课程资料，改为先建立直觉的模型知识讲解，并标注资料不足。'
   }
 
   return {
@@ -356,7 +360,7 @@ export function activityCanBeIndependent(
 ): boolean {
   if (input.wantsFullAnswer === true) return false
   if (meta.intent === 'answer') return false
-  return input.stage === 'practice' || input.stage === 'transfer' || input.stage === 'review'
+  return true
 }
 
 /** 轻量规则分类：模型不可用/失败时的兜底，也用于校准模型分类结果。 */
@@ -366,8 +370,13 @@ export function heuristicClassify(input: TeachingTurnInput): TeachingTurnMeta {
     : detectRequestedForm(input.studentText)
   const text = input.studentText
   let intent: NonNullable<TeachingTurnMeta['intent']> = 'explain'
-  if (requested !== undefined) intent = requested.form === 'answer-first' ? 'answer' : 'switch-style'
-  else if (input.wantsFullAnswer === true) intent = 'answer'
+  if (requested !== undefined) {
+    intent = requested.form === 'answer-first'
+      ? 'answer'
+      : requested.form === 'diagnosis'
+        ? 'diagnose'
+        : requested.form === 'review' ? 'review' : 'switch-style'
+  } else if (input.wantsFullAnswer === true) intent = 'answer'
   else if (/诊断|先考考我|先测|diagnos/i.test(text)) intent = 'diagnose'
   else if (/复习|回顾|review/i.test(text)) intent = 'review'
   else if (/练习|出题|考我|做题|practice|quiz me/i.test(text)) intent = 'practice'

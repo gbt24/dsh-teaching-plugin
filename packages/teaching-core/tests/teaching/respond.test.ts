@@ -5,6 +5,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { ScriptedModelClient } from '../../src/model/fake.ts'
+import { conceptId, courseId, courseRevisionId } from '../../src/contracts/ids.ts'
 import type { ScriptedReply } from '../../src/model/fake.ts'
 import { createTeachingService, planTeachingTurn } from '../../src/teaching/index.ts'
 import type { TeachingStreamEvent } from '../../src/contracts/teaching.ts'
@@ -132,6 +133,53 @@ describe('TeachingService.respond 来源与不确定性', () => {
     assert.equal(done.evidenceRefs.some(ref => ref.anchor !== undefined && ref.kind === 'course-source'), false)
   })
 
+  test('跨课程/外部网页/推导证据：类型、来源信息与前提可区分', async () => {
+    const fixture = makeCourseFixture()
+    const model = new ScriptedModelClient([{
+      kind: 'text',
+      text: replyWithMeta('结合另一门课与外部资料，并给出推导。', {
+        intent: 'explain',
+        stage: 'teaching',
+        evidence: {
+          usedMaterialRefs: ['M1'],
+          usedCrossCourseRefs: ['C1'],
+          usedWebRefs: ['W1'],
+          usedModelKnowledge: false,
+          derivations: [{ label: '由定义推出泛化误差上界', premises: ['M1'] }],
+        },
+      }),
+    }])
+    const input = makeTurnInput(fixture, {
+      crossCourse: [{
+        courseId: courseId(),
+        courseTitle: 'SICP',
+        revisionId: courseRevisionId(),
+        conceptIds: [conceptId()],
+        reason: '递归与过程抽象的类比',
+        anchors: [makeCourseFixture().anchor],
+      }],
+      webResults: [{
+        title: 'Generalization and Overfitting',
+        url: 'https://example.org/paper',
+        snippet: 'A short external snippet about generalization error.',
+      }],
+    })
+    const done = doneOf(await collectEvents(createTeachingService().respond(input, model)))
+    const kinds = new Set(done.evidenceRefs.map(ref => ref.kind))
+    assert.ok(kinds.has('course-source'))
+    assert.ok(kinds.has('other-course'))
+    assert.ok(kinds.has('external-web'))
+    assert.ok(kinds.has('derivation'))
+    const cross = done.evidenceRefs.find(ref => ref.kind === 'other-course')
+    assert.equal(cross?.courseTitle, 'SICP')
+    const web = done.evidenceRefs.find(ref => ref.kind === 'external-web')
+    assert.equal(web?.url, 'https://example.org/paper')
+    assert.ok(web?.accessedAt !== undefined)
+    const derivation = done.evidenceRefs.find(ref => ref.kind === 'derivation')
+    assert.ok(derivation?.premises?.some(premise => premise.includes('机器学习导论.pdf')))
+    assert.ok(done.meta.evidenceKinds?.includes('other-course'))
+  })
+
   test('外部检索无结果与模型图像能力不足进入 limitations', async () => {
     const fixture = makeCourseFixture()
     const model = new ScriptedModelClient(
@@ -195,6 +243,22 @@ describe('TeachingService.respond 教学形式与位置', () => {
     assert.equal(positionOf(events).stage, 'practice', '临时追问不应把学习位置从练习带走')
     assert.equal(done.meta.stage, 'practice')
     assert.ok(done.meta.nextActions?.some(action => action.id === 'resume-current'))
+  })
+
+  test('诊断阶段提示词要求先定位误解、不要只给正确答案', async () => {
+    const fixture = makeCourseFixture()
+    const model = new ScriptedModelClient([{
+      kind: 'text',
+      text: replyWithMeta('你这一步的问题在于……', {
+        intent: 'diagnose',
+        stage: 'diagnosis',
+      }),
+    }])
+    const input = makeTurnInput(fixture, { stage: 'diagnosis', studentText: '我不知道哪里错了' })
+    await collectEvents(createTeachingService().respond(input, model))
+    const system = model.calls[0]?.system ?? ''
+    assert.ok(system.includes('诊断'))
+    assert.ok(system.includes('定位具体误解'))
   })
 
   test('学生要求完整答案：形式切到 answer-first 且活动不能算独立', async () => {

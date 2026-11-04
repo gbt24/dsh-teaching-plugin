@@ -45,7 +45,7 @@ export function buildRubricUserPrompt(params: {
   const { input, rubric, conceptTitles, language } = params
   const languageLine = language === 'en'
     ? '评分理由用英文书写。'
-    : language === 'bilingual' ? '评分理由用中文，可附英文术语。' : '评分理由用中文。'
+    : language === 'bilingual' ? '评分理由用双语：中文为主，可附英文术语。' : '评分理由用中文。'
   const criteria = rubric.map(criterion => [
     `- id: ${criterion.id}`,
     `  label: ${criterion.label}`,

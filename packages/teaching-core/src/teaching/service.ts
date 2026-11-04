@@ -243,7 +243,15 @@ export function createTeachingService(options: TeachingServiceOptions = {}): Tea
       yield { type: 'phase', label: '生成讲解（含来源与活动整理）' }
       const turn = yield* streamModelTurn(model, request, signal)
       if (turn.error !== undefined) {
-        yield { type: 'error', error: turn.error }
+        // 已生成的部分内容保留在 details 中，Host 可显示“已完成内容 + 继续路径”。
+        const partial = turn.text.trim()
+        const error = partial === ''
+          ? turn.error
+          : {
+            ...turn.error,
+            details: { ...(turn.error.details ?? {}), partial: true, partialText: partial.slice(0, 2000) },
+          }
+        yield { type: 'error', error }
         return
       }
 
@@ -311,7 +319,7 @@ export function createTeachingService(options: TeachingServiceOptions = {}): Tea
       for (const warning of input.materialWarnings) uncertaintyParts.push(`资料不确定：${warning}`)
       for (const conflict of meta?.conflicts ?? []) {
         const kindLabel = conflict.kind === 'convention'
-          ? '约定差异（可能是符号/记法习惯不同，不一定是错误）'
+          ? '约定差异，可能是符号/记法习惯不同，不一定是错误'
           : conflict.kind === 'substantive' ? '实质错误' : '未决疑问'
         const basis = conflict.basisRefs === undefined || conflict.basisRefs.length === 0
           ? '依据未提供'
@@ -408,7 +416,9 @@ export function createTeachingService(options: TeachingServiceOptions = {}): Tea
           && completion.text.trim() !== '') {
           parsed = parseClassifyValue(parseTurnMetaText(completion.text).meta)
         }
-        const wantsFullAnswer = parsed.wantsFullAnswer ?? input.wantsFullAnswer === true
+        const wantsFullAnswer = parsed.wantsFullAnswer === true
+          || input.wantsFullAnswer === true
+          || fallback.intent === 'answer'
         const intent = wantsFullAnswer ? 'answer' : (parsed.intent ?? fallback.intent)
         const conceptIds = filterConceptIds(input, parsed.conceptIds)
         const requestedForm = parsed.requestedForm

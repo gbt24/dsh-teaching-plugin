@@ -49,6 +49,20 @@ export interface CorpusCatalog {
 /** 表结构的版本，未来迁移用。 */
 const CATALOG_VERSION = 1
 
+/**
+ * 基本结构校验：兼容 Host 历史/临时实现可能留下的其它 JSON 记录。
+ * 无效记录不进入目录缓存（不会让整个目录读取失败），也不参与检索。
+ */
+function isSourceDocumentRecord(value: unknown): value is SourceDocument {
+  if (typeof value !== 'object' || value === null) return false
+  const record = value as Record<string, unknown>
+  return typeof record['id'] === 'string'
+    && typeof record['originalPath'] === 'string'
+    && typeof record['title'] === 'string'
+    && typeof record['format'] === 'string'
+    && Array.isArray(record['courseIds'])
+}
+
 function emptyCatalog(): CorpusCatalog {
   return { version: CATALOG_VERSION, updatedAt: nowIso(), documents: {} }
 }
@@ -120,9 +134,13 @@ export class CorpusStore {
         documents[documentIdFromFile] = cached
         continue
       }
-      const document = await this.state.readJson<SourceDocument>(relative)
-      if (document === undefined) continue
-      documents[documentIdFromFile] = entryFromDocument(document, fileMtimeMs)
+      const rawDocument = await this.state.readJson<unknown>(relative)
+      if (!isSourceDocumentRecord(rawDocument)) {
+        // 其它实现/旧格式的记录：跳过而不是让整个目录读取失败
+        dirty = true
+        continue
+      }
+      documents[documentIdFromFile] = entryFromDocument(rawDocument, fileMtimeMs)
       dirty = true
     }
     // 缓存里有、磁盘上已不存在的文档记录要移除
@@ -133,8 +151,8 @@ export class CorpusStore {
       for (const fileName of fileNames) {
         const documentIdFromFile = fileName.slice(0, -'.json'.length)
         if (documents[documentIdFromFile] !== undefined) continue
-        const document = await this.state.readJson<SourceDocument>(`sources/${fileName}`)
-        if (document !== undefined) documents[documentIdFromFile] = entryFromDocument(document, 0)
+        const rawDocument = await this.state.readJson<unknown>(`sources/${fileName}`)
+        if (isSourceDocumentRecord(rawDocument)) documents[documentIdFromFile] = entryFromDocument(rawDocument, 0)
       }
     }
     const catalog: CorpusCatalog = {

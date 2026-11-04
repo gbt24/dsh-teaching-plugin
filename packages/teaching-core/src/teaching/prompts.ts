@@ -218,7 +218,7 @@ export function buildTeachingUserPrompt(ctx: TeachingPromptContext): string {
     ? ['（尚无已记录的学习状态）']
     : input.learning.map(item => {
       const title = input.courseRevision.concepts.find(conceptItem => conceptItem.id === item.conceptId)?.title
-      const basis = item.basis.length === 0 ? '无依据记录' : item.basis.join('；')
+      const basis = item.basis.length === 0 ? '无依据记录' : truncate(item.basis.join('；'), 400)
       return `- ${item.conceptId}${title === undefined ? '' : `（${title}）`}：${item.level}；依据：${basis}`
     })
 

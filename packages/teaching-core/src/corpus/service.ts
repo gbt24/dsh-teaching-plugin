@@ -9,20 +9,20 @@ import { basename, extname, resolve } from 'node:path'
 import type { CourseId, SourceId, SourceRevisionId } from '../contracts/ids.ts'
 import { sourceId as newSourceId, sourceRevisionId as newSourceRevisionId, nowIso } from '../contracts/ids.ts'
 import type { Result } from '../contracts/result.ts'
-import { err, ok } from '../contracts/result.ts'
+import { err, isAbort, ok } from '../contracts/result.ts'
 import type { CourseRevision } from '../contracts/course.ts'
 import type {
-  CorpusSearchQuery, CorpusSearchResult, CorpusService, CourseDraftInput, ImportOutcome, ImportRequest,
+  CorpusSearchQuery, CorpusSearchResult, CorpusService, CourseDraftInput, ImportOutcome,
 } from '../contracts/corpus.ts'
 import type {
-  ParsedSource, SourceAnchor, SourceChange, SourceDocument, SourceIssue, SourceRevision,
+  ImportRequest, ParsedSource, SourceAnchor, SourceChange, SourceDocument, SourceIssue, SourceRevision,
   SourceRevisionMeta, SourceUnit,
 } from '../contracts/source.ts'
 import type { ModelClient } from '../model/types.ts'
 import { CourseRepository } from '../storage/repositories.ts'
 import type { LearningRepository } from '../storage/repositories.ts'
 import type { LocalState } from '../storage/local-state.ts'
-import { statusForIssues } from './budget.ts'
+import { isSignalAborted, statusForIssues } from './budget.ts'
 import type { ParserOutput } from './budget.ts'
 import { CorpusCancelledError, isCorpusParseError, toCorpusAppError } from './errors.ts'
 import { FINGERPRINT_PREFIX, hashFile, statFile, type FileStatInfo } from './fingerprint.ts'
@@ -36,7 +36,8 @@ import { proposeCourseRevision, buildDraftCoverage, type DraftCoverageData } fro
 import {
   buildEffects, describeDiff, diffUnits, resolveReferences,
 } from './change-utils.ts'
-import type { ParseContext, ParserOutput as ParsedOutput } from './parsers/context.ts'
+import type { ParserOutput as ParsedOutput } from './budget.ts'
+import type { ParseContext } from './parsers/context.ts'
 import { detectSourceFormat, parseSourceFile } from './parsers/index.ts'
 import type { CorpusReferenceHooks, CorpusServiceOptions } from './types.ts'
 
@@ -179,7 +180,7 @@ export class CorpusServiceImpl implements CorpusServiceApi {
     let done = 0
     hooks?.onProgress?.(0, total, requests[0]?.path ?? '')
     for (const request of requests) {
-      if (signal?.aborted === true) break
+      if (isSignalAborted(signal)) break
       const current = request.path
       try {
         const effective: ImportRequest = request.courseId === undefined && courseId !== undefined
@@ -189,7 +190,7 @@ export class CorpusServiceImpl implements CorpusServiceApi {
         if (result.ok) documents.push(result.value)
         else failures.push({ path: current, error: result.error })
       } catch (cause) {
-        if (signal?.aborted === true || cause instanceof CorpusCancelledError) {
+        if (isSignalAborted(signal) || cause instanceof CorpusCancelledError) {
           warnings.push(`导入已取消：当前文件未完成（${current}）`)
           break
         }
@@ -198,7 +199,7 @@ export class CorpusServiceImpl implements CorpusServiceApi {
       done += 1
       hooks?.onProgress?.(done, total, current)
     }
-    if (signal?.aborted === true && done < total) {
+    if (isSignalAborted(signal) && done < total) {
       const remaining = total - done
       warnings.push(`导入已取消：已完成 ${done}/${total}，剩余 ${remaining} 个文件未处理；已完成的资料可正常使用`)
     }
@@ -228,7 +229,7 @@ export class CorpusServiceImpl implements CorpusServiceApi {
         `不支持的资料格式：${extname(absolutePath) || '无扩展名'}（支持 Markdown/文本/PDF/图片/Word/PPT/代码/Notebook/HTML）`,
         { cause: 'unsupported-format', details: { path: absolutePath } })
     }
-    if (signal?.aborted === true) throw new CorpusCancelledError()
+    if (isSignalAborted(signal)) throw new CorpusCancelledError()
     const fingerprint = await hashFile(absolutePath)
     const existing = await this.store.findDocumentByPath(absolutePath)
     if (existing !== undefined && existing.currentRevisionId !== undefined) {
@@ -577,7 +578,7 @@ export class CorpusServiceImpl implements CorpusServiceApi {
   private async refreshInner(documentId: SourceId, signal?: AbortSignal): Promise<Result<SourceChange>> {
     const document = await this.store.readDocument(documentId)
     if (document === undefined) return err('not-found', '资料不存在或已被删除')
-    if (signal?.aborted === true) return err('cancelled', '更新资料已取消')
+    if (isSignalAborted(signal)) return err('cancelled', '更新资料已取消')
     const detected = await this.detectFor(document)
     if (!detected.ok) return detected
     const change = detected.value
@@ -599,7 +600,7 @@ export class CorpusServiceImpl implements CorpusServiceApi {
       ? await this.store.readRevisionPayload(document.id, document.currentRevisionId)
       : undefined
     const detectedFormat = detectSourceFormat(document.originalPath, document.format) ?? { format: document.format }
-    if (signal?.aborted === true) return err('cancelled', '更新资料已取消')
+    if (isSignalAborted(signal)) return err('cancelled', '更新资料已取消')
     const bytes = new Uint8Array(await readFile(document.originalPath))
     const revisionId = newSourceRevisionId()
     const parsed = await this.runParser({

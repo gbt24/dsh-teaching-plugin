@@ -86,6 +86,7 @@ export interface ModelCompletion {
 /** Call accounting persisted beside teacher messages and in usage.jsonl. */
 export interface UsageEntry {
   readonly at: string
+  /** Opaque session identity used for routing; lets the Host attribute usage. */
   readonly sessionId?: string
   readonly purpose: ModelRequest['purpose']
   readonly provider: string

@@ -47,10 +47,19 @@ function toGenerateOptions(
   selection: { provider: string; model: string; reasoningEffort?: string },
   routingSessionId: string,
 ): Record<string, unknown> {
-  const messages = request.messages.map(message => ({
-    role: message.role,
-    content: [{ type: 'text', text: message.text }],
-  }))
+  // Hand-built assistant messages must carry the durable-message source fields:
+  // the Harness runtime reads `message.source.replayState` for assistant roles.
+  const messages = request.messages.map((message, index) => message.role === 'assistant'
+    ? {
+        id: `teaching-assistant-${index}`,
+        role: 'assistant',
+        content: [{ type: 'text', text: message.text }],
+        source: { kind: 'model', provider: selection.provider, model: selection.model },
+      }
+    : {
+        role: message.role,
+        content: [{ type: 'text', text: message.text }],
+      })
   const options: Record<string, unknown> = {
     provider: selection.provider,
     model: selection.model,
@@ -144,6 +153,7 @@ export class HarnessModelAdapter implements ModelClient {
             const raw = chunk.usage as Record<string, unknown> | undefined
             usage = {
               at: nowIso(),
+              sessionId: request.sessionId,
               purpose: request.purpose,
               provider: info.provider,
               model: info.model,
@@ -177,6 +187,7 @@ export class HarnessModelAdapter implements ModelClient {
       const durationMs = Date.now() - startedAt
       const usageEntry: UsageEntry = usage ?? {
         at: nowIso(),
+        sessionId: request.sessionId,
         purpose: request.purpose,
         provider: info.provider,
         model: info.model,

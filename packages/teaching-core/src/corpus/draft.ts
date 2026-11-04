@@ -21,6 +21,7 @@ import { err, ok, toAppError, type Result } from '../contracts/result.ts'
 import type { CourseRepository } from '../storage/repositories.ts'
 import type { CorpusLimits } from './limits.ts'
 import type { CorpusStore } from './store.ts'
+import { isSignalAborted } from './budget.ts'
 import { excerptAround, locatorDescription } from './text-utils.ts'
 
 /** 草案生成依赖。 */
@@ -64,15 +65,15 @@ export async function proposeCourseRevision(
   input: CourseDraftInput,
   signal?: AbortSignal,
 ): Promise<Result<CourseRevision>> {
-  if (deps.model === undefined) {
-    return err('capability-missing', '当前没有可用的模型客户端，无法生成课程草案')
-  }
   if (input.courseTitle.trim() === '' || input.goal.trim() === '') {
     return err('invalid-input', '课程草案需要课程标题与学习目标')
   }
-  if (signal?.aborted === true) return err('cancelled', '课程草案生成已取消')
+  if (isSignalAborted(signal)) return err('cancelled', '课程草案生成已取消')
   const course = await deps.courses.get(input.courseId)
   if (course === undefined) return err('not-found', '课程不存在或已被删除')
+  if (deps.model === undefined) {
+    return err('capability-missing', '当前没有可用的模型客户端，无法生成课程草案')
+  }
 
   let material: MaterialDigest
   try {
@@ -85,7 +86,7 @@ export async function proposeCourseRevision(
   let lastReason = ''
   let lastText = ''
   for (let attempt = 0; attempt < parseFailureLimit; attempt += 1) {
-    if (signal?.aborted === true) return err('cancelled', '课程草案生成已取消')
+    if (isSignalAborted(signal)) return err('cancelled', '课程草案生成已取消')
     const messages = attempt === 0
       ? requestBase.messages
       : [
@@ -111,7 +112,7 @@ export async function proposeCourseRevision(
     } catch (cause) {
       return mapModelFailure(cause, signal)
     }
-    if (signal?.aborted === true) return err('cancelled', '课程草案生成已取消')
+    if (isSignalAborted(signal)) return err('cancelled', '课程草案生成已取消')
     lastText = completion.text
     const candidate = completion.json !== undefined ? completion.json : tryParseJson(completion.text)
     if (candidate === undefined) {
@@ -124,7 +125,7 @@ export async function proposeCourseRevision(
       continue
     }
     try {
-      const revision = await persistDraft(deps, input, material, validated.value, validated.warnings)
+      const revision = await persistDraft(deps, input, material, validated.value, [...material.warnings, ...validated.warnings])
       return ok(revision)
     } catch (cause) {
       return toResultError(cause, '课程草案保存失败')
@@ -279,6 +280,9 @@ function buildDraftPrompt(deps: DraftDeps, input: CourseDraftInput, material: Ma
     '3. prerequisites 使用其他 concept 的 title；sequence 是概念 title 的学习顺序数组，必须覆盖所有 concept；',
     '4. 只输出 JSON 对象，字段为：goals(string[])、concepts(数组)、sequence(string[])。',
     '',
+    ...(input.instruction !== undefined && input.instruction.trim() !== ''
+      ? [`学生修改要求：${input.instruction.trim().slice(0, 1000)}`, '']
+      : []),
     'concepts 每项字段：',
     '{"title": string, "summary": string, "prerequisites": string[], "difficulty": "intro"|"core"|"advanced", "misconceptions": string[], "checkIdeas": string[], "anchors": [{"documentId": string, "unitId": string}]}',
   ].join('\n')
@@ -606,7 +610,7 @@ export async function buildDraftCoverage(
     const document = await deps.store.readDocument(sourceId)
     if (document === undefined) {
       warnings.push(`资料 ${sourceId} 已被删除，草案中的相关定位可能失效`)
-      coverage.push({ sourceId: sourceId as never, title: '（资料已删除）', status: 'missing', usedUnits: 0, issues: 1 })
+      coverage.push({ sourceId, title: '（资料已删除）', status: 'missing', usedUnits: 0, issues: 1 })
       continue
     }
     const meta = document.currentRevisionId !== undefined
@@ -673,7 +677,7 @@ export function tryParseJson(text: string): unknown | undefined {
 }
 
 function mapModelFailure(cause: unknown, signal?: AbortSignal): Result<never> {
-  if (signal?.aborted === true) return err('cancelled', '课程草案生成已取消')
+  if (isSignalAborted(signal)) return err('cancelled', '课程草案生成已取消')
   const code = typeof cause === 'object' && cause !== null
     ? (cause as { code?: unknown }).code
     : undefined

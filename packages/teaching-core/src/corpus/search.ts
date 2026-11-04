@@ -16,6 +16,7 @@ import type {
 } from '../contracts/source.ts'
 import type { CorpusLimits } from './limits.ts'
 import type { CorpusStore } from './store.ts'
+import type { SourceId, SourceRevisionId, UnitId } from '../contracts/ids.ts'
 import { excerptAround, locatorDescription, tokenizeForIndex, tokenizeQuery } from './text-utils.ts'
 
 const INDEX_VERSION = 1
@@ -265,9 +266,9 @@ export async function searchCorpus(
     if (index === undefined || unit === undefined) continue
     if (kinds !== undefined && !kinds.has(unit.kind)) continue
     const anchor: SourceAnchor = {
-      documentId: index.documentId,
-      revisionId: index.revisionId,
-      unitId: unit.unitId,
+      documentId: index.documentId as SourceId,
+      revisionId: index.revisionId as SourceRevisionId,
+      unitId: unit.unitId as UnitId,
       locator: unit.locator,
       excerpt: unit.excerpt,
       confidence: unit.confidence,

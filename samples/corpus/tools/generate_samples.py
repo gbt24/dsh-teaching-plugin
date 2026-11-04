@@ -379,7 +379,11 @@ def build_notebook() -> None:
                 'source': [
                     '# Notebook：导数实验\n',
                     '\n',
-                    '公式：$f\'(x) = \\\\lim_{h\\\\to 0} \\\\frac{f(x+h)-f(x)}{h}$',
+                    '块级公式如下：\n',
+                    '\n',
+                    '$$\n',
+                    "f'(x) = \\lim_{h \\to 0} \\frac{f(x+h)-f(x)}{h}\n",
+                    '$$\n',
                 ],
             },
             {

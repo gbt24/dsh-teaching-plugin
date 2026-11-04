@@ -284,7 +284,7 @@ test('quiz submits selections and reports help exposure on reveal', async () => 
   const document = createTestDocument()
   const container = asShim(document.createElement('div'))
   const submitted: string[][] = []
-  const help: string[] = []
+  const help: (1 | 'full-answer')[] = []
   const handle = mountQuiz(container as unknown as HTMLElement, QUIZ, {
     document,
     onSubmit: (selected) => { submitted.push([...selected]) },
@@ -326,7 +326,7 @@ test('proof/open/reading task forms collect answers and citations', () => {
   const document = createTestDocument()
   const container = asShim(document.createElement('div'))
   const answers: string[] = []
-  const helps: string[] = []
+  const helps: (1 | 'full-answer')[] = []
   const proofHandle = mountProofTask(container as unknown as HTMLElement, {
     type: 'proof-task',
     claim: '√2 是无理数',

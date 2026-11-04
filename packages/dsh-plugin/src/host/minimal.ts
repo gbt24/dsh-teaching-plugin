@@ -391,6 +391,8 @@ export function buildTeachingMessages(input: {
   profile: StudentProfile
   history: readonly ChatMessage[]
   material: readonly { anchor: SourceAnchor; documentTitle: string }[]
+  /** Externally searched results (already retrieved by the Host), if any. */
+  webResults?: readonly { title: string; url: string; snippet: string }[]
   studentText: string
   currentConceptTitle?: string
 }): { system: string; messages: { role: 'system' | 'user' | 'assistant'; text: string }[] } {
@@ -424,6 +426,11 @@ export function buildTeachingMessages(input: {
       `原文: ${item.anchor.excerpt}`,
     ].join('\n')).join('\n\n')
 
+  const webBlock = (input.webResults ?? []).length === 0
+    ? ''
+    : ['外部网页查证结果（必须标注为“外部资料”，并与本地资料区分）：',
+      ...(input.webResults ?? []).map((item, index) => `[外部${index + 1}] ${item.title} — ${item.url}\n摘要: ${item.snippet}`)].join('\n')
+
   const messages: { role: 'system' | 'user' | 'assistant'; text: string }[] = []
   for (const message of input.history.slice(-10)) {
     if (message.role === 'student') messages.push({ role: 'user', text: message.text })
@@ -438,6 +445,7 @@ export function buildTeachingMessages(input: {
       '',
       '可用课程资料片段：',
       materialBlock,
+      ...(webBlock === '' ? [] : ['', webBlock]),
       '',
       `学生的问题/回答：${input.studentText}`,
     ].filter(line => line !== '').join('\n'),

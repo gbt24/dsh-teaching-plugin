@@ -201,9 +201,14 @@ export class ExtractionBudget {
   }
 }
 
+/** 取消信号检查（集中实现，避免调用点被 TypeScript 过度收窄）。 */
+export function isSignalAborted(signal?: AbortSignal): boolean {
+  return signal !== undefined && signal.aborted
+}
+
 /** 由抽取问题推导修订状态；供存储层使用。 */
 export function statusForIssues(issues: readonly SourceIssue[]): 'ready' | 'partial' | 'needs-review' {
   if (issues.some(issue => issue.reviewRequired || issue.severity === 'error')) return 'needs-review'
-  if (issues.some(issue => issue.severity === 'warning' || issue.severity === 'info')) return 'partial'
+  if (issues.some(issue => issue.severity === 'warning')) return 'partial'
   return 'ready'
 }

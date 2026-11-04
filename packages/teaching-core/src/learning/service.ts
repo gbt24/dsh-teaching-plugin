@@ -24,7 +24,7 @@ import type { LearningRepository } from '../storage/repositories.ts'
 import { classifyIndependence } from './independence.ts'
 import type { RubricAssessor } from './rubric.ts'
 import { degradedValidation } from './rubric.ts'
-import { buildMasteryRecord } from './mastery.ts'
+import { buildMasteryRecord, deriveMasteryLevel } from './mastery.ts'
 import { computeReviewItems } from './review.ts'
 
 /** Host 用活动 payload 解析 rubric（可以是同步/异步）。 */
@@ -476,12 +476,22 @@ export function createLearningService(options: LearningServiceOptions): Learning
         const updatedRecords: MasteryRecord[] = []
         const mastery = record.mastery.map(item => {
           if (!affected.has(item.conceptId as string)) return item
+          const conceptAttempts = record.attempts.filter(attempt => attempt.conceptIds.includes(item.conceptId))
+          // 资料变化后等级暂封顶（mastered → checked），复核后再恢复/更新；证据不删除。
+          const level = deriveMasteryLevel({
+            attempts: conceptAttempts,
+            dimensions: item.dimensions,
+            disputes: item.disputes,
+            needsRecheck: true,
+          })
           const updated: MasteryRecord = {
             ...item,
+            level,
             needsRecheck: true,
             basis: [
               ...item.basis,
               `资料变化（${nowText()}）：${note.trim().slice(0, 300) || '相关资料修订已更新'}；历史依据保留，需复核。`,
+              ...(level === item.level ? [] : [`等级因资料变化暂封顶为 ${level}，复核通过后可恢复。`]),
             ].slice(-14),
             updatedAt: nowText(),
           }

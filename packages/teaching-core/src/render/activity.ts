@@ -428,6 +428,7 @@ export function mountActivity(
         ...(options.requestFrame !== undefined ? { requestFrame: options.requestFrame } : {}),
         ...(options.cancelFrame !== undefined ? { cancelFrame: options.cancelFrame } : {}),
       })
+      state.params = { ...handle.getParams() }
       disposers.push(() => handle.dispose())
       break
     }
@@ -442,6 +443,8 @@ export function mountActivity(
         ...(options.state?.revealedStepIds !== undefined ? { revealedStepIds: options.state.revealedStepIds } : {}),
         onChange: (revealedStepIds) => recordState({ revealedStepIds }),
       })
+      const initialRevealed = handle.getRevealed()
+      if (initialRevealed.length > 0) state.revealedStepIds = [...initialRevealed]
       disposers.push(() => handle.dispose())
       break
     }
@@ -453,6 +456,7 @@ export function mountActivity(
         ...(callbacks.onCancelRun !== undefined ? { onCancel: callbacks.onCancelRun } : {}),
         onChange: (code) => recordState({ code }),
       })
+      state.code = handle.getCode()
       disposers.push(() => handle.dispose())
       break
     }

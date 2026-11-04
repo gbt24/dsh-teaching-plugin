@@ -75,9 +75,13 @@ export function attemptDimensionEvidence(
       return { conditions: 1, variants: 1 }
     case 'objective':
       return { variants: 1 }
-    case 'open':
+    case 'open': {
+      // 开放/证明题的判断必须如实标注评价来源；无来源的“通过”不算证据。
+      if (validation.assessedBy !== 'model-rubric' && validation.assessedBy !== 'objective-runner') return {}
       return { explain: 1, transfer: 1 }
+    }
     case 'rubric': {
+      if (validation.assessedBy !== 'model-rubric' && validation.assessedBy !== 'objective-runner') return {}
       const dims = new Set<keyof MasteryDimensions>()
       for (const score of validation.rubric ?? []) {
         if (!Number.isFinite(score.score) || !Number.isFinite(score.maxScore) || score.maxScore <= 0) continue
@@ -123,10 +127,12 @@ export function deriveMasteryLevel(input: DeriveMasteryInput): MasteryLevel {
   if (attempts.length === 0) return 'unseen'
   const independentAttempts = attempts.filter(attempt => attempt.independence === 'independent')
   if (independentAttempts.length === 0) return 'exposed'
-  const independentPassed = independentAttempts.filter(attempt => attempt.validation?.passed === true)
-  if (independentPassed.length === 0) return 'practiced'
+  // 只有真正贡献维度证据的独立通过尝试才算“有效证据”。
+  const credited = independentAttempts.filter(attempt =>
+    Object.keys(attemptDimensionEvidence(attempt, attempt.validation)).length > 0)
+  if (credited.length === 0) return 'practiced'
   if (coveredDimensionCount(dimensions) < DIMENSION_KEYS.length) return 'checked'
-  if (independentPassed.length < 2) return 'checked'
+  if (credited.length < 2) return 'checked'
   if (input.needsRecheck === true) return 'checked'
   if (hasOpenDispute(input.disputes)) return 'checked'
   return 'mastered'
@@ -172,9 +178,9 @@ export function buildMasteryRecord(input: BuildMasteryRecordInput): MasteryRecor
   for (const attempt of attempts) {
     dimensions = mergeDimensions(dimensions, attemptDimensionEvidence(attempt, attempt.validation))
   }
-  const independentPassed = attempts.filter(
-    attempt => attempt.independence === 'independent' && attempt.validation?.passed === true,
-  )
+  const independentPassed = attempts.filter(attempt =>
+    attempt.independence === 'independent'
+    && Object.keys(attemptDimensionEvidence(attempt, attempt.validation)).length > 0)
   const uncoveredKeys = DIMENSION_KEYS.filter(key => dimensions[key] <= 0)
   const uncovered = uncoveredKeys.map(key => DIMENSION_LABELS[key])
   const disputes = existing?.disputes ?? []

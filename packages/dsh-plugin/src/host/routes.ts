@@ -10,26 +10,30 @@ import { createHash, randomUUID } from 'node:crypto'
 import { readFile, stat } from 'node:fs/promises'
 import { basename } from 'node:path'
 import type {
-  ActivityProposal, ActivityState, ApiRequests, AppError, AttemptOutcome, AttemptValidation, BootstrapInfo,
+  ActivityState, ApiRequests, AppError, AttemptOutcome, AttemptValidation, BootstrapInfo,
   ChatMessage, ChatStreamEvent, Course, CourseDraftView, CourseRevision, CourseSummary,
-  CourseLearningRecord, EnvironmentDirectory, EnvironmentRecord, ExperimentRun, LearningAttempt,
-  LessonActivity, MasteryRecord, ModelCapabilities, ReviewItem,
-  SessionSummary, SessionView, SourceAnchor, SourceDocument, SourceView, TeachingSession,
+  CourseLearningRecord, EnvironmentDirectory, ExperimentRun, LearningAttempt, LearningService, LessonActivity,
+  MasteryRecord, ModelCapabilities, ReviewItem, SessionSummary, SessionView,
+  SourceAnchor, SourceDocument, SourceView, TeachingService, TeachingSession, TeachingTurnInput,
+  UsageEntry,
 } from '@deepseek-teaching/core'
 import {
-  API_PREFIX, CourseRepository, LearningRepository, ProfileRepository, SessionRepository,
-  activityFile, activityStateFile, courseId as newCourseId, courseRevisionId as newCourseRevisionId,
-  environmentFile, nowIso, runFile, sessionId as newSessionId, sourceId as newSourceId,
-  apiPath,
+  CourseRepository, LearningRepository, ProfileRepository, SessionRepository,
+  activityStateFile, apiPath, courseId as newCourseId, courseRevisionId as newCourseRevisionId,
+  nowIso, runFile,
 } from '@deepseek-teaching/core'
 import type { LocalState } from '@deepseek-teaching/core'
 import type { ModelClient } from '@deepseek-teaching/core'
+import { validationFromRun } from '@deepseek-teaching/core/experiments'
+import type { RunnerRegistry } from '@deepseek-teaching/core/experiments'
+import { detectRequestedForm } from '@deepseek-teaching/core/teaching'
 import type { TaskManager } from './tasks.ts'
-import type { MinimalCorpus } from './minimal.ts'
+import type { WebBridge } from './web.ts'
+import { toSearchQuery, wantsWebLookup } from './web.ts'
+import type { CorpusServiceApi } from '@deepseek-teaching/core/corpus'
 import {
-  activityFromProposal, appError, buildTeachingMessages, createCourseRecord, createSessionRecord,
-  detectFormat, draftConceptsFromSources, hitToEvidence, normalizeActivityProposal, parseTeachingMeta,
-  runCode, studentMessage, teacherMessage,
+  activityFromProposal, appError, createCourseRecord, createSessionRecord,
+  hitToEvidence, studentMessage, teacherMessage,
 } from './minimal.ts'
 
 /** Services available to route handlers. */
@@ -48,8 +52,15 @@ export interface RouteServices {
   }
   readonly state: LocalState
   readonly model: ModelClient
+  readonly web: WebBridge
   readonly tasks: TaskManager
-  readonly corpus: MinimalCorpus
+  readonly corpus: CorpusServiceApi
+  readonly teaching: TeachingService
+  readonly experiments: RunnerRegistry
+  /** Build a learning service bound to the activity an attempt answers. */
+  readonly createLearningFor: (activity?: LessonActivity) => LearningService
+  /** Usage of the most recent model call in one session, then cleared. */
+  readonly takeUsage: (sessionId: string) => UsageEntry | undefined
   readonly profiles: ProfileRepository
   readonly courses: CourseRepository
   readonly sessions: SessionRepository
@@ -177,7 +188,7 @@ export function registerRoutes(services: RouteServices): void {
       language: profile.language,
       features: {
         imageOcr: false,
-        webSearch: false,
+        webSearch: services.web.available(),
         experiments: true,
         offlineExport: false,
       },
@@ -196,7 +207,7 @@ export function registerRoutes(services: RouteServices): void {
         imageInput: model.imageInput,
         contextWindow: model.contextWindow,
       },
-      environments: await listEnvironments(services),
+      environments: await services.experiments.directory(),
     })
   })
 
@@ -248,7 +259,7 @@ export function registerRoutes(services: RouteServices): void {
     const learning = (await services.learning.get(courseId)) ?? emptyLearning(courseId, active?.id ?? '')
     let draft: CourseDraftView | undefined
     if (draftRevision !== undefined) {
-      draft = await buildDraftView(services, course, draftRevision, sources)
+      draft = await buildDraftView(services, course, draftRevision)
     }
     return envelope({ course, revisions, activeRevision: active, draftRevision, draft, sources, learning })
   })
@@ -286,37 +297,37 @@ export function registerRoutes(services: RouteServices): void {
     const handle = services.tasks.start({
       kind: 'source-import',
       label: `导入 ${paths.length} 份资料`,
-      steps: [
-        ...paths.slice(0, 20).map((path, index) => ({ id: `file-${index}`, label: basename(path) })),
-      ],
+      steps: paths.slice(0, 20).map((path, index) => ({ id: `file-${index}`, label: basename(path) })),
       resumable: true,
     }, async context => {
-      const imported: SourceDocument[] = []
-      const failures: { path: string; error: AppError }[] = []
-      for (const [index, path] of paths.entries()) {
-        if (context.cancelled()) break
-        const stepId = `file-${index}`
-        context.step(stepId, { status: 'running' })
-        try {
-          if (index >= 20) {
-            // Steps beyond the visible list still report coarse progress.
-            context.progress((index) / paths.length)
-          }
-          const result = await services.corpus.importFile(path, courseId)
-          if (courseId !== undefined) await services.corpus.attach(result.document.id, courseId, true)
-          imported.push(result.document)
-          for (const warning of result.warnings) context.warn(`${basename(path)}: ${warning}`)
-          context.step(stepId, { status: 'done', detail: `${result.units.length} 个内容单元` })
-        } catch (cause) {
-          const error = toAppError(cause)
-          failures.push({ path, error })
-          context.step(stepId, { status: 'failed', detail: error.message })
+      const progress = (done: number, total: number, current: string): void => {
+        context.progress(total === 0 ? undefined : done / total)
+        const index = paths.indexOf(current)
+        if (index >= 0 && index < 20) {
+          context.step(`file-${index}`, done > index ? { status: 'done' } : { status: 'running' })
         }
-        context.progress((index + 1) / paths.length)
       }
-      context.result({ imported: imported.map(document => document.id), failures })
-      if (failures.length > 0 && imported.length === 0) throw appError('failed', '所有资料导入失败', { failures })
-      return { imported, failures }
+      const outcome = await services.corpus.importFiles(
+        courseId as never,
+        paths.map(path => ({ path, ...(courseId === undefined ? {} : { courseId: courseId as never }) })),
+        { onProgress: progress, signal: context.signal },
+      )
+      for (const warning of outcome.warnings) context.warn(warning)
+      for (const failure of outcome.failures) context.warn(`${failure.path}: ${failure.error.message}`)
+      // Mark any step the corpus service skipped (cancelled or failed fast).
+      for (let index = 0; index < Math.min(20, paths.length); index += 1) {
+        if (context.cancelled()) context.step(`file-${index}`, { status: 'skipped' })
+      }
+      context.result({
+        imported: outcome.documents.map(document => document.id),
+        failures: outcome.failures.map(failure => ({ path: failure.path, error: failure.error })),
+      })
+      if (outcome.failures.length > 0 && outcome.documents.length === 0) {
+        throw appError('failed', '所有资料导入失败', {
+          failures: outcome.failures.map(failure => ({ path: failure.path, code: failure.error.code })),
+        })
+      }
+      return { imported: outcome.documents.map(document => document.id) }
     })
     return envelope({ task: handle })
   })
@@ -327,58 +338,72 @@ export function registerRoutes(services: RouteServices): void {
     if (typeof documentId !== 'string') throw appError('invalid-input', '缺少 documentId')
     const handle = services.tasks.start({
       kind: 'source-refresh',
-      label: '检查资料变化',
-      steps: [{ id: 'compare', label: '对比指纹' }, { id: 'reimport', label: '更新解析' }],
+      label: '检查并更新资料',
+      steps: [
+        { id: 'compare', label: '对比文件指纹' },
+        { id: 'reimport', label: '重新解析受影响内容' },
+        { id: 'report', label: '报告受影响引用' },
+      ],
     }, async context => {
       context.step('compare', { status: 'running' })
-      const stored = await services.corpus.load(documentId)
-      const info = await stat(stored.document.originalPath).catch(() => undefined)
-      context.step('compare', { status: 'done', detail: info === undefined ? '原文件缺失' : '已读取' })
-      if (info === undefined) throw appError('not-found', '原文件已不存在，无法刷新')
-      const bytes = await readFile(stored.document.originalPath)
-      const fingerprint = createHash('sha256').update(bytes).digest('hex')
-      if (fingerprint === stored.fingerprint) {
-        context.result({ changed: false })
-        return { changed: false }
-      }
-      context.step('reimport', { status: 'running' })
-      const reimported = await services.corpus.importFile(stored.document.originalPath, stored.document.courseIds[0])
-      await services.corpus.attach(reimported.document.id, stored.document.courseIds[0] ?? '', true)
-      context.step('reimport', { status: 'done', detail: `${reimported.units.length} 个内容单元` })
+      const change = await services.corpus.refreshDocument(documentId as never, context.signal)
+      if (!change.ok) throw appError(change.error.code, change.error.message, change.error.details)
+      context.step('compare', { status: 'done', detail: change.value.changed ? '检测到变化' : '内容未变化' })
+      context.step('reimport', { status: change.value.changed ? 'done' : 'skipped' })
+      context.step('report', { status: 'done' })
+      const effects = change.value.effects
+      if (effects.needsConfirmation) context.warn(effects.summary)
       context.result({
-        changed: true,
-        newRevision: reimported.document.currentRevisionId,
-        affectedConcepts: '待 T02 基于引用索引计算',
+        changed: change.value.changed,
+        effects: {
+          affectedConceptIds: effects.affectedConceptIds,
+          affectedActivityIds: effects.affectedActivityIds,
+          needsConfirmation: effects.needsConfirmation,
+          summary: effects.summary,
+        },
       })
-      return { changed: true }
+      return { changed: change.value.changed }
     })
     return envelope({ task: handle })
   })
 
   route('sources.get', async ({ query }) => {
     const documentId = requireQuery(query, 'documentId')
-    const offset = Number(query.get('offset') ?? '0')
-    const limit = Math.min(200, Math.max(1, Number(query.get('limit') ?? '50')))
-    const stored = await services.corpus.load(documentId)
-    const units = stored.units.slice(offset, offset + limit)
-    const revision: SourceView['revision'] = {
-      id: stored.document.currentRevisionId ?? stored.units[0]?.revisionId ?? '',
-      documentId: stored.document.id,
-      fingerprint: stored.fingerprint,
-      createdAt: stored.document.addedAt,
-      extractor: { name: 'text-v1', version: '0.1.0' },
-      unitCount: stored.units.length,
-      issueCount: stored.warnings.length,
-      status: stored.document.status === 'ready' ? 'ready' : 'partial',
-      units,
-      issues: stored.warnings.map(message => ({ code: 'unsupported-content', severity: 'info', message, reviewRequired: false })),
-    } as never
-    const view: SourceView = {
-      document: stored.document,
-      revision,
-      issues: stored.warnings.map(message => ({ code: 'unsupported-content', severity: 'info', message, reviewRequired: false })),
-      totalUnits: stored.units.length,
+    const offset = Math.max(0, Number(query.get('offset') ?? '0') || 0)
+    const limit = Math.min(200, Math.max(1, Number(query.get('limit') ?? '50') || 50))
+    const documentResult = await services.corpus.getDocument(documentId as never)
+    if (!documentResult.ok) return failure(documentResult.error)
+    const document = documentResult.value
+    const revisionId = query.get('revisionId') ?? document.currentRevisionId
+    let units: import('@deepseek-teaching/core').SourceUnit[] = []
+    let totalUnits = 0
+    let issues: readonly import('@deepseek-teaching/core').SourceIssue[] = []
+    let revision: SourceView['revision']
+    if (revisionId !== undefined) {
+      const [unitsResult, issuesResult] = await Promise.all([
+        services.corpus.readUnits(document.id, offset, limit, revisionId as never),
+        services.corpus.listIssues(document.id),
+      ])
+      if (unitsResult.ok) {
+        units = [...unitsResult.value.units]
+        totalUnits = unitsResult.value.total
+      }
+      if (issuesResult.ok) issues = issuesResult.value
+      const meta = document.revisions.find(entry => entry.id === revisionId)
+      revision = {
+        id: revisionId as never,
+        documentId: document.id,
+        fingerprint: meta?.fingerprint ?? '',
+        createdAt: meta?.createdAt ?? document.updatedAt,
+        extractor: { name: 'corpus', version: '0.2.0' },
+        unitCount: totalUnits,
+        issueCount: issues.length,
+        status: meta?.status ?? 'ready',
+        units,
+        issues,
+      }
     }
+    const view: SourceView = { document, revision, issues, totalUnits }
     return envelope(view)
   })
 
@@ -391,50 +416,36 @@ export function registerRoutes(services: RouteServices): void {
     if (typeof input?.courseId !== 'string') throw appError('invalid-input', '缺少 courseId')
     const course = await services.courses.get(input.courseId)
     if (course === undefined) throw notFoundError('课程')
+    const profile = await services.profiles.get()
+    const active = await services.courses.getActiveRevision(course)
     const handle = services.tasks.start({
       kind: 'course-draft',
       label: '分析资料并生成课程草案',
       steps: [
         { id: 'read', label: '读取已就绪资料' },
-        { id: 'structure', label: '提取概念与顺序' },
-        { id: 'save', label: '保存草案' },
+        { id: 'structure', label: '提取概念与先修顺序' },
+        { id: 'save', label: '保存课程草案' },
       ],
     }, async context => {
       context.step('read', { status: 'running' })
       const documents = await services.courses.listSources(course.id)
-      if (documents.length === 0) throw appError('invalid-input', '课程还没有资料，请先导入资料')
-      const loaded = []
-      for (const document of documents) {
-        if (document.status === 'failed') continue
-        loaded.push({ document, units: (await services.corpus.load(document.id)).units })
-      }
-      context.step('read', { status: 'done', detail: `${loaded.length} 份资料` })
+      context.step('read', { status: 'done', detail: `${documents.length} 份资料` })
       context.step('structure', { status: 'running' })
-      const drafted = draftConceptsFromSources(loaded)
-      context.step('structure', { status: 'done', detail: `${drafted.concepts.length} 个候选概念` })
-      context.step('save', { status: 'running' })
-      const previous = await services.courses.listRevisions(course.id)
-      const nextVersion = (previous.at(-1)?.version ?? 0) + 1
-      const revision: CourseRevision = {
-        id: newCourseRevisionId(),
+      const proposed = await services.corpus.proposeCourseStructure({
         courseId: course.id,
-        version: nextVersion,
-        createdAt: nowIso(),
-        state: 'draft',
-        provenance: 'ai-draft',
-        goals: previous.find(item => item.id === course.activeRevisionId)?.goals ?? [],
-        language: course.description !== '' ? (await services.profiles.get()).language : (await services.profiles.get()).language,
-        sources: loaded.map(item => ({ sourceId: item.document.id, role: 'textbook' })),
-        concepts: drafted.concepts,
-        sequence: drafted.concepts.map(concept => concept.id),
-        basedOn: loaded.map(item => ({ sourceId: item.document.id, revisionId: item.document.currentRevisionId ?? '' })),
-        changeSummary: `基于 ${loaded.length} 份资料生成 ${drafted.concepts.length} 个概念`,
+        courseTitle: course.title,
+        goal: active?.goals.join('；') ?? course.description,
+        ...(active?.background === undefined ? {} : { background: active.background }),
+        language: profile.language,
+        ...(input.instruction === undefined ? {} : { instruction: input.instruction }),
+      }, context.signal)
+      if (!proposed.ok) {
+        throw appError(proposed.error.code, proposed.error.message, proposed.error.details)
       }
-      await services.courses.saveRevision(revision)
-      await services.courses.save({ ...course, draftRevisionId: revision.id })
+      context.step('structure', { status: 'done', detail: `${proposed.value.concepts.length} 个概念` })
       context.step('save', { status: 'done' })
-      context.result({ revisionId: revision.id, conceptCount: revision.concepts.length, warnings: drafted.warnings })
-      return { revisionId: revision.id }
+      context.result({ revisionId: proposed.value.id, conceptCount: proposed.value.concepts.length })
+      return { revisionId: proposed.value.id }
     })
     return envelope({ task: handle })
   })
@@ -445,8 +456,7 @@ export function registerRoutes(services: RouteServices): void {
     if (course === undefined) throw notFoundError('课程')
     const draft = await services.courses.getDraftRevision(course)
     if (draft === undefined) return envelope({})
-    const sources = await services.courses.listSources(courseId)
-    return envelope({ draft: await buildDraftView(services, course, draft, sources) })
+    return envelope({ draft: await buildDraftView(services, course, draft) })
   })
 
   route('courseDraft.confirm', async ({ body }) => {
@@ -605,7 +615,11 @@ export function registerRoutes(services: RouteServices): void {
     const history = await services.sessions.messages(session.id)
     const student = studentMessage(session.id, input.text.trim())
     await services.sessions.appendMessage(student)
-    await services.sessions.save({ ...session, messageIds: [...session.messageIds, student.id], updatedAt: nowIso() })
+    await services.sessions.save({
+      ...session,
+      messageIds: [...session.messageIds, student.id],
+      updatedAt: nowIso(),
+    })
 
     const controller = new AbortController()
     activeChats.set(session.id, controller)
@@ -619,135 +633,190 @@ export function registerRoutes(services: RouteServices): void {
         const send = (event: ChatStreamEvent): void => {
           sink.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
         }
+        const createdActivities: LessonActivity[] = []
         try {
           send({ type: 'start', studentMessage: student })
           send({ type: 'progress', label: '检索课程资料' })
-          const hits = await services.corpus.search(input.text, [course.id], 6)
-          const material = hits.map(hit => ({ anchor: hit.anchor, documentTitle: hit.anchor.label.split(' · ')[0] ?? hit.anchor.label }))
-          const evidenceRefs = hits.map(hitToEvidence)
-          if (hits.length === 0) {
-            evidenceRefs.push({ kind: 'model-knowledge', label: '模型补充', note: '本轮未在本地资料中检索到相关片段' })
+          const searchedCorpus = await services.corpus.search({ query: input.text, courseId: course.id, limit: 6 })
+          const hits = searchedCorpus.ok ? searchedCorpus.value.hits : []
+          const material = hits.map(hit => ({
+            anchor: hit.anchor,
+            documentTitle: hit.anchor.label.split(' · ')[0] ?? hit.anchor.label,
+          }))
+          const evidenceFromMaterial = hits.map(hit => hitToEvidence(hit))
+          let webResults: { title: string; url: string; snippet: string }[] = []
+          const webEvidence: import('@deepseek-teaching/core').EvidenceReference[] = []
+          let webNote: string | undefined
+          if (wantsWebLookup(input.text)) {
+            if (!services.web.available()) {
+              webNote = '本轮请求涉及联网查证，但当前 Harness 配置没有可用的联网能力；回答仅基于本地资料与模型知识。'
+            } else {
+              send({ type: 'progress', label: '联网查证（按需）' })
+              const searched = await services.web.search(toSearchQuery(input.text), { maxResults: 4, signal: controller.signal })
+              if (searched.ok) {
+                webResults = [...searched.value]
+                for (const hit of searched.value) {
+                  webEvidence.push({ kind: 'external-web', label: hit.title, url: hit.url, note: hit.snippet.slice(0, 240) })
+                }
+                if (searched.value.length === 0) webNote = '联网查询没有返回可用来源，回答未引用外部资料。'
+              } else {
+                webNote = `联网查证未完成（${searched.error.code}）：${searched.error.message}`
+              }
+            }
           }
-          send({ type: 'evidence', refs: evidenceRefs })
-          send({ type: 'progress', label: '生成讲解' })
-          const prompt = buildTeachingMessages({
-            course,
-            revision,
+          const record = await services.learning.get(course.id)
+          const learningSummary = (record?.mastery ?? []).map(item => ({
+            conceptId: item.conceptId,
+            level: item.level,
+            basis: item.basis,
+          }))
+          const teachingInput: TeachingTurnInput = {
+            sessionId: session.id,
+            studentText: input.text.trim(),
+            stage: session.position.stage,
             profile,
+            language: profile.language,
+            course,
+            courseRevision: revision,
+            currentConceptId: session.position.conceptId,
             history,
             material,
-            studentText: input.text.trim(),
-            currentConceptTitle: currentConcept?.title,
-          })
-          let answer = ''
-          let modelFailure: AppError | undefined
-          let usage: ChatMessage['usage']
-          for await (const event of services.model.stream({
-            system: prompt.system,
-            messages: prompt.messages,
-            maxTokens: 3000,
-            sessionId: session.id,
-            purpose: 'chat',
-            language: profile.language,
-          }, controller.signal)) {
-            if (event.type === 'text') {
-              answer += event.text
-              send({ type: 'delta', text: event.text })
-            } else if (event.type === 'usage') {
-              usage = event.usage
-            } else if (event.type === 'error') {
-              modelFailure = { code: event.error.code === 'cancelled' ? 'cancelled' : 'failed', message: event.error.message }
-            }
+            crossCourse: [],
+            learning: learningSummary,
+            materialWarnings: [],
+            requestedForm: detectRequestedForm(input.text)?.form,
+            wantsFullAnswer: /完整答案|直接给(我)?答案|别提示|tell me the answer|just give me/i.test(input.text),
+            webResults,
           }
-          const parsed = parseTeachingMeta(answer)
-          for (const warning of parsed.warnings) {
-            send({ type: 'progress', label: warning })
-          }
-          const activities: LessonActivity[] = []
+
+          let finalText = ''
+          let finalMeta: import('@deepseek-teaching/core').TeachingTurnMeta | undefined
+          let evidenceRefs: import('@deepseek-teaching/core').EvidenceReference[] = [...evidenceFromMaterial, ...webEvidence]
+          let uncertainty: string[] = []
           let limitations: string[] = []
-          if (parsed.meta?.activity !== undefined && parsed.meta.activity !== null) {
-            const proposal = activityProposalFromMeta(parsed.meta.activity, revision, hits)
-            if (proposal === undefined) {
-              services.logger('activity proposal invalid', { raw: JSON.stringify(parsed.meta.activity).slice(0, 1200) })
-              limitations = [...limitations, '模型提出的活动结构不完整，已省略']
-            } else {
+          for await (const event of services.teaching.respond(teachingInput, services.model, controller.signal)) {
+            if (event.type === 'phase') {
+              send({ type: 'progress', label: event.label })
+              continue
+            }
+            if (event.type === 'delta') {
+              send({ type: 'delta', text: event.text })
+              continue
+            }
+            if (event.type === 'evidence') {
+              evidenceRefs = [...event.refs]
+              send({ type: 'evidence', refs: evidenceRefs })
+              continue
+            }
+            if (event.type === 'position') {
+              await services.sessions.save({
+                ...session,
+                position: {
+                  stage: event.stage,
+                  ...(event.conceptId === undefined ? {} : { conceptId: event.conceptId }),
+                  ...(session.position.activityId === undefined ? {} : { activityId: session.position.activityId }),
+                  updatedAt: nowIso(),
+                },
+                updatedAt: nowIso(),
+              })
+              send({ type: 'position', stage: event.stage, conceptId: event.conceptId })
+              continue
+            }
+            if (event.type === 'activity') {
               const activity = activityFromProposal({
-                proposal,
+                proposal: event.proposal,
                 sessionId: session.id,
                 courseId: course.id,
-                sourceRefs: hits.slice(0, 3).map(hit => hit.anchor),
+                sourceRefs: event.proposal.sourceRefs.length > 0
+                  ? event.proposal.sourceRefs
+                  : hits.slice(0, 3).map(hit => hit.anchor),
               })
               await services.sessions.saveActivity(activity)
-              activities.push(activity)
+              createdActivities.push(activity)
               send({ type: 'activity', activity })
+              continue
+            }
+            if (event.type === 'done') {
+              finalText = event.text
+              finalMeta = event.meta
+              evidenceRefs = [...event.evidenceRefs]
+              uncertainty = [...event.uncertainty]
+              limitations = [...event.limitations]
+              continue
+            }
+            if (event.type === 'error') {
+              throw appError(event.error.code, event.error.message, event.error.details)
             }
           }
-          // If the teaching turn proposed no usable activity, ask once for one
-          // focused activity; if that also fails, fall back to a deterministic
-          // reflection question so the T01 flow always has a practice step.
-          if (activities.length === 0) {
-            const fallback = await proposeFallbackActivity(services, {
-              course,
-              revision,
-              material,
-              answerText: parsed.replyText,
-              signal: controller.signal,
-            })
-            if (fallback !== undefined) {
-              const activity = activityFromProposal({
-                proposal: fallback,
-                sessionId: session.id,
-                courseId: course.id,
-                sourceRefs: hits.slice(0, 3).map(hit => hit.anchor),
-              })
-              await services.sessions.saveActivity(activity)
-              activities.push(activity)
-              send({ type: 'activity', activity })
-            }
-          }
-          const uncertainty = [
-            ...(parsed.meta?.uncertainty ?? []).filter((item): item is string => typeof item === 'string'),
-            ...limitations,
-          ]
+          const usage = services.takeUsage(session.id)
           const teacher = teacherMessage({
             sessionId: session.id,
-            text: parsed.replyText,
-            evidenceRefs,
-            activityIds: activities.map(activity => activity.id),
-            usage,
-            uncertainty,
+            text: finalText,
+            evidenceRefs: webNote === undefined
+              ? evidenceRefs
+              : [...evidenceRefs, { kind: 'model-knowledge', label: '能力说明', note: webNote }],
+            activityIds: createdActivities.map(activity => activity.id),
+            usage: usage === undefined
+              ? undefined
+              : {
+                  provider: usage.provider,
+                  model: usage.model,
+                  durationMs: usage.durationMs,
+                  inputTokens: usage.inputTokens,
+                  outputTokens: usage.outputTokens,
+                  totalTokens: usage.totalTokens,
+                  costUsd: usage.costUsd,
+                  usageUnknown: usage.usageUnknown,
+                },
+            uncertainty: [...uncertainty, ...limitations, ...(webNote === undefined ? [] : [webNote])],
           })
           await services.sessions.appendMessage(teacher)
           const latest = (await services.sessions.get(session.id)) ?? session
           const nextPosition = {
-            stage: (parsed.meta?.stage ?? latest.position.stage) as TeachingSession['position']['stage'],
-            conceptId: latest.position.conceptId,
-            activityId: activities[0]?.id ?? latest.position.activityId,
+            stage: (finalMeta?.stage ?? latest.position.stage) as TeachingSession['position']['stage'],
+            conceptId: finalMeta?.conceptIds?.[0] ?? latest.position.conceptId,
+            activityId: createdActivities.at(-1)?.id ?? latest.position.activityId,
             updatedAt: nowIso(),
           }
           await services.sessions.save({
             ...latest,
             messageIds: [...latest.messageIds, teacher.id],
             position: nextPosition,
+            coveredConceptIds: Array.from(new Set([
+              ...latest.coveredConceptIds,
+              ...(finalMeta?.conceptIds ?? []),
+            ])),
             updatedAt: nowIso(),
           })
           send({ type: 'position', stage: nextPosition.stage, conceptId: nextPosition.conceptId })
-          if (modelFailure !== undefined) {
-            send({ type: 'error', error: modelFailure })
-          } else {
-            send({ type: 'done', message: teacher })
-          }
+          send({ type: 'done', message: teacher })
         } catch (cause) {
           const error = toAppError(cause)
-          services.logger('chat turn failed', { sessionId: session.id, code: error.code })
+          services.logger('chat turn failed', { sessionId: session.id, code: error.code, message: error.message })
+          // Persist a visible failure note so a reload does not hide what happened.
+          try {
+            const note = teacherMessage({
+              sessionId: session.id,
+              text: `本轮教学未能完成：${error.message}`,
+              evidenceRefs: [],
+              activityIds: [],
+            })
+            await services.sessions.appendMessage({ ...note, kind: 'system-note', error: { code: error.code, message: error.message } })
+            const latest = await services.sessions.get(session.id)
+            if (latest !== undefined) {
+              await services.sessions.save({ ...latest, messageIds: [...latest.messageIds, note.id], updatedAt: nowIso() })
+            }
+          } catch {
+            // A failed note must not replace the original error.
+          }
           try {
             send({ type: 'error', error })
           } catch {
-            // The client may already be gone; the persisted student message remains.
+            // Client already gone; the persisted state above remains.
           }
         } finally {
           activeChats.delete(session.id)
-          sink.close()
+          try { sink.close() } catch { /* already closed */ }
         }
       },
       cancel: () => {
@@ -832,7 +901,7 @@ export function registerRoutes(services: RouteServices): void {
     }
     const state = await services.sessions.getActivityState(activity.id)
     const code = input.code ?? state?.code ?? activity.payload.code
-    const run = await executeCodeRun(services, {
+    const run = await runExperiment(services, {
       sessionId: activity.sessionId,
       courseId: activity.courseId,
       activityId: activity.id,
@@ -843,7 +912,9 @@ export function registerRoutes(services: RouteServices): void {
       stdin: input.stdin ?? activity.payload.stdin,
       checks: activity.payload.tests,
     })
-    return envelope({ run, validation: run.validation })
+    return envelope({ run, validation: run.status === 'succeeded' || run.verification === 'objective'
+      ? validationFromRun(run)
+      : undefined })
   })
 
   route('experiments.run', async ({ body }) => {
@@ -851,7 +922,7 @@ export function registerRoutes(services: RouteServices): void {
     if (typeof input?.language !== 'string' || typeof input?.code !== 'string') {
       throw appError('invalid-input', '缺少语言或代码')
     }
-    const run = await executeCodeRun(services, {
+    const run = await runExperiment(services, {
       sessionId: input.sessionId,
       courseId: input.courseId,
       activityId: input.activityId,
@@ -861,11 +932,21 @@ export function registerRoutes(services: RouteServices): void {
       code: input.code,
       stdin: input.stdin,
       checks: input.checks,
+      timeoutMs: input.timeoutMs,
     })
     return envelope({ run })
   })
 
-  route('experiments.cancel', async () => failure({ code: 'capability-missing', message: '运行取消将在 T05 实验适配器接入后提供' }))
+  route('experiments.cancel', async ({ body }) => {
+    const input = body as ApiRequests['experiments.cancel']['body']
+    if (typeof input?.runId !== 'string') throw appError('invalid-input', '缺少 runId')
+    const run = await services.experiments.cancel(input.runId)
+    if (run === undefined) {
+      return failure({ code: 'not-found', message: '运行不存在或已结束' })
+    }
+    await services.state.writeJson(runFile(services.state.dataDir, run.id), run)
+    return envelope({ run })
+  })
 
   /* ------------------------------------------------------------------ */
   /* Attempts / mastery / review                                          */
@@ -877,45 +958,27 @@ export function registerRoutes(services: RouteServices): void {
     const session = await services.sessions.get(input.sessionId)
     if (session === undefined) throw notFoundError('学习会话')
     const activity = input.activityId === undefined ? undefined : await services.sessions.getActivity(input.activityId)
-    const independence = classifyIndependence(input)
-    const validation = activity === undefined
-      ? { kind: 'unverified' as const, confidence: 'unknown' as const, notes: ['自由对话回答未进行客观验证'] }
-      : await validateAttempt(services, activity, input)
-    const attempt: LearningAttempt = {
-      id: `try-${randomUUID().slice(0, 12)}` as never,
+    const validation = activity === undefined ? undefined : await validateAttempt(services, activity, input)
+    const conceptIds = activity?.conceptIds ?? (session.position.conceptId === undefined ? [] : [session.position.conceptId])
+    const learning = services.createLearningFor(activity)
+    const outcome = await learning.submitAttempt({
       sessionId: session.id,
       courseId: session.courseId,
       courseRevisionId: session.courseRevisionId,
-      conceptIds: activity?.conceptIds ?? (session.position.conceptId === undefined ? [] : [session.position.conceptId]),
-      activityId: activity?.id,
-      activityRevision: activity?.revision,
+      conceptIds,
+      ...(activity === undefined ? {} : { activityId: activity.id, activityRevision: activity.revision }),
       prompt: input.prompt,
       answerText: input.answerText,
-      selectedOptionIds: input.selectedOptionIds,
-      helpExposure: input.helpLevel === 'full-answer'
-        ? { level: 'full-answer', answer: '' }
-        : { level: input.helpLevel, hints: input.hintsSeen ?? [] },
-      independence,
-      selfReport: input.selfReport,
-      runId: input.runId as never,
-      validation,
-      createdAt: nowIso(),
-    }
-    const record = (await services.learning.get(session.courseId)) ?? emptyLearning(session.courseId, session.courseRevisionId)
-    const updated = applyAttemptToRecord(record, attempt, activity)
-    const saved = await services.learning.save(updated)
-    const mastery = saved.mastery.filter(item => attempt.conceptIds.includes(item.conceptId))
-    const review = saved.review.filter(item => attempt.conceptIds.includes(item.conceptId))
-    const outcome: AttemptOutcome = {
-      attempt,
-      validation,
-      mastery,
-      review,
-      ...(independence === 'answer-shown' || independence === 'skipped' || independence === 'assisted'
-        ? { independenceNote: '本次尝试不作为独立掌握证据' }
-        : {}),
-    }
-    return envelope(outcome)
+      helpLevel: input.helpLevel,
+      hintsSeen: input.hintsSeen ?? [],
+      answerRevealed: input.answerRevealed,
+      ...(input.selectedOptionIds === undefined ? {} : { selectedOptionIds: input.selectedOptionIds }),
+      ...(input.selfReport === undefined ? {} : { selfReport: input.selfReport }),
+      ...(validation === undefined ? {} : { validation }),
+      ...(input.runId === undefined ? {} : { runId: input.runId as never }),
+    })
+    if (!outcome.ok) return failure(outcome.error)
+    return envelope(outcome.value)
   })
 
   route('attempts.list', async ({ query }) => {
@@ -945,24 +1008,10 @@ export function registerRoutes(services: RouteServices): void {
     if (typeof input?.courseId !== 'string' || typeof input?.conceptId !== 'string' || typeof input?.reason !== 'string') {
       throw appError('invalid-input', '缺少课程、概念或异议理由')
     }
-    const record = await services.learning.get(input.courseId)
-    if (record === undefined) throw notFoundError('学情记录')
-    const index = record.mastery.findIndex(item => item.conceptId === input.conceptId)
-    if (index === -1) throw notFoundError('掌握记录')
-    const current = record.mastery[index] as MasteryRecord
-    const disputed: MasteryRecord = {
-      ...current,
-      disputes: [...current.disputes, {
-        id: `dispute-${randomUUID().slice(0, 8)}`,
-        reason: input.reason,
-        createdAt: nowIso(),
-        status: 'open',
-      }],
-      updatedAt: nowIso(),
-    }
-    const mastery = record.mastery.map((item, i) => i === index ? disputed : item)
-    await services.learning.save({ ...record, mastery })
-    return envelope({ mastery: disputed })
+    const learning = services.createLearningFor(undefined)
+    const result = await learning.dispute(input.courseId, input.conceptId, input.reason)
+    if (!result.ok) return failure(result.error)
+    return envelope({ mastery: result.value })
   })
 
   route('mastery.recheck', async ({ body }) => {
@@ -970,28 +1019,18 @@ export function registerRoutes(services: RouteServices): void {
     if (typeof input?.courseId !== 'string' || typeof input?.conceptId !== 'string') {
       throw appError('invalid-input', '缺少课程或概念')
     }
-    const record = await services.learning.get(input.courseId)
-    if (record === undefined) throw notFoundError('学情记录')
-    const index = record.mastery.findIndex(item => item.conceptId === input.conceptId)
-    if (index === -1) throw notFoundError('掌握记录')
-    const current = record.mastery[index] as MasteryRecord
-    const recheck: MasteryRecord = {
-      ...current,
-      disputes: current.disputes.map(dispute => dispute.status === 'open'
-        ? { ...dispute, status: 'recheck-due' as const }
-        : dispute),
-      uncovered: Array.from(new Set([...current.uncovered, '重新检验：条件/反例与迁移表现'])),
-      updatedAt: nowIso(),
-    }
-    const mastery = record.mastery.map((item, i) => i === index ? recheck : item)
-    await services.learning.save({ ...record, mastery })
-    return envelope({ mastery: recheck })
+    const learning = services.createLearningFor(undefined)
+    const result = await learning.recheck(input.courseId, input.conceptId)
+    if (!result.ok) return failure(result.error)
+    return envelope({ mastery: result.value.record, plan: result.value.plan })
   })
 
   route('review.list', async ({ query }) => {
     const courseId = requireQuery(query, 'courseId')
-    const record = await services.learning.get(courseId)
-    return envelope({ review: record?.review ?? [] })
+    const learning = services.createLearningFor(undefined)
+    const result = await learning.listReview(courseId as never)
+    if (!result.ok) return failure(result.error)
+    return envelope({ review: result.value })
   })
 
   /* ------------------------------------------------------------------ */
@@ -1006,12 +1045,37 @@ export function registerRoutes(services: RouteServices): void {
     return envelope({ profile: await services.profiles.patch(input.patch) })
   })
 
-  route('environments.list', async () => envelope(await listEnvironments(services)))
+  route('environments.list', async () => envelope(await services.experiments.directory()))
 
-  route('environments.prepare', async () => failure({
-    code: 'capability-missing',
-    message: '环境自动配置在 T06 接入；当前 Python/JavaScript 可直接运行',
-  }))
+  route('environments.prepare', async ({ body }) => {
+    const input = body as ApiRequests['environments.prepare']['body']
+    if (typeof input?.language !== 'string') throw appError('invalid-input', '缺少语言')
+    const handle = services.tasks.start({
+      kind: 'environment-prepare',
+      label: `准备 ${input.language} 运行环境`,
+      steps: [
+        { id: 'probe', label: '探测已有运行时' },
+        { id: 'prepare', label: '准备独立环境' },
+        { id: 'verify', label: '冒烟验证' },
+      ],
+    }, async context => {
+      context.step('probe', { status: 'running' })
+      const environment = await services.experiments.prepare({
+        language: input.language,
+        ...(input.dialect === undefined ? {} : { dialect: input.dialect }),
+        ...(input.courseId === undefined ? {} : { courseId: input.courseId as never }),
+      })
+      context.step('probe', { status: environment.status === 'failed' ? 'failed' : 'done', detail: environment.version })
+      context.step('prepare', { status: environment.status === 'failed' ? 'failed' : 'done' })
+      context.step('verify', { status: environment.status === 'ready' ? 'done' : 'skipped' })
+      context.result({ environmentId: environment.id, status: environment.status })
+      return { environment }
+    })
+    return envelope({ task: handle, environment: await services.experiments.prepare({
+      language: input.language,
+      ...(input.dialect === undefined ? {} : { dialect: input.dialect }),
+    }) })
+  })
 
   route('tasks.get', async ({ query }) => {
     const taskId = requireQuery(query, 'taskId')
@@ -1066,65 +1130,26 @@ function requireQuery(query: URLSearchParams, name: string): string {
   return value
 }
 
-/** Build a course draft view with coverage and warnings. */
+/** Build a course draft view with coverage and warnings from the corpus service. */
 async function buildDraftView(
   services: RouteServices,
   course: Course,
   revision: CourseRevision,
-  sources: readonly SourceDocument[],
 ): Promise<CourseDraftView> {
-  const coverage = []
-  const warnings: string[] = []
-  for (const source of sources) {
-    const stored = await services.corpus.load(source.id).catch(() => undefined)
-    coverage.push({
-      sourceId: source.id,
-      title: source.title,
-      status: source.status,
-      usedUnits: stored?.units.length ?? 0,
-      issues: stored?.warnings.length ?? 0,
-    })
-    for (const warning of stored?.warnings ?? []) warnings.push(`${source.title}: ${warning}`)
+  const coverage = await services.corpus.buildCourseDraftCoverage(course.id, revision.id)
+  if (!coverage.ok) {
+    return {
+      course,
+      revision,
+      coverage: [],
+      warnings: [`无法读取资料覆盖情况：${coverage.error.message}`],
+    }
   }
-  return { course, revision, coverage, warnings }
+  return { course, revision, coverage: coverage.value.coverage, warnings: coverage.value.warnings }
 }
 
-/** Convert model-proposed activity JSON into a typed proposal. */
-function activityProposalFromMeta(
-  raw: unknown,
-  revision: CourseRevision,
-  hits: readonly { anchor: { excerpt: string } }[],
-): ActivityProposal | undefined {
-  const normalized = normalizeActivityProposal(raw)
-  if (normalized === undefined) return undefined
-  const meta = raw as { kind?: string; title?: string; goal?: string }
-  const concept = revision.concepts[0]
-  return {
-    kind: meta.kind ?? normalized.payload.type,
-    title: typeof meta.title === 'string' && meta.title !== '' ? meta.title : '课堂活动',
-    goal: typeof meta.goal === 'string' && meta.goal !== '' ? meta.goal : (concept?.summary ?? '检验对当前概念的理解'),
-    payload: normalized.payload,
-    verification: normalized.verification,
-    sourceRefs: hits.slice(0, 2).map(hit => hit.anchor as never),
-    conceptIds: concept === undefined ? [] : [concept.id],
-    independent: normalized.verification.kind === 'objective',
-  }
-}
-
-/** Independence classification shared by the T01 attempt path. */
-function classifyIndependence(input: {
-  helpLevel: 0 | 1 | 2 | 3 | 'full-answer'
-  answerRevealed: boolean
-  answerText: string
-}): 'independent' | 'assisted' | 'skipped' | 'answer-shown' {
-  if (input.answerText.trim() === '') return 'skipped'
-  if (input.helpLevel === 'full-answer' || input.answerRevealed) return 'answer-shown'
-  if (input.helpLevel >= 2) return 'assisted'
-  return 'independent'
-}
-
-/** Execute code for an activity and apply objective checks. */
-async function executeCodeRun(
+/** Run code through the experiments registry and persist the run record. */
+async function runExperiment(
   services: RouteServices,
   input: {
     sessionId?: string
@@ -1135,59 +1160,44 @@ async function executeCodeRun(
     dialect?: string
     code: string
     stdin?: string
-    checks?: readonly { name: string; type: string; value: string | number }[]
+    timeoutMs?: number
+    checks?: readonly { readonly name: string; readonly type: string; readonly value: string | number }[]
   },
-): Promise<ExperimentRun & { validation?: AttemptValidation }> {
+): Promise<ExperimentRun> {
   const runId = `run-${randomUUID().slice(0, 12)}`
-  const startedAt = nowIso()
-  const result = await runCode({ language: input.language, code: input.code, stdin: input.stdin })
-  const checks = (input.checks ?? []).map(check => {
-    let status: 'pass' | 'fail' | 'not-run' = 'not-run'
-    if (check.type === 'stdout-contains') status = result.stdout.includes(String(check.value)) ? 'pass' : 'fail'
-    else if (check.type === 'stdout-equals') status = result.stdout.trim() === String(check.value).trim() ? 'pass' : 'fail'
-    else if (check.type === 'exit-code') status = result.exitCode === Number(check.value) ? 'pass' : 'fail'
-    return { ...check, status }
+  const checks = (input.checks ?? []).flatMap(check => {
+    if (check.type !== 'stdout-contains' && check.type !== 'stdout-equals' && check.type !== 'exit-code') return []
+    return [{ name: check.name, type: check.type, value: check.value }]
   })
-  const run: ExperimentRun = {
-    id: runId as never,
-    sessionId: input.sessionId as never,
-    courseId: input.courseId as never,
-    activityId: input.activityId as never,
-    activityRevision: input.activityRevision,
-    environmentId: `env-${input.language}` as never,
+  const run = await services.experiments.run({
+    ...(input.sessionId === undefined ? {} : { sessionId: input.sessionId as never }),
+    ...(input.courseId === undefined ? {} : { courseId: input.courseId as never }),
+    ...(input.activityId === undefined ? {} : { activityId: input.activityId as never }),
+    ...(input.activityRevision === undefined ? {} : { activityRevision: input.activityRevision }),
     language: input.language,
-    dialect: input.dialect,
+    ...(input.dialect === undefined ? {} : { dialect: input.dialect }),
     code: input.code,
-    stdin: input.stdin,
-    startedAt,
-    endedAt: nowIso(),
-    status: result.timedOut ? 'timed-out' : (result.exitCode === 0 ? 'succeeded' : 'failed'),
-    stdout: result.stdout,
-    stderr: result.stderr,
-    exitCode: result.exitCode,
-    durationMs: result.durationMs,
-    checks,
-    verification: checks.length === 0 ? 'exploratory' : (checks.every(check => check.status === 'pass') ? 'objective' : 'objective'),
-    limits: { timeoutMs: 10_000 },
-  }
+    ...(input.stdin === undefined ? {} : { stdin: input.stdin }),
+    ...(checks.length === 0 ? {} : { checks }),
+    ...(input.timeoutMs === undefined ? {} : { timeoutMs: input.timeoutMs }),
+  } as import('@deepseek-teaching/core').RunRequest, { runId: runId as never })
   await services.state.writeJson(runFile(services.state.dataDir, run.id), run)
-  const validation: AttemptValidation | undefined = checks.length === 0 ? undefined : {
-    kind: 'objective',
-    passed: checks.every(check => check.status === 'pass'),
-    checks: checks.map(check => ({ name: check.name, status: check.status === 'pass' ? 'pass' : 'fail' })),
-    evidence: [result.stdout.slice(0, 400)],
-    assessedBy: 'objective-runner',
-    confidence: 'high',
-  }
-  return { ...run, validation }
+  return run
 }
 
-/** Validate an attempt against its activity. */
+/**
+ * Host-side objective validation for one attempt.
+ *
+ * Only checks the Host can determine without model judgement happen here: quiz
+ * answers and real run results. Every other activity returns `undefined` so the
+ * learning service applies its rubric path (or records the attempt as
+ * unverified) instead of this layer pretending to judge it.
+ */
 async function validateAttempt(
   services: RouteServices,
   activity: LessonActivity,
   input: ApiRequests['attempts.submit']['body'],
-): Promise<AttemptValidation> {
+): Promise<AttemptValidation | undefined> {
   if (activity.payload.type === 'quiz') {
     const selected = (input.selectedOptionIds ?? []).slice().sort()
     const correct = activity.payload.correctOptionIds.slice().sort()
@@ -1206,86 +1216,15 @@ async function validateAttempt(
   }
   if (activity.payload.type === 'code-run' && input.runId !== undefined) {
     const run = await services.state.readJson<ExperimentRun>(runFile(services.state.dataDir, input.runId))
-    if (run !== undefined) {
-      const passed = run.checks !== undefined && run.checks.length > 0
-        ? run.checks.every(check => check.status === 'pass')
-        : run.status === 'succeeded'
-      return {
-        kind: 'objective',
-        passed,
-        checks: (run.checks ?? []).map(check => ({ name: check.name, status: check.status })),
-        evidence: [run.stdout.slice(0, 400)],
-        assessedBy: 'objective-runner',
-        confidence: 'high',
-      }
+    if (run !== undefined) return validationFromRun(run)
+    return {
+      kind: 'unverified',
+      confidence: 'unknown',
+      notes: ['没有找到对应的运行记录，无法客观验证'],
+      assessedBy: 'none',
     }
   }
-  return {
-    kind: 'unverified',
-    confidence: 'unknown',
-    notes: ['该回答尚未客观验证；模型/rubric 评价由 T04 接入'],
-    assessedBy: 'none',
-  }
-}
-
-/** Apply one attempt to the course learning record (T01 minimal mastery rules). */
-function applyAttemptToRecord(
-  record: CourseLearningRecord,
-  attempt: LearningAttempt,
-  _activity: LessonActivity | undefined,
-): CourseLearningRecord {
-  const attempts = [...record.attempts, attempt]
-  const mastery = [...record.mastery]
-  const review = [...record.review]
-  const passed = attempt.validation?.passed === true
-  for (const conceptId of attempt.conceptIds) {
-    const index = mastery.findIndex(item => item.conceptId === conceptId)
-    const current = index === -1 ? undefined : mastery[index]
-    const independent = attempt.independence === 'independent'
-    const dimensions = {
-      explain: current?.dimensions.explain ?? 0,
-      conditions: current?.dimensions.conditions ?? 0,
-      variants: (current?.dimensions.variants ?? 0) + (independent && passed ? 1 : 0),
-      transfer: current?.dimensions.transfer ?? 0,
-    }
-    const level: MasteryRecord['level'] = attempt.independence === 'skipped'
-      ? (current?.level ?? 'exposed')
-      : independent && passed
-        ? (dimensions.variants >= 2 ? 'checked' : 'practiced')
-        : (current?.level === 'unseen' || current === undefined ? 'exposed' : current.level)
-    const basis = [...(current?.basis ?? [])]
-    if (independent && passed) basis.push(`独立完成活动取得正确结果（${attempt.id}）`)
-    else if (attempt.independence === 'assisted') basis.push(`在提示下完成，不计独立证据（${attempt.id}）`)
-    else if (attempt.independence === 'answer-shown') basis.push(`已查看完整答案，不计独立证据（${attempt.id}）`)
-    const next: MasteryRecord = {
-      id: current?.id ?? (`mst-${randomUUID().slice(0, 10)}` as never),
-      courseId: attempt.courseId,
-      courseRevisionId: attempt.courseRevisionId,
-      conceptId,
-      level,
-      dimensions,
-      evidenceAttemptIds: [...(current?.evidenceAttemptIds ?? []), attempt.id],
-      basis,
-      uncovered: current?.uncovered ?? ['概念解释', '条件/反例辨析', '迁移表现'],
-      disputes: current?.disputes ?? [],
-      updatedAt: nowIso(),
-    }
-    if (index === -1) mastery.push(next)
-    else mastery[index] = next
-    if (level !== 'mastered' && level !== 'checked') {
-      const dueAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-      if (!review.some(item => item.conceptId === conceptId)) {
-        review.push({
-          conceptId,
-          courseId: attempt.courseId,
-          dueAt,
-          intervalDays: 1,
-          reason: 'low-mastery',
-        })
-      }
-    }
-  }
-  return { ...record, attempts, mastery, review, updatedAt: nowIso() }
+  return undefined
 }
 
 /** Empty learning record for a course. */
@@ -1298,170 +1237,6 @@ function emptyLearning(courseId: string, courseRevisionId: string): CourseLearni
     review: [],
     notes: [],
     updatedAt: nowIso(),
-  }
-}
-
-/** Environment directory for T01: interpreters probed on demand. */
-async function listEnvironments(services: RouteServices): Promise<EnvironmentDirectory> {
-  const environments: EnvironmentRecord[] = []
-  const probe = async (language: string, command: string, args: string[]): Promise<{ ok: boolean; version?: string }> => {
-    try {
-      const result = await new Promise<{ code: number | null; stdout: string }>((resolve, reject) => {
-        const child = spawnSafe(command, args)
-        let stdout = ''
-        child.stdout?.on('data', (chunk: Buffer) => { stdout += chunk.toString('utf8') })
-        child.on('error', reject)
-        child.on('close', (code: number | null) => resolve({ code, stdout }))
-      })
-      if (result.code !== 0) return { ok: false }
-      return { ok: true, version: result.stdout.split('\n')[0]?.trim() }
-    } catch {
-      return { ok: false }
-    }
-  }
-  const python = await probe('python', process.env.DSH_TEACHING_PYTHON ?? 'python3', ['--version'])
-  const node = await probe('javascript', process.execPath, ['--version'])
-  const environmentsReady: EnvironmentRecord[] = [
-    {
-      id: 'env-python' as never,
-      language: 'python',
-      kind: 'system',
-      status: python.ok ? 'ready' : 'missing',
-      version: python.version,
-      isolation: { dependencies: 'none', note: 'T01 使用系统 Python；课程级隔离环境在 T06 提供' },
-      execution: { mode: 'process', executable: process.env.DSH_TEACHING_PYTHON ?? 'python3', timeoutMs: 10_000, cancellable: true, network: 'unknown', confinement: '宿主进程，无额外内存限制' },
-      createdAt: nowIso(),
-      updatedAt: nowIso(),
-      ...(python.ok ? {} : { failure: { message: '未找到 python3', code: 'capability-missing', cleanup: 'not-needed' as const } }),
-    },
-    {
-      id: 'env-javascript' as never,
-      language: 'javascript',
-      kind: 'system',
-      status: node.ok ? 'ready' : 'missing',
-      version: node.version,
-      isolation: { dependencies: 'none', note: '使用宿主 Electron Node 模式子进程' },
-      execution: { mode: 'process', executable: process.execPath, timeoutMs: 10_000, cancellable: true, network: 'unknown', confinement: '宿主进程，无额外内存限制' },
-      createdAt: nowIso(),
-      updatedAt: nowIso(),
-    },
-    {
-      id: 'env-scheme' as never,
-      language: 'scheme',
-      dialect: 'sicp',
-      kind: 'managed',
-      status: 'missing',
-      isolation: { dependencies: 'none', note: 'T05 接入 biwascheme 解释器' },
-      execution: { mode: 'in-process', timeoutMs: 10_000, cancellable: false, network: 'unknown' },
-      createdAt: nowIso(),
-      updatedAt: nowIso(),
-    },
-  ]
-  for (const environment of environmentsReady) {
-    environments.push(environment)
-    await services.state.writeJson(environmentFile(services.state.dataDir, environment.id), environment)
-  }
-  return {
-    environments,
-    supportedLanguages: [
-      { language: 'python', label: 'Python', status: python.ok ? 'ready' : 'missing', environmentId: 'env-python' as never, note: python.version },
-      { language: 'javascript', label: 'JavaScript', status: node.ok ? 'ready' : 'missing', environmentId: 'env-javascript' as never, note: node.version },
-      { language: 'scheme', label: 'Scheme (SICP)', status: 'missing', environmentId: 'env-scheme' as never, note: 'T05 接入' },
-    ],
-    gaps: ['Scheme 解释器与 SICP 教学库在 T05 接入', '课程级依赖隔离环境在 T06 接入'],
-  }
-}
-
-/** Spawn without shell, used only for version probes. */
-function spawnSafe(command: string, args: string[]): ReturnType<typeof import('node:child_process').spawn> {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { spawn } = process.getBuiltinModule('node:child_process') as typeof import('node:child_process')
-  return spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] })
-}
-
-/** Ask the model for one activity when the teaching turn proposed none. */
-async function proposeFallbackActivity(
-  services: RouteServices,
-  input: {
-    course: Course
-    revision: CourseRevision
-    material: readonly { anchor: SourceAnchor; documentTitle: string }[]
-    answerText: string
-    signal: AbortSignal
-  },
-): Promise<ActivityProposal | undefined> {
-  const concept = input.revision.concepts[0]
-  const materialText = input.material.slice(0, 4).map((item, index) => `[资料${index + 1}] ${item.anchor.excerpt.slice(0, 240)}`).join('\n')
-  try {
-    const completion = await services.model.complete({
-      system: '你是教学活动设计师。只输出 JSON，不要解释。',
-      messages: [{
-        role: 'user',
-        text: [
-          `课程：${input.course.title}`,
-          `当前概念：${concept?.title ?? '未命名'}`,
-          `讲解摘要：${input.answerText.slice(0, 500)}`,
-          `可用资料：\n${materialText}`,
-          '请设计一个能检验理解的小活动，JSON 字段：',
-          '{"kind":"quiz|graph|code-run|derivation","title":"...","goal":"...","payload":{...},"verification":{"kind":"objective|open|none"}}',
-          'quiz payload: {"type":"quiz","question":"...","options":[{"id":"A","label":"..."}],"correctOptionIds":["A"],"explanation":"..."}',
-          'graph payload: {"type":"graph","title":"...","xRange":[-5,5],"yRange":[-5,5],"series":[{"id":"s1","label":"...","expr":"x^2"}]}',
-          'code-run payload: {"type":"code-run","language":"python","code":"print(1)","editable":true}',
-          'derivation payload: {"type":"derivation","steps":[{"id":"s1","latex":"x^2","note":"..."}]}',
-        ].join('\n'),
-      }],
-      json: { name: 'activity', description: '一个教学活动', fields: { kind: '活动类型', title: '标题', goal: '目标', payload: '活动内容', verification: '验证方式' } },
-      maxTokens: 900,
-      purpose: 'other',
-      sessionId: 'session-teaching-plugin',
-    }, input.signal)
-    const normalized = completion.json === undefined ? undefined : normalizeActivityProposal(completion.json)
-    if (normalized === undefined) return fallbackReflectionActivity(input)
-    const meta = completion.json as { kind?: string; title?: string; goal?: string }
-    return {
-      kind: meta.kind ?? normalized.payload.type,
-      title: meta.title ?? '检验理解',
-      goal: meta.goal ?? (concept?.summary ?? '检验当前概念的理解'),
-      payload: normalized.payload,
-      verification: normalized.verification,
-      sourceRefs: input.material.slice(0, 2).map(item => item.anchor),
-      conceptIds: concept === undefined ? [] : [concept.id],
-      independent: normalized.verification.kind === 'objective',
-    }
-  } catch (cause) {
-    services.logger('fallback activity failed', { message: cause instanceof Error ? cause.message : String(cause) })
-    return fallbackReflectionActivity(input)
-  }
-}
-
-/**
- * Deterministic fallback activity: a short reflection question keeps the
- * teaching loop observable even when the model cannot produce structured output.
- */
-function fallbackReflectionActivity(input: {
-  course: Course
-  revision: CourseRevision
-  material: readonly { anchor: SourceAnchor; documentTitle: string }[]
-}): ActivityProposal | undefined {
-  const concept = input.revision.concepts[0]
-  const conceptTitle = concept?.title ?? input.course.title
-  return {
-    kind: 'open-question',
-    title: `用自己的话解释：${conceptTitle}`,
-    goal: '检验能否脱离原文复述并举例',
-    payload: {
-      type: 'open-question',
-      prompt: `请用自己的话解释「${conceptTitle}」，并给出一个它适用或不适用的具体例子，说明你的判断依据。`,
-      rubric: [
-        { id: 'explain', label: '概念表述', description: '用自己的话准确表述核心含义', weight: 1 },
-        { id: 'example', label: '例子与条件', description: '给出例子并说明适用条件', weight: 1 },
-        { id: 'limits', label: '边界认识', description: '指出何时不适用或常见误区', weight: 1 },
-      ],
-    },
-    verification: { kind: 'open', note: '开放题按 rubric 评价并保留不确定性' },
-    sourceRefs: input.material.slice(0, 2).map(item => item.anchor),
-    conceptIds: concept === undefined ? [] : [concept.id],
-    independent: true,
   }
 }
 

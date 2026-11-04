@@ -54,10 +54,14 @@ function chunk(type: string, data: Uint8Array): Uint8Array {
 export function encodePng(
   width: number,
   height: number,
-  channels: 3 | 4,
+  channels: 1 | 3 | 4,
   pixels: Uint8Array,
 ): Uint8Array {
-  const bytes = channels === 4 ? pixels : rgbToRgba(width, height, pixels)
+  const bytes = channels === 4
+    ? pixels
+    : channels === 3
+      ? rgbToRgba(width, height, pixels)
+      : grayToRgba(pixels)
   const stride = width * 4
   const raw = new Uint8Array((stride + 1) * height)
   for (let y = 0; y < height; y += 1) {
@@ -86,6 +90,18 @@ export function encodePng(
   for (const part of parts) {
     out.set(part, offset)
     offset += part.length
+  }
+  return out
+}
+
+function grayToRgba(gray: Uint8Array): Uint8Array {
+  const out = new Uint8Array(gray.length * 4)
+  for (let i = 0, j = 0; i < gray.length; i += 1, j += 4) {
+    const value = gray[i] as number
+    out[j] = value
+    out[j + 1] = value
+    out[j + 2] = value
+    out[j + 3] = 255
   }
   return out
 }

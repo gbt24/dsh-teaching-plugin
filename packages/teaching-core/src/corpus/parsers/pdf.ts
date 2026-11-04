@@ -479,13 +479,20 @@ export function addOcrPageUnits(
         reviewRequired: true,
       }))
   }
+  let formulaCount = 0
+  let firstFormula = ''
   for (const paragraph of paragraphs) {
     if (paragraph.text.trim() === '') continue
     const locator: SourceLocator = {
       ...locatorBase,
       ...(paragraph.bbox !== undefined ? { bbox: paragraph.bbox } : {}),
     }
-    const kind = looksLikeFormula(paragraph.text) && paragraph.text.length <= 300 ? 'formula' : 'paragraph'
+    const isFormula = looksLikeFormula(paragraph.text) && paragraph.text.length <= 300
+    if (isFormula) {
+      formulaCount += 1
+      if (firstFormula === '') firstFormula = paragraph.text
+    }
+    const kind = isFormula ? 'formula' : 'paragraph'
     const confidence: ExtractionConfidence = paragraph.confidence >= minConfidence ? 'medium' : 'low'
     budget.addUnit({
       kind,
@@ -494,6 +501,14 @@ export function addOcrPageUnits(
       confidence,
       notes: [`OCR 置信度 ${paragraph.confidence.toFixed(1)}`],
     })
+  }
+  if (formulaCount > 0) {
+    budget.addIssue(issueOf('formula-uncertain', 'warning',
+      `扫描页中有 ${formulaCount} 处疑似公式由 OCR 识别，符号/上下标可能错误，请核对原页`, {
+        locator: locatorBase,
+        excerpt: firstFormula,
+        reviewRequired: true,
+      }))
   }
 }
 
@@ -542,7 +557,8 @@ export async function parsePdf(context: ParseContext): Promise<ParserOutput> {
       let textLines: PdfLine[] = []
       try {
         const textContent = await page.getTextContent()
-        const items = textContent.items.filter(isTextItem)
+        const rawItems: unknown[] = textContent.items
+        const items = rawItems.filter(isTextItem)
         textLines = buildPdfLines(items, viewport)
       } catch {
         budget.addIssue(issueOf('unsupported-content', 'warning',
