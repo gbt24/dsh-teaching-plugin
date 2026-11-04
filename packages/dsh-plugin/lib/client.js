@@ -18483,6 +18483,7 @@ window.__ModuleLoader__.load({
     };
     function Onboarding(props) {
       const [step, setStep] = (0, import_react5.useState)("course");
+      const [picking, setPicking] = (0, import_react5.useState)(false);
       const [title, setTitle] = (0, import_react5.useState)("");
       const [description, setDescription] = (0, import_react5.useState)("");
       const [goals, setGoals] = (0, import_react5.useState)("");
@@ -18514,6 +18515,25 @@ window.__ModuleLoader__.load({
         if (created !== void 0) {
           setCourseId(created);
           setStep("import");
+        }
+      };
+      const pickDirectory = async () => {
+        if (props.onPickDirectory === void 0) {
+          setLocalError("\u5F53\u524D\u73AF\u5883\u6CA1\u6709\u53EF\u7528\u7684\u6587\u4EF6\u5939\u9009\u62E9\u5668\uFF0C\u8BF7\u76F4\u63A5\u8F93\u5165\u672C\u5730\u8DEF\u5F84\u3002");
+          return;
+        }
+        setPicking(true);
+        setLocalError(void 0);
+        try {
+          const picked = await props.onPickDirectory();
+          if (picked !== null && picked !== "") {
+            setPathsText((current) => current.trim() === "" ? picked : `${current.trimEnd()}
+    ${picked}`);
+          }
+        } catch (cause) {
+          setLocalError(`\u6253\u5F00\u9009\u62E9\u5668\u5931\u8D25\uFF1A${cause instanceof Error ? cause.message : String(cause)}\uFF0C\u8BF7\u76F4\u63A5\u8F93\u5165\u8DEF\u5F84\u3002`);
+        } finally {
+          setPicking(false);
         }
       };
       const importSources = async () => {
@@ -18624,7 +18644,21 @@ window.__ModuleLoader__.load({
                 placeholder: "/Users/you/Documents/SICP.pdf\n/Users/you/Documents/\u8BFE\u7A0B\u7B14\u8BB0.md\n/Users/you/Documents/\u4EE3\u7801\u5B9E\u9A8C"
               }
             ),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-field-hint", children: "\u652F\u6301 Markdown/\u6587\u672C/PDF/Word/PPT/\u4EE3\u7801/Notebook\u3002\u626B\u63CF\u4EF6\u7684\u516C\u5F0F\u56FE\u8868\u8BC6\u522B\u53D6\u51B3\u4E8E\u672C\u673A\u80FD\u529B\uFF0C\u5BFC\u5165\u540E\u4F1A\u5217\u51FA\u95EE\u9898\u6E05\u5355\u3002" })
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-row", style: { marginTop: 6 }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: "ai-small-button",
+                  onClick: () => void pickDirectory(),
+                  disabled: picking,
+                  "aria-label": "\u9009\u62E9\u8D44\u6599\u6587\u4EF6\u5939",
+                  title: "\u6253\u5F00\u6587\u4EF6\u7BA1\u7406\u5668\u9009\u62E9\u8D44\u6599\u6240\u5728\u6587\u4EF6\u5939\uFF08Host \u4F1A\u9012\u5F52\u5BFC\u5165\u5176\u4E2D\u7684\u652F\u6301\u683C\u5F0F\uFF09",
+                  children: picking ? "\u6B63\u5728\u6253\u5F00\u9009\u62E9\u5668\u2026" : "\u{1F4C2} \u9009\u62E9\u8D44\u6599\u6587\u4EF6\u5939\u2026"
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-field-hint", children: "\u53EF\u9009\u62E9\u6587\u4EF6\u5939\uFF08\u4F1A\u81EA\u52A8\u6536\u96C6\u5176\u4E2D\u7684 Markdown/\u6587\u672C/PDF/\u56FE\u7247/Word/PPT/\u4EE3\u7801/Notebook\uFF09\uFF0C\u4E5F\u53EF\u76F4\u63A5\u8F93\u5165\u591A\u4E2A\u6587\u4EF6\u8DEF\u5F84\u3002" })
+            ] })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-row", children: [
             /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => void importSources(), disabled: busy || importRunning, children: importRunning ? "\u5BFC\u5165\u4E2D\u2026" : "\u5BFC\u5165\u8D44\u6599" }),
@@ -19344,7 +19378,7 @@ window.__ModuleLoader__.load({
     function sleep(ms) {
       return new Promise((resolve) => setTimeout(resolve, ms));
     }
-    function TeachingWorkspace() {
+    function TeachingWorkspace(props = {}) {
       const [state, dispatch] = import_react10.default.useReducer(workspaceReducer, INITIAL_WORKSPACE_STATE);
       const stateRef = (0, import_react10.useRef)(state);
       stateRef.current = state;
@@ -19955,7 +19989,8 @@ window.__ModuleLoader__.load({
         onImportPaths: importPaths,
         onGenerateDraft: generateDraft,
         onConfirmDraft: confirmDraft,
-        onStartAdhoc: startAdhocSession
+        onStartAdhoc: startAdhocSession,
+        ...props.pickDirectory === void 0 ? {} : { onPickDirectory: props.pickDirectory }
       };
       return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-teaching-root", children: [
         /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
@@ -20170,14 +20205,29 @@ window.__ModuleLoader__.load({
         return this.props.children;
       }
     };
-    function TeachingPage() {
+    function TeachingPage(props) {
       (0, import_react11.useEffect)(() => {
         ensureStyles();
       }, []);
-      return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(PanelErrorBoundary, { children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(TeachingWorkspace, {}) });
+      return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(PanelErrorBoundary, { children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(TeachingWorkspace, { ...props.pickDirectory === void 0 ? {} : { pickDirectory: props.pickDirectory } }) });
+    }
+    function bindDirectoryPicker(ctx) {
+      const uiWorkspace = ctx.get?.("uiWorkspace");
+      if (uiWorkspace?.pickDirectory === void 0) return void 0;
+      return async () => {
+        try {
+          return await uiWorkspace.pickDirectory();
+        } catch {
+          return null;
+        }
+      };
     }
     function apply(ctx) {
-      ctx.slots.inject("main", () => ctx.slots.register({ name: "main", key: PANEL_ID }, TeachingPage));
+      const pickDirectory = bindDirectoryPicker(ctx);
+      ctx.slots.inject("main", () => ctx.slots.register(
+        { name: "main", key: PANEL_ID },
+        () => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(TeachingPage, { ...pickDirectory === void 0 ? {} : { pickDirectory } })
+      ));
       ctx.slots.inject("sidebar.panellist", () => ctx.slots.register({
         name: "sidebar.panellist",
         id: PANEL_ID,

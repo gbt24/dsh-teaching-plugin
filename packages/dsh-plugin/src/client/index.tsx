@@ -80,15 +80,30 @@ class PanelErrorBoundary extends React.Component<
 }
 
 /** The `main` slot page. */
-function TeachingPage(): React.ReactElement {
+function TeachingPage(props: { readonly pickDirectory?: () => Promise<string | null> }): React.ReactElement {
   useEffect(() => {
     ensureStyles()
   }, [])
   return (
     <PanelErrorBoundary>
-      <TeachingWorkspace />
+      <TeachingWorkspace {...(props.pickDirectory === undefined ? {} : { pickDirectory: props.pickDirectory })} />
     </PanelErrorBoundary>
   )
+}
+
+/** Bind the Harness directory chooser (desktop native dialog or Host OS chooser). */
+function bindDirectoryPicker(ctx: ClientSlotContext): (() => Promise<string | null>) | undefined {
+  const uiWorkspace = ctx.get?.('uiWorkspace') as
+    | { pickDirectory?: () => Promise<string | null> }
+    | undefined
+  if (uiWorkspace?.pickDirectory === undefined) return undefined
+  return async () => {
+    try {
+      return await uiWorkspace.pickDirectory!()
+    } catch {
+      return null
+    }
+  }
 }
 
 /** Minimal shape of the browser context used by this plugin (no Host imports). */
@@ -97,6 +112,8 @@ interface ClientSlotContext {
     inject(slot: string, factory: () => unknown): unknown
     register(options: Record<string, unknown>, component: unknown): unknown
   }
+  /** Optional service lookup (uiWorkspace provides the Host/Desktop directory chooser). */
+  get?(name: string): unknown
 }
 
 /**
@@ -106,7 +123,11 @@ interface ClientSlotContext {
  */
 export function apply(ctx: ClientSlotContext): void {
   // Central page: keyed by the same id the sidebar entry selects.
-  ctx.slots.inject('main', () => ctx.slots.register({ name: 'main', key: PANEL_ID }, TeachingPage))
+  const pickDirectory = bindDirectoryPicker(ctx)
+  ctx.slots.inject('main', () => ctx.slots.register(
+    { name: 'main', key: PANEL_ID },
+    () => <TeachingPage {...(pickDirectory === undefined ? {} : { pickDirectory })} />,
+  ))
   // Left-sidebar entry.
   ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({
     name: 'sidebar.panellist',

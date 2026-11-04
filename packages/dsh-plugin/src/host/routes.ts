@@ -7,8 +7,8 @@
  * renders what these routes return.
  */
 import { createHash, randomUUID } from 'node:crypto'
-import { readFile, stat } from 'node:fs/promises'
-import { basename } from 'node:path'
+import { readFile, readdir, stat } from 'node:fs/promises'
+import { basename, extname, join } from 'node:path'
 import type {
   ActivityState, ApiRequests, AppError, AttemptOutcome, AttemptValidation, BootstrapInfo,
   ChatMessage, ChatStreamEvent, Course, CourseDraftView, CourseRevision, CourseSummary,
@@ -296,39 +296,49 @@ export function registerRoutes(services: RouteServices): void {
   route('sources.import', async ({ body }) => {
     const input = body as ApiRequests['sources.import']['body']
     const paths = (input?.paths ?? []).filter((path): path is string => typeof path === 'string' && path.trim() !== '')
-    if (paths.length === 0) throw appError('invalid-input', '请提供至少一个本地文件路径')
+    if (paths.length === 0) throw appError('invalid-input', '请提供至少一个本地文件路径，或选择一个资料文件夹')
     const courseId = input.courseId
+    const expanded = await collectImportFiles(paths)
+    if (expanded.files.length === 0) {
+      return failure({
+        code: 'invalid-input',
+        message: '所选位置没有可导入的资料文件（支持 Markdown/文本/PDF/图片/Word/PPT/代码/Notebook）',
+        details: { warnings: expanded.warnings },
+      })
+    }
+    const files = expanded.files
     const handle = services.tasks.start({
       kind: 'source-import',
-      label: `导入 ${paths.length} 份资料`,
-      steps: paths.slice(0, 20).map((path, index) => ({ id: `file-${index}`, label: basename(path) })),
+      label: `导入 ${files.length} 份资料`,
+      steps: files.slice(0, 20).map((path, index) => ({ id: `file-${index}`, label: basename(path) })),
       resumable: true,
     }, async context => {
+      for (const warning of expanded.warnings) context.warn(warning)
       const progress = (done: number, total: number, current: string): void => {
         context.progress(total === 0 ? undefined : done / total)
-        const index = paths.indexOf(current)
+        const index = files.indexOf(current)
         if (index >= 0 && index < 20) {
           context.step(`file-${index}`, done > index ? { status: 'done' } : { status: 'running' })
         }
       }
       const outcome = await services.corpus.importFiles(
         courseId as never,
-        paths.map(path => ({ path, ...(courseId === undefined ? {} : { courseId: courseId as never }) })),
+        files.map(path => ({ path, ...(courseId === undefined ? {} : { courseId: courseId as never }) })),
         { onProgress: progress, signal: context.signal },
       )
       for (const warning of outcome.warnings) context.warn(warning)
-      for (const failure of outcome.failures) context.warn(`${failure.path}: ${failure.error.message}`)
-      // Mark any step the corpus service skipped (cancelled or failed fast).
-      for (let index = 0; index < Math.min(20, paths.length); index += 1) {
+      for (const failed of outcome.failures) context.warn(`${failed.path}: ${failed.error.message}`)
+      for (let index = 0; index < Math.min(20, files.length); index += 1) {
         if (context.cancelled()) context.step(`file-${index}`, { status: 'skipped' })
       }
       context.result({
         imported: outcome.documents.map(document => document.id),
-        failures: outcome.failures.map(failure => ({ path: failure.path, error: failure.error })),
+        failures: outcome.failures.map(failed => ({ path: failed.path, error: failed.error })),
+        expandedFrom: paths.length,
       })
       if (outcome.failures.length > 0 && outcome.documents.length === 0) {
         throw appError('failed', '所有资料导入失败', {
-          failures: outcome.failures.map(failure => ({ path: failure.path, code: failure.error.code })),
+          failures: outcome.failures.map(failed => ({ path: failed.path, code: failed.error.code })),
         })
       }
       return { imported: outcome.documents.map(document => document.id) }
@@ -1367,6 +1377,79 @@ function requireQuery(query: URLSearchParams, name: string): string {
   const value = query.get(name)
   if (value === null || value === '') throw appError('invalid-input', `缺少参数 ${name}`)
   return value
+}
+
+/** Extensions the corpus understands; directory imports only pick these. */
+const IMPORTABLE_EXTENSIONS = new Set([
+  '.md', '.markdown', '.mdx', '.txt', '.text', '.log', '.pdf', '.png', '.jpg', '.jpeg',
+  '.webp', '.gif', '.heic', '.docx', '.pptx', '.ipynb', '.html', '.htm',
+  '.py', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.scm', '.ss', '.rkt', '.c', '.h',
+  '.cpp', '.java', '.rs', '.go', '.rb', '.sh', '.sql', '.json', '.yaml', '.yml',
+])
+
+/** Directories never worth importing even when the student picks a parent folder. */
+const SKIPPED_DIR_NAMES = new Set(['node_modules', '.git', '.svn', 'dist', 'build', '.next', 'target', '__pycache__'])
+
+/**
+ * Expand the student's selected paths into concrete files.
+ *
+ * A folder picked through the native/Host directory chooser is walked
+ * recursively (bounded depth and file count) so the wizard can offer a real
+ * file-manager selection instead of requiring typed paths. Symlinked loops are
+ * avoided by bounding depth; unreadable entries are reported as warnings.
+ */
+async function collectImportFiles(
+  paths: readonly string[],
+): Promise<{ files: string[]; warnings: string[] }> {
+  const files: string[] = []
+  const warnings: string[] = []
+  const maxFiles = 3000
+  const maxDepth = 8
+  const walk = async (dir: string, depth: number): Promise<void> => {
+    if (depth > maxDepth || files.length >= maxFiles) return
+    let entries
+    try {
+      entries = await readdir(dir, { withFileTypes: true })
+    } catch (cause) {
+      warnings.push(`无法读取目录 ${dir}：${cause instanceof Error ? cause.message : String(cause)}`)
+      return
+    }
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      if (files.length >= maxFiles) {
+        warnings.push(`目录文件过多，仅导入前 ${maxFiles} 个文件；可分批选择子目录`)
+        return
+      }
+      const full = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        if (entry.name.startsWith('.') || SKIPPED_DIR_NAMES.has(entry.name)) continue
+        await walk(full, depth + 1)
+        continue
+      }
+      if (!entry.isFile()) continue
+      if (!IMPORTABLE_EXTENSIONS.has(extname(entry.name).toLowerCase())) continue
+      files.push(full)
+    }
+  }
+  for (const path of paths) {
+    const trimmed = path.trim()
+    if (trimmed === '') continue
+    let info
+    try {
+      info = await stat(trimmed)
+    } catch {
+      // Keep missing paths so the corpus task reports the same visible failure.
+      files.push(trimmed)
+      continue
+    }
+    if (info.isDirectory()) {
+      const before = files.length
+      await walk(trimmed, 0)
+      if (files.length === before) warnings.push(`目录中没有可导入的资料文件：${trimmed}`)
+      continue
+    }
+    files.push(trimmed)
+  }
+  return { files, warnings }
 }
 
 /** Build a course draft view with coverage and warnings from the corpus service. */

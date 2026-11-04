@@ -60,7 +60,10 @@ function sleep(ms: number): Promise<void> {
 }
 
 /** The central teaching page registered under the `main` slot. */
-export function TeachingWorkspace(): React.ReactElement {
+export function TeachingWorkspace(props: {
+  /** Harness directory chooser (native Desktop dialog / Host OS chooser). */
+  readonly pickDirectory?: () => Promise<string | null>
+} = {}): React.ReactElement {
   const [state, dispatch] = React.useReducer(workspaceReducer, INITIAL_WORKSPACE_STATE)
   const stateRef = useRef(state)
   stateRef.current = state
@@ -803,6 +806,7 @@ export function TeachingWorkspace(): React.ReactElement {
     onGenerateDraft: generateDraft,
     onConfirmDraft: confirmDraft,
     onStartAdhoc: startAdhocSession,
+    ...(props.pickDirectory === undefined ? {} : { onPickDirectory: props.pickDirectory }),
   }
 
   return (

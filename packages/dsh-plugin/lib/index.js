@@ -2116,7 +2116,7 @@ var require_fxp = __commonJS({
 
 // packages/dsh-plugin/src/host/index.ts
 import { homedir } from "node:os";
-import { join as join15 } from "node:path";
+import { join as join16 } from "node:path";
 
 // packages/teaching-core/src/contracts/ids.ts
 var RANDOM_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -9337,7 +9337,7 @@ var __webpack_modules__ = {
       var defineProperty = Object.defineProperty;
       var stringSlice = uncurryThis("".slice);
       var replace = uncurryThis("".replace);
-      var join16 = uncurryThis([].join);
+      var join17 = uncurryThis([].join);
       var CONFIGURABLE_LENGTH = DESCRIPTORS && !fails(function() {
         return defineProperty(function() {
         }, "length", { value: 8 }).length !== 8;
@@ -9364,7 +9364,7 @@ var __webpack_modules__ = {
         }
         var state = enforceInternalState(value);
         if (!hasOwn(state, "source")) {
-          state.source = join16(TEMPLATE, typeof name2 == "string" ? name2 : "");
+          state.source = join17(TEMPLATE, typeof name2 == "string" ? name2 : "");
         }
         return value;
       };
@@ -60390,8 +60390,8 @@ var HarnessModelAdapter = class {
             try {
               const { writeFileSync } = process.getBuiltinModule("node:fs");
               const { tmpdir: tmpdir2 } = process.getBuiltinModule("node:os");
-              const { join: join16 } = process.getBuiltinModule("node:path");
-              writeFileSync(join16(tmpdir2(), `teaching-chat-${Date.now()}.txt`), text2, "utf8");
+              const { join: join17 } = process.getBuiltinModule("node:path");
+              writeFileSync(join17(tmpdir2(), `teaching-chat-${Date.now()}.txt`), text2, "utf8");
             } catch {
             }
           }
@@ -60507,8 +60507,8 @@ function toSearchQuery(text2) {
 
 // packages/dsh-plugin/src/host/routes.ts
 import { randomUUID as randomUUID2 } from "node:crypto";
-import "node:fs/promises";
-import { basename as basename5 } from "node:path";
+import { readdir as readdir5, stat as stat6 } from "node:fs/promises";
+import { basename as basename5, extname as extname6, join as join15 } from "node:path";
 
 // packages/dsh-plugin/src/host/minimal.ts
 import "node:crypto";
@@ -60813,38 +60813,49 @@ function registerRoutes(services) {
   route("sources.import", async ({ body }) => {
     const input = body;
     const paths = (input?.paths ?? []).filter((path2) => typeof path2 === "string" && path2.trim() !== "");
-    if (paths.length === 0) throw appError("invalid-input", "\u8BF7\u63D0\u4F9B\u81F3\u5C11\u4E00\u4E2A\u672C\u5730\u6587\u4EF6\u8DEF\u5F84");
+    if (paths.length === 0) throw appError("invalid-input", "\u8BF7\u63D0\u4F9B\u81F3\u5C11\u4E00\u4E2A\u672C\u5730\u6587\u4EF6\u8DEF\u5F84\uFF0C\u6216\u9009\u62E9\u4E00\u4E2A\u8D44\u6599\u6587\u4EF6\u5939");
     const courseId2 = input.courseId;
+    const expanded = await collectImportFiles(paths);
+    if (expanded.files.length === 0) {
+      return failure({
+        code: "invalid-input",
+        message: "\u6240\u9009\u4F4D\u7F6E\u6CA1\u6709\u53EF\u5BFC\u5165\u7684\u8D44\u6599\u6587\u4EF6\uFF08\u652F\u6301 Markdown/\u6587\u672C/PDF/\u56FE\u7247/Word/PPT/\u4EE3\u7801/Notebook\uFF09",
+        details: { warnings: expanded.warnings }
+      });
+    }
+    const files = expanded.files;
     const handle = services.tasks.start({
       kind: "source-import",
-      label: `\u5BFC\u5165 ${paths.length} \u4EFD\u8D44\u6599`,
-      steps: paths.slice(0, 20).map((path2, index) => ({ id: `file-${index}`, label: basename5(path2) })),
+      label: `\u5BFC\u5165 ${files.length} \u4EFD\u8D44\u6599`,
+      steps: files.slice(0, 20).map((path2, index) => ({ id: `file-${index}`, label: basename5(path2) })),
       resumable: true
     }, async (context) => {
+      for (const warning of expanded.warnings) context.warn(warning);
       const progress = (done, total, current) => {
         context.progress(total === 0 ? void 0 : done / total);
-        const index = paths.indexOf(current);
+        const index = files.indexOf(current);
         if (index >= 0 && index < 20) {
           context.step(`file-${index}`, done > index ? { status: "done" } : { status: "running" });
         }
       };
       const outcome = await services.corpus.importFiles(
         courseId2,
-        paths.map((path2) => ({ path: path2, ...courseId2 === void 0 ? {} : { courseId: courseId2 } })),
+        files.map((path2) => ({ path: path2, ...courseId2 === void 0 ? {} : { courseId: courseId2 } })),
         { onProgress: progress, signal: context.signal }
       );
       for (const warning of outcome.warnings) context.warn(warning);
-      for (const failure2 of outcome.failures) context.warn(`${failure2.path}: ${failure2.error.message}`);
-      for (let index = 0; index < Math.min(20, paths.length); index += 1) {
+      for (const failed of outcome.failures) context.warn(`${failed.path}: ${failed.error.message}`);
+      for (let index = 0; index < Math.min(20, files.length); index += 1) {
         if (context.cancelled()) context.step(`file-${index}`, { status: "skipped" });
       }
       context.result({
         imported: outcome.documents.map((document2) => document2.id),
-        failures: outcome.failures.map((failure2) => ({ path: failure2.path, error: failure2.error }))
+        failures: outcome.failures.map((failed) => ({ path: failed.path, error: failed.error })),
+        expandedFrom: paths.length
       });
       if (outcome.failures.length > 0 && outcome.documents.length === 0) {
         throw appError("failed", "\u6240\u6709\u8D44\u6599\u5BFC\u5165\u5931\u8D25", {
-          failures: outcome.failures.map((failure2) => ({ path: failure2.path, code: failure2.error.code }))
+          failures: outcome.failures.map((failed) => ({ path: failed.path, code: failed.error.code }))
         });
       }
       return { imported: outcome.documents.map((document2) => document2.id) };
@@ -61791,6 +61802,99 @@ function requireQuery(query, name2) {
   if (value === null || value === "") throw appError("invalid-input", `\u7F3A\u5C11\u53C2\u6570 ${name2}`);
   return value;
 }
+var IMPORTABLE_EXTENSIONS = /* @__PURE__ */ new Set([
+  ".md",
+  ".markdown",
+  ".mdx",
+  ".txt",
+  ".text",
+  ".log",
+  ".pdf",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".gif",
+  ".heic",
+  ".docx",
+  ".pptx",
+  ".ipynb",
+  ".html",
+  ".htm",
+  ".py",
+  ".js",
+  ".mjs",
+  ".cjs",
+  ".ts",
+  ".tsx",
+  ".jsx",
+  ".scm",
+  ".ss",
+  ".rkt",
+  ".c",
+  ".h",
+  ".cpp",
+  ".java",
+  ".rs",
+  ".go",
+  ".rb",
+  ".sh",
+  ".sql",
+  ".json",
+  ".yaml",
+  ".yml"
+]);
+var SKIPPED_DIR_NAMES = /* @__PURE__ */ new Set(["node_modules", ".git", ".svn", "dist", "build", ".next", "target", "__pycache__"]);
+async function collectImportFiles(paths) {
+  const files = [];
+  const warnings = [];
+  const maxFiles = 3e3;
+  const maxDepth = 8;
+  const walk = async (dir, depth) => {
+    if (depth > maxDepth || files.length >= maxFiles) return;
+    let entries;
+    try {
+      entries = await readdir5(dir, { withFileTypes: true });
+    } catch (cause) {
+      warnings.push(`\u65E0\u6CD5\u8BFB\u53D6\u76EE\u5F55 ${dir}\uFF1A${cause instanceof Error ? cause.message : String(cause)}`);
+      return;
+    }
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      if (files.length >= maxFiles) {
+        warnings.push(`\u76EE\u5F55\u6587\u4EF6\u8FC7\u591A\uFF0C\u4EC5\u5BFC\u5165\u524D ${maxFiles} \u4E2A\u6587\u4EF6\uFF1B\u53EF\u5206\u6279\u9009\u62E9\u5B50\u76EE\u5F55`);
+        return;
+      }
+      const full = join15(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name.startsWith(".") || SKIPPED_DIR_NAMES.has(entry.name)) continue;
+        await walk(full, depth + 1);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      if (!IMPORTABLE_EXTENSIONS.has(extname6(entry.name).toLowerCase())) continue;
+      files.push(full);
+    }
+  };
+  for (const path2 of paths) {
+    const trimmed = path2.trim();
+    if (trimmed === "") continue;
+    let info2;
+    try {
+      info2 = await stat6(trimmed);
+    } catch {
+      files.push(trimmed);
+      continue;
+    }
+    if (info2.isDirectory()) {
+      const before = files.length;
+      await walk(trimmed, 0);
+      if (files.length === before) warnings.push(`\u76EE\u5F55\u4E2D\u6CA1\u6709\u53EF\u5BFC\u5165\u7684\u8D44\u6599\u6587\u4EF6\uFF1A${trimmed}`);
+      continue;
+    }
+    files.push(trimmed);
+  }
+  return { files, warnings };
+}
 async function buildDraftView(services, course, revision) {
   const coverage = await services.corpus.buildCourseDraftCoverage(course.id, revision.id);
   if (!coverage.ok) {
@@ -62084,8 +62188,8 @@ var inject = ["connection", "llm", "agentDefaultModel"];
 function resolveDataDir(config) {
   const overridden = typeof config.dataDir === "string" && config.dataDir.trim() !== "" ? config.dataDir.trim() : void 0;
   if (overridden !== void 0) return overridden;
-  const home = process.env.DSH_HOME?.trim() || join15(homedir(), ".dsh");
-  return join15(home, "teaching");
+  const home = process.env.DSH_HOME?.trim() || join16(homedir(), ".dsh");
+  return join16(home, "teaching");
 }
 function apply(ctx, config = {}) {
   const dataDir = resolveDataDir(config);

@@ -46,6 +46,8 @@ export interface OnboardingProps {
   readonly canCancel?: boolean
   /** Leave the wizard without creating a course. */
   readonly onCancel?: () => void
+  /** Open the Harness directory chooser and append the chosen folder path. */
+  readonly onPickDirectory?: () => Promise<string | null>
 }
 
 type Step = 'course' | 'import' | 'draft'
@@ -58,6 +60,7 @@ const STEP_LABELS: Readonly<Record<Step, string>> = {
 
 export function Onboarding(props: OnboardingProps): React.ReactElement {
   const [step, setStep] = useState<Step>('course')
+  const [picking, setPicking] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [goals, setGoals] = useState('')
@@ -91,6 +94,25 @@ export function Onboarding(props: OnboardingProps): React.ReactElement {
     if (created !== undefined) {
       setCourseId(created)
       setStep('import')
+    }
+  }
+
+  const pickDirectory = async (): Promise<void> => {
+    if (props.onPickDirectory === undefined) {
+      setLocalError('当前环境没有可用的文件夹选择器，请直接输入本地路径。')
+      return
+    }
+    setPicking(true)
+    setLocalError(undefined)
+    try {
+      const picked = await props.onPickDirectory()
+      if (picked !== null && picked !== '') {
+        setPathsText(current => (current.trim() === '' ? picked : `${current.trimEnd()}\n${picked}`))
+      }
+    } catch (cause) {
+      setLocalError(`打开选择器失败：${cause instanceof Error ? cause.message : String(cause)}，请直接输入路径。`)
+    } finally {
+      setPicking(false)
     }
   }
 
@@ -220,9 +242,21 @@ export function Onboarding(props: OnboardingProps): React.ReactElement {
               onChange={event => setPathsText(event.target.value)}
               placeholder={'/Users/you/Documents/SICP.pdf\n/Users/you/Documents/课程笔记.md\n/Users/you/Documents/代码实验'}
             />
-            <span className="ai-field-hint">
-              支持 Markdown/文本/PDF/Word/PPT/代码/Notebook。扫描件的公式图表识别取决于本机能力，导入后会列出问题清单。
-            </span>
+            <div className="ai-row" style={{ marginTop: 6 }}>
+              <button
+                type="button"
+                className="ai-small-button"
+                onClick={() => void pickDirectory()}
+                disabled={picking}
+                aria-label="选择资料文件夹"
+                title="打开文件管理器选择资料所在文件夹（Host 会递归导入其中的支持格式）"
+              >
+                {picking ? '正在打开选择器…' : '📂 选择资料文件夹…'}
+              </button>
+              <span className="ai-field-hint">
+                可选择文件夹（会自动收集其中的 Markdown/文本/PDF/图片/Word/PPT/代码/Notebook），也可直接输入多个文件路径。
+              </span>
+            </div>
           </div>
           <div className="ai-row">
             <button type="button" className="ai-primary-button" onClick={() => void importSources()} disabled={busy || importRunning}>
