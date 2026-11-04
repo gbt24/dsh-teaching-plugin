@@ -166,7 +166,20 @@ export interface ApiRequests {
     }
   }
   'sessions.list': { readonly method: 'GET'; readonly query: { readonly courseId?: CourseId }; readonly body?: never }
-  'sessions.create': { readonly method: 'POST'; readonly body: { readonly courseId: CourseId; readonly title?: string } }
+  'sessions.create': {
+    readonly method: 'POST'
+    readonly body: {
+      readonly courseId: CourseId
+      readonly title?: string
+      /**
+       * `course` (default) needs a confirmed structure. `adhoc` lets the student
+       * start asking right away: the Host confirms a minimal revision built
+       * from the existing draft (or the course title) before creating the
+       * session, so no unreviewed draft is silently treated as a full course.
+       */
+      readonly mode?: 'course' | 'adhoc'
+    }
+  }
   'sessions.get': { readonly method: 'GET'; readonly query: { readonly sessionId: SessionId }; readonly body?: never }
   'sessions.position': {
     readonly method: 'POST'

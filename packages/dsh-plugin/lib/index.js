@@ -53504,6 +53504,11 @@ function appendMarkdownBlocks(parent, document2, blocks, environment) {
 }
 
 // packages/teaching-core/src/render/code-run.ts
+function createClientRunId(now = Date.now, random = Math.random) {
+  const stamp = Math.floor(now()).toString(36).toLowerCase();
+  const suffix = Math.floor(random() * 16777216).toString(36).padStart(5, "0").slice(0, 8);
+  return `run-client-${stamp}-${suffix}`;
+}
 var VERIFICATION_LABEL = {
   objective: "\u5BA2\u89C2\u6821\u9A8C",
   exploratory: "\u63A2\u7D22\u6027\u8FD0\u884C\uFF08\u65E0\u5BA2\u89C2\u68C0\u67E5\uFF09",
@@ -53516,6 +53521,7 @@ function mountCodeRun(container, payload, options = {}) {
   let busy = false;
   let lastResult = null;
   let lastRunId;
+  let activeRunId;
   const wrapper = createElement(document2, "div", { className: "teaching-code-run" });
   if (payload.title !== void 0) {
     wrapper.appendChild(createElement(document2, "div", {
@@ -53681,9 +53687,12 @@ function mountCodeRun(container, payload, options = {}) {
       return;
     }
     setBusy(true);
-    lastRunId = void 0;
+    const clientRunId = createClientRunId();
+    activeRunId = clientRunId;
+    lastRunId = clientRunId;
     try {
       const result = await options.onRun({
+        clientRunId,
         code: currentCode,
         language: payload.language,
         ...payload.dialect !== void 0 ? { dialect: payload.dialect } : {},
@@ -53698,6 +53707,7 @@ function mountCodeRun(container, payload, options = {}) {
         errorMessage: `\u8FD0\u884C\u5931\u8D25\uFF1A${error instanceof Error ? error.message : String(error)}`
       });
     } finally {
+      activeRunId = void 0;
       setBusy(false);
     }
   };
@@ -53705,7 +53715,8 @@ function mountCodeRun(container, payload, options = {}) {
     void doRun();
   }));
   disposers.push(on(stopButton, "click", () => {
-    if (lastRunId !== void 0) void options.onCancel?.(lastRunId);
+    const runId2 = activeRunId ?? lastRunId;
+    if (runId2 !== void 0) void options.onCancel?.(runId2);
   }));
   if (resetButton !== void 0) {
     disposers.push(on(resetButton, "click", () => {
@@ -58735,13 +58746,43 @@ function registerRoutes(services) {
     if (typeof input?.courseId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 courseId");
     const course = await services.courses.get(input.courseId);
     if (course === void 0) throw notFoundError("\u8BFE\u7A0B");
-    const revision = await services.courses.getActiveRevision(course);
+    let revision = await services.courses.getActiveRevision(course);
     if (revision === void 0) {
-      return failure({
-        code: "needs-confirmation",
-        message: "\u8BFE\u7A0B\u7ED3\u6784\u5C1A\u672A\u786E\u8BA4\u3002\u8BF7\u5148\u786E\u8BA4 AI \u751F\u6210\u7684\u8BFE\u7A0B\u8349\u6848\uFF0C\u6216\u9009\u62E9\u968F\u95EE\u968F\u5B66\u3002",
-        details: { courseId: course.id, draftRevisionId: course.draftRevisionId }
-      });
+      if (input.mode !== "adhoc") {
+        return failure({
+          code: "needs-confirmation",
+          message: "\u8BFE\u7A0B\u7ED3\u6784\u5C1A\u672A\u786E\u8BA4\u3002\u8BF7\u5148\u786E\u8BA4 AI \u751F\u6210\u7684\u8BFE\u7A0B\u8349\u6848\uFF0C\u6216\u9009\u62E9\u968F\u95EE\u968F\u5B66\u3002",
+          details: { courseId: course.id, draftRevisionId: course.draftRevisionId }
+        });
+      }
+      const draft = await services.courses.getDraftRevision(course);
+      const concepts = (draft?.concepts ?? []).length > 0 ? draft?.concepts ?? [] : [{
+        id: `concept-${course.id}-adhoc`,
+        title: course.title,
+        summary: `${course.title}\uFF08\u968F\u95EE\u968F\u5B66\uFF0C\u672A\u786E\u8BA4\u5B8C\u6574\u8BFE\u7A0B\u7ED3\u6784\uFF09`,
+        prerequisites: [],
+        sourceAnchors: []
+      }];
+      const revisions = await services.courses.listRevisions(course.id);
+      const adhoc = {
+        id: courseRevisionId(),
+        courseId: course.id,
+        version: (revisions.at(-1)?.version ?? 0) + 1,
+        createdAt: nowIso(),
+        state: "confirmed",
+        confirmedAt: nowIso(),
+        provenance: "student-edit",
+        goals: draft !== void 0 && draft.goals.length > 0 ? draft.goals : course.description === "" ? [] : [course.description],
+        language: draft?.language ?? (await services.profiles.get()).language,
+        sources: draft?.sources ?? [],
+        concepts,
+        sequence: concepts.map((concept) => concept.id),
+        basedOn: draft?.basedOn ?? [],
+        changeSummary: "\u968F\u95EE\u968F\u5B66\uFF1A\u81EA\u52A8\u786E\u8BA4\u6700\u5C0F\u53EF\u7528\u8BFE\u7A0B\u7ED3\u6784\uFF08\u672A\u7ECF\u8FC7\u5B8C\u6574\u8349\u6848\u8BC4\u5BA1\uFF09"
+      };
+      await services.courses.saveRevision(adhoc);
+      await services.courses.save({ ...course, status: "active", activeRevisionId: adhoc.id, draftRevisionId: void 0, updatedAt: nowIso() });
+      revision = adhoc;
     }
     const { session } = createSessionRecord(course, revision);
     const titled = { ...session, ...input.title === void 0 ? {} : { title: input.title } };
@@ -59093,6 +59134,7 @@ function registerRoutes(services) {
       dialect: activity.payload.dialect,
       code,
       stdin: input.stdin ?? activity.payload.stdin,
+      ...input.clientRunId === void 0 ? {} : { runId: input.clientRunId },
       checks: activity.payload.tests
     });
     return envelope({ run, validation: run.status === "succeeded" || run.verification === "objective" ? validationFromRun(run) : void 0 });
@@ -59112,7 +59154,8 @@ function registerRoutes(services) {
       code: input.code,
       stdin: input.stdin,
       checks: input.checks,
-      timeoutMs: input.timeoutMs
+      timeoutMs: input.timeoutMs,
+      ...input.clientRunId === void 0 ? {} : { runId: input.clientRunId }
     });
     return envelope({ run });
   });
@@ -59416,7 +59459,7 @@ async function buildDraftView(services, course, revision) {
   return { course, revision, coverage: coverage.value.coverage, warnings: coverage.value.warnings };
 }
 async function runExperiment(services, input) {
-  const runId2 = `run-${randomUUID2().slice(0, 12)}`;
+  const runId2 = input.runId ?? `run-${randomUUID2().slice(0, 12)}`;
   const checks = (input.checks ?? []).flatMap((check) => {
     if (check.type !== "stdout-contains" && check.type !== "stdout-equals" && check.type !== "exit-code") return [];
     return [{ name: check.name, type: check.type, value: check.value }];

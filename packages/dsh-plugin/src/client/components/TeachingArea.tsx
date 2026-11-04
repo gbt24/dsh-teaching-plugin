@@ -20,6 +20,7 @@ import { Spinner } from './Banner.tsx'
 export interface ActivityInteractionCallbacks {
   readonly onStateChange: (activity: LessonActivity, patch: MountedActivityState) => void
   readonly onRunCode: (activity: LessonActivity, request: {
+    readonly clientRunId: string
     readonly code: string
     readonly language: string
     readonly dialect?: string

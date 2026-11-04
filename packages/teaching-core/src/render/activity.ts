@@ -54,6 +54,7 @@ export interface ActivityCallbacks {
   readonly onStateChange?: (patch: MountedActivityState) => void
   /** Run code through the Host (`activity.run`/`experiments.run`). */
   readonly onRunCode?: (request: {
+    readonly clientRunId: string
     readonly code: string
     readonly language: string
     readonly dialect?: string

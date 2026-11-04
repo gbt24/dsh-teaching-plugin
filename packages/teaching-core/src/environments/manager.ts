@@ -657,6 +657,13 @@ class Manager implements EnvironmentManager {
       const approval = need.approval ?? missingRuntimeApproval(context.language, context.language)
       if (options.approveSystemChange !== true) {
         this.records.delete(placeholder.id)
+        const existingApproval = this.findRecordByStatus(context.language, context.dialect, 'needs-approval')
+        if (existingApproval !== undefined) {
+          await this.persistRecords()
+          this.emitProgress(context, 'approval', existingApproval, '复用已存在的待确认记录，未执行任何安装')
+          this.emitProgress(context, 'done', existingApproval, '等待学生确认')
+          return existingApproval
+        }
         const record = this.approvalRecord(context, approval, kind)
         this.remember(record)
         await this.persistRecords()
@@ -1348,18 +1355,34 @@ class Manager implements EnvironmentManager {
 
   // ---- records / directory / cleanup ------------------------------------
 
-  get(environmentId: EnvironmentId): EnvironmentRecord | undefined {
+  async get(environmentId: EnvironmentId): Promise<EnvironmentRecord | undefined> {
+    await this.ensureLoaded()
     return this.records.get(environmentId)
   }
 
-  getEnvironment(language: string, dialect?: string): EnvironmentRecord | undefined {
+  async getEnvironment(language: string, dialect?: string): Promise<EnvironmentRecord | undefined> {
     const normalized = normalizeLanguage(language)
     if (normalized === undefined) return undefined
+    await this.ensureLoaded()
     return this.findReadyRecord(normalized, normalizeDialect(dialect)) ?? this.runners.getEnvironment(normalized, dialect)
   }
 
-  listRecords(): readonly EnvironmentRecord[] {
+  async listRecords(): Promise<readonly EnvironmentRecord[]> {
+    await this.ensureLoaded()
     return [...this.records.values()]
+  }
+
+  private findRecordByStatus(
+    language: string,
+    dialect: string | undefined,
+    status: EnvironmentRecord['status'],
+  ): EnvironmentRecord | undefined {
+    for (const record of this.records.values()) {
+      if (record.language !== language || record.status !== status) continue
+      if (dialect !== undefined && record.dialect !== dialect) continue
+      return record
+    }
+    return undefined
   }
 
   private findReadyRecord(language: string, dialect?: string): EnvironmentRecord | undefined {
@@ -1427,10 +1450,10 @@ class Manager implements EnvironmentManager {
       '扩展环境的网络可达性未探测（unknown）；不把某项安装成功当作普遍保证。',
       '超出本机资源的实验不会真实运行：返回保留核心原理的降规模/模拟替代，并列出与完整实验的差别（assessResources）。',
       ...(failedRecords.length > 0
-        ? [`存在准备失败/取消的环境记录：${failedRecords.map(record => `${record.language}(${record.failure?.code ?? 'failed'})`).join('、')}；未完成目录已按状态清理，可重试。`]
+        ? [`存在准备失败/取消的环境记录：${[...new Set(failedRecords.map(record => `${record.language}(${record.failure?.code ?? 'failed'})`))].join('、')}；未完成目录已按状态清理，可重试。`]
         : []),
       ...(approvalRecords.length > 0
-        ? [`存在需要学生确认的环境：${approvalRecords.map(record => record.language).join('、')}；插件未执行任何系统级/联网安装。`]
+        ? [`存在需要学生确认的环境：${[...new Set(approvalRecords.map(record => record.language))].join('、')}；插件未执行任何系统级/联网安装。`]
         : []),
     ]
     return { environments, supportedLanguages, gaps }

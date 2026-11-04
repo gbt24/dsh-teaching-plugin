@@ -326,11 +326,12 @@ export interface EnvironmentManager {
   cancelRun(runId: RunId): Promise<ExperimentRun | undefined>
   getRun(runId: RunId): ExperimentRun | undefined
   activeRuns(): readonly ExperimentRun[]
-  get(environmentId: EnvironmentId): EnvironmentRecord | undefined
+  /** Loads persisted state first; environments survive host restarts. */
+  get(environmentId: EnvironmentId): Promise<EnvironmentRecord | undefined>
   /** Ready persisted environment for a language/dialect, if any. */
-  getEnvironment(language: string, dialect?: string): EnvironmentRecord | undefined
+  getEnvironment(language: string, dialect?: string): Promise<EnvironmentRecord | undefined>
   /** All persisted environment records (including failed/needs-approval ones). */
-  listRecords(): readonly EnvironmentRecord[]
+  listRecords(): Promise<readonly EnvironmentRecord[]>
   /** Persisted configuration + fresh builtin detection, shaped for the client. */
   directory(): Promise<EnvironmentDirectory>
   /** Remove one managed environment's files; only plugin-owned directories are touched. */

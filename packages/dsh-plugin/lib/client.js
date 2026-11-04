@@ -15756,6 +15756,11 @@ window.__ModuleLoader__.load({
     }
 
     // packages/teaching-core/src/render/code-run.ts
+    function createClientRunId(now = Date.now, random = Math.random) {
+      const stamp = Math.floor(now()).toString(36).toLowerCase();
+      const suffix = Math.floor(random() * 16777216).toString(36).padStart(5, "0").slice(0, 8);
+      return `run-client-${stamp}-${suffix}`;
+    }
     var VERIFICATION_LABEL = {
       objective: "\u5BA2\u89C2\u6821\u9A8C",
       exploratory: "\u63A2\u7D22\u6027\u8FD0\u884C\uFF08\u65E0\u5BA2\u89C2\u68C0\u67E5\uFF09",
@@ -15768,6 +15773,7 @@ window.__ModuleLoader__.load({
       let busy = false;
       let lastResult = null;
       let lastRunId;
+      let activeRunId;
       const wrapper = createElement(document2, "div", { className: "teaching-code-run" });
       if (payload.title !== void 0) {
         wrapper.appendChild(createElement(document2, "div", {
@@ -15933,9 +15939,12 @@ window.__ModuleLoader__.load({
           return;
         }
         setBusy(true);
-        lastRunId = void 0;
+        const clientRunId = createClientRunId();
+        activeRunId = clientRunId;
+        lastRunId = clientRunId;
         try {
           const result = await options.onRun({
+            clientRunId,
             code: currentCode,
             language: payload.language,
             ...payload.dialect !== void 0 ? { dialect: payload.dialect } : {},
@@ -15950,6 +15959,7 @@ window.__ModuleLoader__.load({
             errorMessage: `\u8FD0\u884C\u5931\u8D25\uFF1A${error instanceof Error ? error.message : String(error)}`
           });
         } finally {
+          activeRunId = void 0;
           setBusy(false);
         }
       };
@@ -15957,7 +15967,8 @@ window.__ModuleLoader__.load({
         void doRun();
       }));
       disposers.push(on(stopButton, "click", () => {
-        if (lastRunId !== void 0) void options.onCancel?.(lastRunId);
+        const runId = activeRunId ?? lastRunId;
+        if (runId !== void 0) void options.onCancel?.(runId);
       }));
       if (resetButton !== void 0) {
         disposers.push(on(resetButton, "click", () => {
@@ -19189,6 +19200,7 @@ window.__ModuleLoader__.load({
       const mounted = (0, import_react8.useRef)(true);
       const pollTimer = (0, import_react8.useRef)(void 0);
       const helpByActivity = (0, import_react8.useRef)({});
+      const activeRuns = (0, import_react8.useRef)({});
       const saveTimers = (0, import_react8.useRef)({});
       const [online, setOnline] = (0, import_react8.useState)(() => typeof navigator === "undefined" ? true : navigator.onLine !== false);
       const [runResults, setRunResults] = (0, import_react8.useState)({});
@@ -19426,11 +19438,16 @@ window.__ModuleLoader__.load({
         }, 350);
       }, [notify]);
       const onRunCode = (0, import_react8.useCallback)(async (activity, request) => {
+        const clientRunId = request.clientRunId;
+        activeRuns.current[clientRunId] = { activityId: activity.id };
         try {
           const { run } = await apiPost("activity.run", {
             activityId: activity.id,
             activityRevision: activity.revision,
-            code: request.code
+            code: request.code,
+            // Addresses the in-flight run with /experiments.cancel; the Host uses it
+            // as the real run id.
+            clientRunId
           });
           const view = {
             runId: run.id,
@@ -19454,11 +19471,27 @@ window.__ModuleLoader__.load({
           };
           if (mounted.current) setRunResults((previous) => ({ ...previous, [activity.id]: view }));
           return view;
+        } finally {
+          delete activeRuns.current[clientRunId];
         }
       }, []);
       const onCancelRun = (0, import_react8.useCallback)((runId) => {
-        if (runId === void 0) return;
-        void apiPost("experiments.cancel", { runId }).then(() => notify({ kind: "info", message: "\u5DF2\u8BF7\u6C42\u505C\u6B62\u5B9E\u9A8C\u8FD0\u884C\u3002" })).catch((error) => notify({ kind: "warning", message: `\u505C\u6B62\u5931\u8D25\uFF1A${describeError(error)}` }));
+        const target = runId ?? Object.keys(activeRuns.current)[0];
+        if (target === void 0) {
+          notify({ kind: "info", message: "\u5F53\u524D\u6CA1\u6709\u53EF\u53D6\u6D88\u7684\u8FD0\u884C\u3002" });
+          return;
+        }
+        notify({ kind: "info", message: "\u6B63\u5728\u505C\u6B62\u8FD0\u884C\u2026" });
+        void apiPost("experiments.cancel", { runId: target }).then(({ run }) => {
+          if (!mounted.current) return;
+          if (run.status === "cancelled") {
+            notify({ kind: "info", message: "\u5DF2\u53D6\u6D88\u8FD0\u884C\uFF1B\u8FDB\u7A0B\u5DF2\u7ED3\u675F\uFF0C\u7ED3\u679C\u6807\u8BB0\u4E3A cancelled\u3002" });
+          } else if (run.status === "running") {
+            notify({ kind: "info", message: "\u5DF2\u8BF7\u6C42\u53D6\u6D88\uFF0C\u8FD0\u884C\u4ECD\u5728\u6536\u5C3E\u3002" });
+          } else {
+            notify({ kind: "info", message: `\u8FD0\u884C\u5DF2\u7ED3\u675F\uFF1A${run.status}` });
+          }
+        }).catch((error) => notify({ kind: "warning", message: `\u53D6\u6D88\u8FD0\u884C\u5931\u8D25\uFF1A${describeError(error)}` }));
       }, [notify]);
       const onHelpExposure = (0, import_react8.useCallback)((activity, help) => {
         const previous = helpByActivity.current[activity.id];

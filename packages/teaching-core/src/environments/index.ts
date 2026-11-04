@@ -27,7 +27,9 @@ export {
   assessResourceRequest, buildResourceFallback, describeDeclaredResources,
   memoryBudgetMb, readHostFacts,
 } from './resources.ts'
+export type { CodeRunNeedPayload } from './catalog.ts'
 export {
-  DEFAULT_INSTALL_PLANS, EXTENDED_LANGUAGE_SPECS, findExtendedSpec, findInstallPlan,
-  networkInstallApproval, pluginRepairApproval, systemRuntimeApproval,
+  declaredNeedFromRunPayload, DEFAULT_INSTALL_PLANS, EXTENDED_LANGUAGE_SPECS,
+  findExtendedSpec, findInstallPlan, networkInstallApproval, pluginRepairApproval,
+  systemRuntimeApproval,
 } from './catalog.ts'

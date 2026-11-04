@@ -67,6 +67,8 @@ export function TeachingWorkspace(): React.ReactElement {
   const mounted = useRef(true)
   const pollTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const helpByActivity = useRef<Record<string, HelpState>>({})
+  /** Client-generated run ids of in-flight code runs (for cancel before response). */
+  const activeRuns = useRef<Record<string, { activityId: string }>>({})
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const [online, setOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine !== false)
@@ -351,13 +353,18 @@ export function TeachingWorkspace(): React.ReactElement {
 
   const onRunCode = useCallback(async (
     activity: LessonActivity,
-    request: { code: string; language: string; dialect?: string; stdin?: string },
+    request: { clientRunId: string; code: string; language: string; dialect?: string; stdin?: string },
   ): Promise<CodeRunResultView> => {
+    const clientRunId = request.clientRunId
+    activeRuns.current[clientRunId] = { activityId: activity.id }
     try {
       const { run } = await apiPost('activity.run', {
         activityId: activity.id,
         activityRevision: activity.revision,
         code: request.code,
+        // Addresses the in-flight run with /experiments.cancel; the Host uses it
+        // as the real run id.
+        clientRunId,
       })
       const view: CodeRunResultView = {
         runId: run.id,
@@ -381,14 +388,32 @@ export function TeachingWorkspace(): React.ReactElement {
       }
       if (mounted.current) setRunResults(previous => ({ ...previous, [activity.id]: view }))
       return view
+    } finally {
+      delete activeRuns.current[clientRunId]
     }
   }, [])
 
   const onCancelRun = useCallback((runId: string | undefined): void => {
-    if (runId === undefined) return
-    void apiPost('experiments.cancel', { runId })
-      .then(() => notify({ kind: 'info', message: '已请求停止实验运行。' }))
-      .catch((error: unknown) => notify({ kind: 'warning', message: `停止失败：${describeError(error)}` }))
+    // The renderer passes the in-flight client id; fall back to the newest
+    // active run when only the legacy `runId` is available.
+    const target = runId ?? Object.keys(activeRuns.current)[0]
+    if (target === undefined) {
+      notify({ kind: 'info', message: '当前没有可取消的运行。' })
+      return
+    }
+    notify({ kind: 'info', message: '正在停止运行…' })
+    void apiPost('experiments.cancel', { runId: target })
+      .then(({ run }) => {
+        if (!mounted.current) return
+        if (run.status === 'cancelled') {
+          notify({ kind: 'info', message: '已取消运行；进程已结束，结果标记为 cancelled。' })
+        } else if (run.status === 'running') {
+          notify({ kind: 'info', message: '已请求取消，运行仍在收尾。' })
+        } else {
+          notify({ kind: 'info', message: `运行已结束：${run.status}` })
+        }
+      })
+      .catch((error: unknown) => notify({ kind: 'warning', message: `取消运行失败：${describeError(error)}` }))
   }, [notify])
 
   const onHelpExposure = useCallback((activity: LessonActivity, help: {

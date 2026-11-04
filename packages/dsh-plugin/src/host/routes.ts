@@ -539,13 +539,50 @@ export function registerRoutes(services: RouteServices): void {
     if (typeof input?.courseId !== 'string') throw appError('invalid-input', '缺少 courseId')
     const course = await services.courses.get(input.courseId)
     if (course === undefined) throw notFoundError('课程')
-    const revision = await services.courses.getActiveRevision(course)
+    let revision = await services.courses.getActiveRevision(course)
     if (revision === undefined) {
-      return failure({
-        code: 'needs-confirmation',
-        message: '课程结构尚未确认。请先确认 AI 生成的课程草案，或选择随问随学。',
-        details: { courseId: course.id, draftRevisionId: course.draftRevisionId },
-      })
+      if (input.mode !== 'adhoc') {
+        return failure({
+          code: 'needs-confirmation',
+          message: '课程结构尚未确认。请先确认 AI 生成的课程草案，或选择随问随学。',
+          details: { courseId: course.id, draftRevisionId: course.draftRevisionId },
+        })
+      }
+      // Ad-hoc learning: confirm a minimal structure derived from the existing
+      // draft (or the course title) so progress/mastery remain traceable, while
+      // making clear the full structure was not reviewed.
+      const draft = await services.courses.getDraftRevision(course)
+      const concepts = (draft?.concepts ?? []).length > 0
+        ? draft?.concepts ?? []
+        : [{
+            id: `concept-${course.id}-adhoc` as never,
+            title: course.title,
+            summary: `${course.title}（随问随学，未确认完整课程结构）`,
+            prerequisites: [],
+            sourceAnchors: [],
+          }]
+      const revisions = await services.courses.listRevisions(course.id)
+      const adhoc: CourseRevision = {
+        id: newCourseRevisionId(),
+        courseId: course.id,
+        version: (revisions.at(-1)?.version ?? 0) + 1,
+        createdAt: nowIso(),
+        state: 'confirmed',
+        confirmedAt: nowIso(),
+        provenance: 'student-edit',
+        goals: draft !== undefined && draft.goals.length > 0
+          ? draft.goals
+          : (course.description === '' ? [] : [course.description]),
+        language: draft?.language ?? (await services.profiles.get()).language,
+        sources: draft?.sources ?? [],
+        concepts,
+        sequence: concepts.map(concept => concept.id),
+        basedOn: draft?.basedOn ?? [],
+        changeSummary: '随问随学：自动确认最小可用课程结构（未经过完整草案评审）',
+      }
+      await services.courses.saveRevision(adhoc)
+      await services.courses.save({ ...course, status: 'active', activeRevisionId: adhoc.id, draftRevisionId: undefined, updatedAt: nowIso() })
+      revision = adhoc
     }
     const { session } = createSessionRecord(course, revision)
     const titled = { ...session, ...(input.title === undefined ? {} : { title: input.title }) }

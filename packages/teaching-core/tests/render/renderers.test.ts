@@ -9,8 +9,8 @@ import type {
   OpenQuestionPayload, ProofTaskPayload, QuizPayload, ReadingTaskPayload,
 } from '../../src/contracts/index.ts'
 import {
-  mountCodeRun, mountDerivation, mountFigure, mountGraph, mountOpenQuestion, mountProofTask,
-  mountQuiz, mountReadingTask,
+  createClientRunId, mountCodeRun, mountDerivation, mountFigure, mountGraph, mountOpenQuestion,
+  mountProofTask, mountQuiz, mountReadingTask,
 } from '../../src/render/index.ts'
 import { asShim, createTestDocument, fire, type ShimElement } from './dom-shim.ts'
 
@@ -255,6 +255,48 @@ test('code-run runs through the injected callback and shows real output/checks',
   await handle.run()
   assert.equal(handle.getCode(), CODE.code)
   handle.dispose()
+})
+
+test('code-run generates a cancellable client run id for the in-flight run', async () => {
+  const document = createTestDocument()
+  const container = asShim(document.createElement('div'))
+  let requested: { clientRunId?: string } | undefined
+  let cancelled: string | undefined
+  let finish: ((value: {
+    status: 'cancelled'
+    stdout: string
+    stderr: string
+  }) => void) | undefined
+  const handle = mountCodeRun(container as unknown as HTMLElement, CODE, {
+    document,
+    onRun: (request) => {
+      requested = request
+      return new Promise((resolve) => {
+        finish = resolve
+      })
+    },
+    onCancel: (runId) => {
+      cancelled = runId
+    },
+  })
+  const shim = asShim(handle.element)
+  fire(findButton(shim, '运行') as unknown as ShimElement, 'click')
+  await new Promise(resolve => setTimeout(resolve, 0))
+  assert.match(requested?.clientRunId ?? '', /^run-client-[a-z0-9-]+$/u)
+  // The run has not resolved yet, but the stop button already knows the id.
+  fire(findButton(shim, '停止') as unknown as ShimElement, 'click')
+  assert.equal(cancelled, requested?.clientRunId)
+  finish?.({ status: 'cancelled', stdout: '', stderr: '' })
+  await new Promise(resolve => setTimeout(resolve, 0))
+  assert.match(shim.textContent, /运行结果：cancelled/u)
+  handle.dispose()
+})
+
+test('client run ids are stable-shaped, unique and safe for cancel', () => {
+  const ids = new Set(Array.from({ length: 20 }, () => createClientRunId()))
+  assert.equal(ids.size, 20)
+  for (const id of ids) assert.match(id, /^run-client-[a-z0-9]+-[a-z0-9]+$/u)
+  assert.equal(createClientRunId(() => 1_700_000_000_000, () => 0.5), 'run-client-' + Math.floor(1_700_000_000_000).toString(36) + '-' + Math.floor(0.5 * 0x1000000).toString(36).padStart(5, '0').slice(0, 8))
 })
 
 test('offline code-run disables execution and says so', () => {

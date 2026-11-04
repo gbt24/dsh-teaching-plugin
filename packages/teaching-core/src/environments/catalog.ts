@@ -10,7 +10,10 @@
  * change and must be presented to the student, never executed silently.
  */
 import { join } from 'node:path'
-import type { EnvironmentApproval, ExtendedLanguageSpec, SystemInstallPlanSpec } from './types.ts'
+import type {
+  DeclaredEnvironmentNeed, EnvironmentApproval, EnvironmentNeedSource,
+  ExtendedLanguageSpec, SystemInstallPlanSpec,
+} from './types.ts'
 
 /** Extract the first version-looking token from combined probe output. */
 function firstVersion(output: string, pattern: RegExp): string | undefined {
@@ -243,4 +246,40 @@ export function findInstallPlan(
   plans: readonly SystemInstallPlanSpec[] = DEFAULT_INSTALL_PLANS,
 ): SystemInstallPlanSpec | undefined {
   return plans.find(plan => plan.language === language)
+}
+
+/** Run payload shape a code activity actually carries (see contracts/activity). */
+export interface CodeRunNeedPayload {
+  readonly language: string
+  readonly dialect?: string
+  /** Why the activity needs this language; falls back to the activity label. */
+  readonly reason?: string
+  /** Defaults to 'activity': the need came from a declared code activity. */
+  readonly source?: EnvironmentNeedSource
+  readonly courseId?: DeclaredEnvironmentNeed['courseId']
+  readonly conceptIds?: DeclaredEnvironmentNeed['conceptIds']
+  readonly activityId?: DeclaredEnvironmentNeed['activityId']
+  readonly dependencies?: readonly string[]
+}
+
+/**
+ * Convert a code-run payload's `language` into a declared environment need.
+ *
+ * This is the only place the plugin translates an activity declaration into a
+ * requirement; it does not inspect code or course text to infer languages.
+ */
+export function declaredNeedFromRunPayload(payload: CodeRunNeedPayload): DeclaredEnvironmentNeed {
+  const reason = payload.reason !== undefined && payload.reason.trim() !== ''
+    ? payload.reason.trim()
+    : `代码活动声明的语言：${payload.language}`
+  return {
+    language: payload.language,
+    ...(payload.dialect !== undefined ? { dialect: payload.dialect } : {}),
+    reason,
+    source: payload.source ?? 'activity',
+    ...(payload.courseId !== undefined ? { courseId: payload.courseId } : {}),
+    ...(payload.conceptIds !== undefined ? { conceptIds: payload.conceptIds } : {}),
+    ...(payload.activityId !== undefined ? { activityId: payload.activityId } : {}),
+    ...(payload.dependencies !== undefined ? { dependencies: payload.dependencies } : {}),
+  }
 }

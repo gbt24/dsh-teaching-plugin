@@ -31,17 +31,33 @@ export interface CodeRunResultView {
   readonly errorMessage?: string
 }
 
+/** One run request handed to the Host callbacks. */
+export interface CodeRunRunRequest {
+  readonly code: string
+  readonly language: string
+  readonly dialect?: string
+  readonly stdin?: string
+  /**
+   * Stable client-generated id for this run. The Host uses it as the real run
+   * id, so `experiments.cancel` can address the run before the synchronous
+   * response settles.
+   */
+  readonly clientRunId: string
+}
+
+/** Generate a safe, stable client run id (`[a-z0-9-]`, starts with a letter). */
+export function createClientRunId(now: () => number = Date.now, random: () => number = Math.random): string {
+  const stamp = Math.floor(now()).toString(36).toLowerCase()
+  const suffix = Math.floor(random() * 0x1000000).toString(36).padStart(5, '0').slice(0, 8)
+  return `run-client-${stamp}-${suffix}`
+}
+
 /** Options for {@link mountCodeRun}. */
 export interface CodeRunMountOptions extends RenderEnvironment {
   /** Restored student code; falls back to the payload code. */
   readonly code?: string
   /** Runs code through the Host; absent in the offline export. */
-  readonly onRun?: (request: {
-    readonly code: string
-    readonly language: string
-    readonly dialect?: string
-    readonly stdin?: string
-  }) => Promise<CodeRunResultView> | CodeRunResultView
+  readonly onRun?: (request: CodeRunRunRequest) => Promise<CodeRunResultView> | CodeRunResultView
   /** Cancels the in-flight run (`/experiments.cancel`); optional. */
   readonly onCancel?: (runId: string | undefined) => void | Promise<void>
   /** Persists the edited code as activity state. */
@@ -76,6 +92,8 @@ export function mountCodeRun(
   let busy = false
   let lastResult: CodeRunResultView | null = null
   let lastRunId: string | undefined
+  /** Id of the run currently executing (known before the response settles). */
+  let activeRunId: string | undefined
 
   const wrapper = createElement(document, 'div', { className: 'teaching-code-run' })
   if (payload.title !== undefined) {
@@ -223,9 +241,12 @@ export function mountCodeRun(
       return
     }
     setBusy(true)
-    lastRunId = undefined
+    const clientRunId = createClientRunId()
+    activeRunId = clientRunId
+    lastRunId = clientRunId
     try {
       const result = await options.onRun({
+        clientRunId,
         code: currentCode,
         language: payload.language,
         ...(payload.dialect !== undefined ? { dialect: payload.dialect } : {}),
@@ -240,12 +261,17 @@ export function mountCodeRun(
         errorMessage: `运行失败：${error instanceof Error ? error.message : String(error)}`,
       })
     } finally {
+      activeRunId = undefined
       setBusy(false)
     }
   }
 
   disposers.push(on(runButton, 'click', () => { void doRun() }))
-  disposers.push(on(stopButton, 'click', () => { if (lastRunId !== undefined) void options.onCancel?.(lastRunId) }))
+  disposers.push(on(stopButton, 'click', () => {
+    // Prefer the in-flight id; fall back to the id of the run just rendered.
+    const runId = activeRunId ?? lastRunId
+    if (runId !== undefined) void options.onCancel?.(runId)
+  }))
   if (resetButton !== undefined) {
     disposers.push(on(resetButton, 'click', () => {
       currentCode = payload.starterCode ?? ''
