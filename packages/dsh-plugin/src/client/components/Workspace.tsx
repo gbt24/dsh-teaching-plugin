@@ -482,6 +482,9 @@ export function TeachingWorkspace(): React.ReactElement {
     void apiPost('activity.state', {
       activityId: activity.id,
       activityRevision: activity.revision,
+      ...(next.params !== undefined ? { params: next.params } : {}),
+      ...(next.code !== undefined ? { code: next.code } : {}),
+      ...(next.revealedStepIds !== undefined ? { revealedStepIds: next.revealedStepIds } : {}),
       notes: notesDraft,
     }).then((response) => {
       if (mounted.current) dispatch({ type: 'activity/state', state: (response as { state: ActivityState }).state })

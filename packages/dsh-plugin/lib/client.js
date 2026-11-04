@@ -19530,6 +19530,9 @@ window.__ModuleLoader__.load({
         void apiPost("activity.state", {
           activityId: activity.id,
           activityRevision: activity.revision,
+          ...next.params !== void 0 ? { params: next.params } : {},
+          ...next.code !== void 0 ? { code: next.code } : {},
+          ...next.revealedStepIds !== void 0 ? { revealedStepIds: next.revealedStepIds } : {},
           notes: notesDraft
         }).then((response) => {
           if (mounted.current) dispatch({ type: "activity/state", state: response.state });
