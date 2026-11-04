@@ -9,21 +9,22 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type {
-  ActivityState, AppError, ChatStreamEvent, CourseDraftView, CourseSummary,
-  EvidenceReference, LanguagePreference, LessonActivity, MasteryRecord, ReviewItem, SourceAnchor,
-  SourceView, TaskSnapshot,
+  ActivityState, AppError, ChatStreamEvent, CourseDetail, CourseDraftView, CourseSummary,
+  EvidenceReference, LanguagePreference, LessonActivity, MasteryRecord, ReviewItem, SessionSummary,
+  SourceAnchor, SourceView, TaskSnapshot,
 } from '@deepseek-teaching/core/contracts'
 import type { CodeRunResultView } from '@deepseek-teaching/core/render'
 import {
   apiChatSend, apiGet, apiPost, consumeChatStreamResponse, describeError, isNetworkError, toAppError,
 } from '../api.ts'
 import {
-  INITIAL_WORKSPACE_STATE, computeCourseProgress, isChatBusy, selectedActivity,
-  sortedReview, workspaceReducer, type WorkspaceNotice,
+  INITIAL_WORKSPACE_STATE, computeCourseProgress, draftConceptCount, isChatBusy, needsCourseSetup,
+  selectedActivity, sortedReview, workspaceReducer, type WorkspaceNotice,
 } from '../state.ts'
 import { Banner, ErrorBanner, Spinner } from './Banner.tsx'
 import { ChatPanel, QUICK_ACTION_PROMPTS, type QuickAction } from './ChatPanel.tsx'
-import { Onboarding } from './Onboarding.tsx'
+import { Onboarding, type WizardResult } from './Onboarding.tsx'
+import { CourseSetupCard } from './CourseSetupCard.tsx'
 import { Sidebar } from './Sidebar.tsx'
 import { TeachingArea } from './TeachingArea.tsx'
 import { TopBar } from './TopBar.tsx'
@@ -74,6 +75,13 @@ export function TeachingWorkspace(): React.ReactElement {
     typeof navigator === 'undefined' ? true : navigator.onLine !== false)
   const [runResults, setRunResults] = useState<Record<string, CodeRunResultView>>({})
   const [notesDraft, setNotesDraft] = useState('')
+  /** Draft/confirm/adhoc flow of the workspace "structure pending" card. */
+  const [setup, setSetup] = useState<{
+    phase: 'ready' | 'loading' | 'draft' | 'error'
+    draft?: CourseDraftView
+    error?: string
+    busy?: boolean
+  }>({ phase: 'ready' })
 
   useEffect(() => {
     mounted.current = true
@@ -92,6 +100,11 @@ export function TeachingWorkspace(): React.ReactElement {
     // Bootstrap runs once for the panel lifetime.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // A different course restarts the structure-pending flow.
+  useEffect(() => {
+    setSetup({ phase: 'ready' })
+  }, [state.courseDetail?.course.id])
 
   // Reload the notes box when the selected activity changes.
   useEffect(() => {
@@ -611,66 +624,154 @@ export function TeachingWorkspace(): React.ReactElement {
     }
   }, [notify])
 
-  const importPaths = useCallback(async (courseId: string, paths: readonly string[]): Promise<void> => {
+  /** Reload a course and its session list after a structural change. */
+  const refreshCourse = useCallback(async (courseId: string): Promise<{
+    detail?: CourseDetail
+    sessions: readonly SessionSummary[]
+  }> => {
+    const [detail, sessionsResponse] = await Promise.all([
+      apiGet('courses.get', { courseId: courseId as never }),
+      apiGet('sessions.list', { courseId: courseId as never }),
+    ])
+    if (mounted.current) {
+      dispatch({ type: 'course/loaded', detail, sessions: sessionsResponse.sessions })
+      dispatch({ type: 'sessions/loaded', sessions: sessionsResponse.sessions })
+    }
+    return { detail, sessions: sessionsResponse.sessions }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const importPaths = useCallback(async (courseId: string, paths: readonly string[]): Promise<WizardResult> => {
     dispatch({ type: 'busy', label: '开始导入资料…' })
     try {
       const { task } = await apiPost('sources.import', { courseId: courseId as never, paths })
       notify({ kind: 'info', message: `已开始导入：${task.snapshot.label}` })
       void loadTasks()
-      const settled = awaitTask(task.id)
-      const snapshot = await settled
-      if (snapshot?.status === 'completed') notify({ kind: 'info', message: '资料导入完成，可以生成课程草案。' })
-      else if (snapshot?.status === 'partial') notify({ kind: 'warning', message: `资料部分导入：${(snapshot.warnings ?? []).join('；') || '部分文件失败，详见任务详情。'}` })
-      else if (snapshot?.status === 'failed') notify({ kind: 'error', message: `资料导入失败：${snapshot.error?.message ?? '未知原因'}` })
-      void loadTasks()
+      const snapshot = await awaitTask(task.id)
+      if (snapshot?.status === 'partial') {
+        return { ok: false, error: `资料部分导入：${(snapshot.warnings ?? []).join('；') || '部分文件失败，详见任务详情。'}` }
+      }
+      if (snapshot?.status === 'failed') {
+        return { ok: false, error: `资料导入失败：${snapshot.error?.message ?? '未知原因'}` }
+      }
+      if (snapshot === undefined) return { ok: false, error: '导入任务未在限定时间内完成，请稍后刷新任务状态重试。' }
+      notify({ kind: 'info', message: '资料导入完成，可以生成课程草案。' })
+      return { ok: true }
     } catch (error) {
-      notify({ kind: 'error', message: `导入失败：${describeError(error)}` })
+      return { ok: false, error: `导入失败：${describeError(error)}` }
     } finally {
       if (mounted.current) dispatch({ type: 'busy', label: undefined })
+      void loadTasks()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadTasks, awaitTask, notify])
 
-  const generateDraft = useCallback(async (courseId: string): Promise<void> => {
+  const generateDraft = useCallback(async (courseId: string): Promise<WizardResult> => {
     dispatch({ type: 'busy', label: '生成课程结构草案…' })
     try {
       const { task } = await apiPost('courseDraft.generate', { courseId: courseId as never })
       void loadTasks()
       const snapshot = await awaitTask(task.id)
-      if (snapshot?.status === 'failed') {
-        notify({ kind: 'error', message: `课程草案生成失败：${snapshot.error?.message ?? '未知原因'}` })
-        return
+      if (snapshot === undefined) {
+        return { ok: false, error: '草案生成任务没有在限定时间内完成（未获取到任务状态）。' }
       }
+      if (snapshot.status === 'failed') {
+        return { ok: false, error: `课程草案生成失败：${snapshot.error?.message ?? '未知原因'}` }
+      }
+      if (snapshot.status === 'cancelled') return { ok: false, error: '课程草案生成已取消。' }
       const { draft } = await apiGet('courseDraft.get', { courseId: courseId as never })
-      if (!mounted.current) return
+      if (!mounted.current) return { ok: false, error: '界面已关闭' }
       if (draft === undefined) {
-        notify({ kind: 'warning', message: '草案尚未生成：请先导入可读资料后重试。' })
-        return
+        return { ok: false, error: '草案尚未生成：请确认资料已导入成功，或返回补充资料后重试。' }
       }
       dispatch({ type: 'draft/loaded', draft })
+      return { ok: true, draft }
     } catch (error) {
-      notify({ kind: 'error', message: `课程草案生成失败：${describeError(error)}` })
+      return { ok: false, error: `课程草案生成失败：${describeError(error)}` }
     } finally {
       if (mounted.current) dispatch({ type: 'busy', label: undefined })
       void loadTasks()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadTasks, awaitTask, notify])
+  }, [loadTasks, awaitTask])
 
-  const confirmDraft = useCallback(async (courseId: string, revisionId: string): Promise<void> => {
+  const confirmDraft = useCallback(async (courseId: string, revisionId: string): Promise<WizardResult> => {
+    if (revisionId === '') return { ok: false, error: '草案版本无效，请重新生成草案。' }
     dispatch({ type: 'busy', label: '确认课程结构…' })
     try {
       await apiPost('courseDraft.confirm', { courseId: courseId as never, revisionId })
-      if (!mounted.current) return
+      const { sessions } = await refreshCourse(courseId)
       notify({ kind: 'info', message: '课程结构已确认，开始系统学习。' })
-      await selectCourse(courseId)
+      const first = sessions[0]
+      if (first !== undefined) await selectSession(first.id)
+      else await createSession(courseId)
+      return { ok: true }
     } catch (error) {
-      notify({ kind: 'error', message: `确认课程结构失败：${describeError(error)}` })
+      return { ok: false, error: `确认课程结构失败：${describeError(error)}` }
     } finally {
       if (mounted.current) dispatch({ type: 'busy', label: undefined })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notify, selectCourse])
+  }, [notify, refreshCourse, selectSession, createSession])
+
+  /** Ad-hoc path: the Host confirms a minimal structure, then a session opens. */
+  const startAdhocSession = useCallback(async (courseId: string): Promise<WizardResult> => {
+    dispatch({ type: 'busy', label: '创建随问随学会话…' })
+    try {
+      const { session } = await apiPost('sessions.create', {
+        courseId: courseId as never,
+        mode: 'adhoc',
+      })
+      await refreshCourse(courseId)
+      notify({ kind: 'info', message: '已用「先随便问问」开始：结构是最小确认版本，之后仍可生成完整草案。' })
+      await selectSession(session.id)
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, error: `随问随学会话创建失败：${describeError(error)}` }
+    } finally {
+      if (mounted.current) dispatch({ type: 'busy', label: undefined })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notify, refreshCourse, selectSession])
+
+  // ---- workspace "structure pending" card handlers ---------------------
+
+  const loadSetupDraft = useCallback(async (courseId: string): Promise<void> => {
+    setSetup({ phase: 'loading' })
+    try {
+      const { draft } = await apiGet('courseDraft.get', { courseId: courseId as never })
+      if (!mounted.current) return
+      if (draft === undefined) {
+        setSetup({ phase: 'error', error: '还没有可确认的草案：请先导入资料后生成草案，或直接「先随便问问」。' })
+      } else {
+        setSetup({ phase: 'draft', draft })
+      }
+    } catch (error) {
+      if (mounted.current) setSetup({ phase: 'error', error: `读取课程草案失败：${describeError(error)}` })
+    }
+  }, [])
+
+  const generateSetupDraft = useCallback(async (courseId: string): Promise<void> => {
+    setSetup({ phase: 'loading' })
+    const result = await generateDraft(courseId)
+    if (!mounted.current) return
+    if (result.ok && result.draft !== undefined) setSetup({ phase: 'draft', draft: result.draft })
+    else setSetup({ phase: 'error', error: result.error ?? '课程草案生成失败' })
+  }, [generateDraft])
+
+  const confirmSetupDraft = useCallback(async (courseId: string, revisionId: string): Promise<void> => {
+    setSetup(previous => ({ ...previous, busy: true, error: undefined }))
+    const result = await confirmDraft(courseId, revisionId)
+    if (!mounted.current) return
+    setSetup(result.ok ? { phase: 'ready' } : previous => ({ ...previous, busy: false, error: result.error }))
+  }, [confirmDraft])
+
+  const adhocSetup = useCallback(async (courseId: string): Promise<void> => {
+    setSetup(previous => ({ ...previous, busy: true, error: undefined }))
+    const result = await startAdhocSession(courseId)
+    if (!mounted.current) return
+    setSetup(result.ok ? { phase: 'ready' } : previous => ({ ...previous, busy: false, error: result.error }))
+  }, [startAdhocSession])
 
   // ---- derived ---------------------------------------------------------
 
@@ -701,7 +802,7 @@ export function TeachingWorkspace(): React.ReactElement {
     onImportPaths: importPaths,
     onGenerateDraft: generateDraft,
     onConfirmDraft: confirmDraft,
-    onFinish: () => { /* selectCourse already switched the workspace to ready */ },
+    onStartAdhoc: startAdhocSession,
   }
 
   return (
@@ -737,7 +838,21 @@ export function TeachingWorkspace(): React.ReactElement {
         <div style={{ padding: 24 }}><Spinner label="正在连接教学 Host…" /></div>
       )}
       {state.phase === 'onboarding' && <Onboarding {...onboardingCallbacks} />}
-      {state.phase === 'ready' && (
+      {state.phase === 'ready' && needsCourseSetup(detail) && detail !== undefined && (
+        <CourseSetupCard
+          detail={detail}
+          phase={setup.phase}
+          {...(setup.draft !== undefined ? { draft: setup.draft } : {})}
+          {...(setup.error !== undefined ? { error: setup.error } : {})}
+          busy={busy || setup.busy === true}
+          hasDraftConcepts={draftConceptCount(detail) > 0}
+          onGenerate={() => { void generateSetupDraft(detail.course.id) }}
+          onLoadDraft={() => { void loadSetupDraft(detail.course.id) }}
+          onConfirm={(revisionId) => { void confirmSetupDraft(detail.course.id, revisionId) }}
+          onAdhoc={() => { void adhocSetup(detail.course.id) }}
+        />
+      )}
+      {state.phase === 'ready' && !needsCourseSetup(detail) && (
         <div className="ai-teaching-body">
           <Sidebar
             courses={state.courses}

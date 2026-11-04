@@ -387,6 +387,20 @@ export function computeCourseProgress(state: {
   return { covered, total, percent: total === 0 ? 0 : Math.round((covered / total) * 100) }
 }
 
+/** True when a course has a draft structure but no confirmed (active) revision. */
+export function needsCourseSetup(detail: CourseDetail | undefined): boolean {
+  if (detail === undefined) return false
+  if (detail.activeRevision !== undefined) return false
+  return detail.course.draftRevisionId !== undefined || detail.draftRevision !== undefined
+}
+
+/** Number of concepts in the pending draft structure (0 when none/unknown). */
+export function draftConceptCount(detail: CourseDetail | undefined): number {
+  return detail?.draftRevision?.concepts.length
+    ?? detail?.draft?.revision.concepts.length
+    ?? 0
+}
+
 /** Review suggestions ordered by due date (earliest first). */
 export function sortedReview(review: readonly ReviewItem[]): readonly ReviewItem[] {
   return [...review].sort((a, b) => a.dueAt.localeCompare(b.dueAt))

@@ -148,6 +148,12 @@ export const TEACHING_CSS = `
 .ai-source-issue { font-size: 11px; color: var(--dsw-alias-state-warn-primary, #b45309); }
 .ai-env-row { font-size: 12px; padding: 6px 0; border-bottom: 1px solid
   var(--dsw-alias-border-l2, rgba(127,127,127,0.12)); }
+.ai-course-setup { flex: 1 1 auto; overflow-y: auto; padding: 24px; min-height: 0; }
+.ai-course-setup-card { max-width: 820px; margin: 0 auto; padding: 18px 20px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25)); border-radius: 14px;
+  background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.05)); }
+.ai-draft-review h3 { color: inherit; }
+.ai-draft-review .ai-checklist { max-height: 320px; overflow-y: auto; }
 .ai-onboarding { padding: 24px; max-width: 720px; margin: 0 auto; overflow-y: auto; }
 .ai-onboarding h2 { font-size: 18px; margin: 0 0 6px; }
 .ai-onboarding p { opacity: 0.8; margin: 4px 0 10px; }

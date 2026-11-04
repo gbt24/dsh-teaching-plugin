@@ -61190,6 +61190,33 @@ function registerRoutes(services) {
               }
             }
           }
+          const crossCourse = [];
+          if (hits.length < 3) {
+            const allCourses = await services.courses.list();
+            const others = allCourses.filter((other) => other.id !== course.id && other.activeRevisionId !== void 0).slice(0, 3);
+            for (const other of others) {
+              const otherRevision = await services.courses.getRevision(other.id, other.activeRevisionId);
+              if (otherRevision === void 0) continue;
+              const otherHits = await services.corpus.search({ query: input.text, courseId: other.id, limit: 2 });
+              if (!otherHits.ok || otherHits.value.hits.length === 0) continue;
+              crossCourse.push({
+                courseId: other.id,
+                courseTitle: other.title,
+                revisionId: otherRevision.id,
+                conceptIds: [],
+                reason: `\u5F53\u524D\u8BFE\u7A0B\u8D44\u6599\u672A\u8986\u76D6\uFF0C\u5176\u4ED6\u8BFE\u7A0B\u300A${other.title}\u300B\u6709\u76F8\u5173\u6750\u6599\uFF0C\u4EC5\u4F5C\u5173\u8054\u53C2\u8003`,
+                anchors: otherHits.value.hits.map((hit) => hit.anchor)
+              });
+              if (crossCourse.length >= 2) break;
+            }
+          }
+          const crossEvidence = crossCourse.flatMap((ref) => ref.anchors.slice(0, 1).map((anchor) => ({
+            kind: "other-course",
+            label: `${ref.courseTitle} \xB7 ${anchor.label ?? "\u76F8\u5173\u7247\u6BB5"}`,
+            anchor,
+            courseId: ref.courseId,
+            courseTitle: ref.courseTitle
+          })));
           const record = await services.learning.get(course.id);
           const learningSummary = (record?.mastery ?? []).map((item) => ({
             conceptId: item.conceptId,
@@ -61207,7 +61234,7 @@ function registerRoutes(services) {
             currentConceptId: session.position.conceptId,
             history,
             material,
-            crossCourse: [],
+            crossCourse,
             learning: learningSummary,
             materialWarnings: [],
             requestedForm: detectRequestedForm(input.text)?.form,
@@ -61218,7 +61245,7 @@ function registerRoutes(services) {
           };
           let finalText = "";
           let finalMeta;
-          let evidenceRefs = [...evidenceFromMaterial, ...webEvidence];
+          let evidenceRefs = [...evidenceFromMaterial, ...webEvidence, ...crossEvidence];
           let uncertainty = [];
           let limitations = [];
           for await (const event of services.teaching.respond(teachingInput, services.model, controller.signal)) {

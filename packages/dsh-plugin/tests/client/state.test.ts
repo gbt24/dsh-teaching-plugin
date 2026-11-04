@@ -9,8 +9,8 @@ import type {
 } from '@deepseek-teaching/core/contracts'
 import {
   INITIAL_WORKSPACE_STATE, applyChatStreamEvent, appendMessage, computeCourseProgress,
-  latestActivity, mergeEvidence, selectedActivity, sortedReview, upsertActivity, workspaceReducer,
-  type WorkspaceState,
+  draftConceptCount, latestActivity, mergeEvidence, needsCourseSetup, selectedActivity,
+  sortedReview, upsertActivity, workspaceReducer, type WorkspaceState,
 } from '../../src/client/state.ts'
 
 const NOW = '2026-11-04T08:00:00.000Z'
@@ -147,6 +147,45 @@ test('course progress counts covered concepts and is resilient to missing revisi
   } as unknown as SessionView
   assert.deepEqual(computeCourseProgress({ courseDetail: detail, session, mastery: [] }), { covered: 1, total: 2, percent: 50 })
   assert.deepEqual(computeCourseProgress({}), { covered: 0, total: 0, percent: 0 })
+})
+
+test('needsCourseSetup detects a draft-only course and clears once confirmed', () => {
+  const draftOnly = {
+    course: { id: 'course-1', draftRevisionId: 'crev-1' } as never,
+    revisions: [], sources: [],
+    draftRevision: {
+      id: 'crev-1' as never, courseId: 'course-1' as never, version: 1, createdAt: NOW,
+      state: 'draft', provenance: 'student-edit', goals: ['g'], language: 'zh', sources: [], sequence: [],
+      concepts: [
+        { id: 'c1' as never, title: 'A', summary: '', prerequisites: [], sourceAnchors: [] },
+      ],
+      basedOn: [],
+    },
+    learning: { attempts: [], mastery: [], review: [], notes: [], updatedAt: NOW },
+  } as unknown as CourseDetail
+  assert.equal(needsCourseSetup(draftOnly), true)
+  assert.equal(draftConceptCount(draftOnly), 1)
+  assert.equal(needsCourseSetup(undefined), false)
+  const confirmed = {
+    ...draftOnly,
+    activeRevision: { ...draftOnly.draftRevision, state: 'confirmed' },
+  } as unknown as CourseDetail
+  assert.equal(needsCourseSetup(confirmed), false)
+  assert.equal(draftConceptCount(undefined), 0)
+})
+
+test('the first-run wizard is not switched to ready by course/task refreshes', () => {
+  const bootstrap = { profile: { language: 'zh' }, warnings: [] } as never
+  const onboarding = workspaceReducer(INITIAL_WORKSPACE_STATE, { type: 'bootstrap/loaded', bootstrap, courses: [] })
+  assert.equal(onboarding.phase, 'onboarding')
+  // A freshly created course must keep the student in the wizard until confirm.
+  const afterCreate = workspaceReducer(onboarding, {
+    type: 'courses/loaded',
+    courses: [{ course: { id: 'course-1' } as never, sourceCount: 0, conceptCount: 0, readySourceCount: 0 }],
+  })
+  assert.equal(afterCreate.phase, 'onboarding')
+  const afterTasks = workspaceReducer(afterCreate, { type: 'tasks/loaded', tasks: [] })
+  assert.equal(afterTasks.phase, 'onboarding')
 })
 
 test('latest activity and sorted review helpers', () => {

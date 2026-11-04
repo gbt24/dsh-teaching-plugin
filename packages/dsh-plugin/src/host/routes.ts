@@ -716,6 +716,37 @@ export function registerRoutes(services: RouteServices): void {
               }
             }
           }
+          // Cross-course references: only when the current course material is
+          // thin and another course has relevant material, and always labelled
+          // with the other course's title/revision (R10).
+          const crossCourse: import('@deepseek-teaching/core').CrossCourseReference[] = []
+          if (hits.length < 3) {
+            const allCourses = await services.courses.list()
+            const others = allCourses.filter(other => other.id !== course.id && other.activeRevisionId !== undefined).slice(0, 3)
+            for (const other of others) {
+              const otherRevision = await services.courses.getRevision(other.id, other.activeRevisionId as never)
+              if (otherRevision === undefined) continue
+              const otherHits = await services.corpus.search({ query: input.text, courseId: other.id, limit: 2 })
+              if (!otherHits.ok || otherHits.value.hits.length === 0) continue
+              crossCourse.push({
+                courseId: other.id,
+                courseTitle: other.title,
+                revisionId: otherRevision.id,
+                conceptIds: [],
+                reason: `当前课程资料未覆盖，其他课程《${other.title}》有相关材料，仅作关联参考`,
+                anchors: otherHits.value.hits.map(hit => hit.anchor),
+              })
+              if (crossCourse.length >= 2) break
+            }
+          }
+          const crossEvidence: import('@deepseek-teaching/core').EvidenceReference[] = crossCourse.flatMap(ref =>
+            ref.anchors.slice(0, 1).map(anchor => ({
+              kind: 'other-course' as const,
+              label: `${ref.courseTitle} · ${anchor.label ?? '相关片段'}`,
+              anchor,
+              courseId: ref.courseId,
+              courseTitle: ref.courseTitle,
+            })))
           const record = await services.learning.get(course.id)
           const learningSummary = (record?.mastery ?? []).map(item => ({
             conceptId: item.conceptId,
@@ -733,7 +764,7 @@ export function registerRoutes(services: RouteServices): void {
             currentConceptId: session.position.conceptId,
             history,
             material,
-            crossCourse: [],
+            crossCourse,
             learning: learningSummary,
             materialWarnings: [],
             requestedForm: detectRequestedForm(input.text)?.form,
@@ -745,7 +776,7 @@ export function registerRoutes(services: RouteServices): void {
 
           let finalText = ''
           let finalMeta: import('@deepseek-teaching/core').TeachingTurnMeta | undefined
-          let evidenceRefs: import('@deepseek-teaching/core').EvidenceReference[] = [...evidenceFromMaterial, ...webEvidence]
+          let evidenceRefs: import('@deepseek-teaching/core').EvidenceReference[] = [...evidenceFromMaterial, ...webEvidence, ...crossEvidence]
           let uncertainty: string[] = []
           let limitations: string[] = []
           for await (const event of services.teaching.respond(teachingInput, services.model, controller.signal)) {
