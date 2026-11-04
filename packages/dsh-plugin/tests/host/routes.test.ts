@@ -350,6 +350,31 @@ describe('teaching host routes', () => {
     assert.notEqual(attempt.mastery[0]?.level, 'mastered')
   })
 
+  it('updates course learning goals as a new confirmed revision', async () => {
+    const harness = await createHarness([{ kind: 'text', text: DRAFT_REPLY }])
+    const { courseId, revisionId } = await preparedCourse(harness)
+    const updated = unwrap<{ course: { activeRevisionId: string }; revision: { version: number; goals: string[]; state: string; background?: string } }>((
+      await harness.call('courseGoals.update', {
+        body: { courseId, goals: ['新目标一', '新目标二'], background: '学过基础统计' },
+      })
+    ).json)
+    assert.equal(updated.revision.state, 'confirmed')
+    assert.deepEqual(updated.revision.goals, ['新目标一', '新目标二'])
+    assert.equal(updated.revision.background, '学过基础统计')
+    assert.notEqual(updated.course.activeRevisionId, revisionId)
+    const detail = unwrap<{
+      course: { activeRevisionId: string }
+      activeRevision: { goals: string[]; version: number }
+      revisions: { id: string; state: string }[]
+    }>((await harness.call('courses.get', { method: 'GET', query: { courseId } })).json)
+    assert.deepEqual(detail.activeRevision.goals, ['新目标一', '新目标二'])
+    const previous = detail.revisions.find(item => item.id === revisionId)
+    assert.equal(previous?.state, 'superseded')
+
+    const invalid = await harness.call('courseGoals.update', { body: { courseId, goals: [] } })
+    assert.equal((invalid.json as { error: { code: string } }).error.code, 'invalid-input')
+  })
+
   it('returns structured errors for invalid input, missing objects and unimplemented capabilities', async () => {
     const harness = await createHarness([])
     const invalid = await harness.call('courses.create', { body: {} })

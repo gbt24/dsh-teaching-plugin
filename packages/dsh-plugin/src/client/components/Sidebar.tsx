@@ -31,6 +31,8 @@ export interface SidebarProps {
   readonly onNewCourse: () => void
   /** Request deletion of one course (the workspace shows the confirmation). */
   readonly onDeleteCourse: (courseId: string, title: string) => void
+  /** Open the learning-goals editor for the active course. */
+  readonly onEditGoals?: () => void
 }
 
 /** Ordered concepts of the active (or draft) course revision. */
@@ -111,6 +113,18 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
           <div className="ai-muted" style={{ marginTop: 4 }}>
             {language === 'en' ? 'English' : language === 'bilingual' ? '中英双语' : '中文'}
             {goal !== undefined ? ` · 目标：${truncate(goal, 24)}` : ''}
+            {props.onEditGoals !== undefined && (
+              <button
+                type="button"
+                className="ai-link-button"
+                style={{ marginLeft: 6 }}
+                onClick={() => props.onEditGoals?.()}
+                aria-label="编辑学习目标"
+                title="编辑学习目标与基础"
+              >
+                ✏️ 编辑目标
+              </button>
+            )}
           </div>
         )}
       </div>

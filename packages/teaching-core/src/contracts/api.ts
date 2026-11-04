@@ -176,6 +176,16 @@ export interface ApiRequests {
       }
     }
   }
+  'courseGoals.update': {
+    readonly method: 'POST'
+    readonly body: {
+      readonly courseId: CourseId
+      /** Student-edited learning goals, replacing the previous list. */
+      readonly goals: readonly string[]
+      /** Optional self-described background used for pacing. */
+      readonly background?: string
+    }
+  }
   'sessions.list': { readonly method: 'GET'; readonly query: { readonly courseId?: CourseId }; readonly body?: never }
   'sessions.create': {
     readonly method: 'POST'
@@ -325,6 +335,7 @@ export interface ApiResponses {
   'courseDraft.generate': { readonly task: TaskHandle }
   'courseDraft.get': { readonly draft?: CourseDraftView }
   'courseDraft.confirm': { readonly course: Course; readonly revision: CourseRevision }
+  'courseGoals.update': { readonly course: Course; readonly revision: CourseRevision }
   'sessions.list': { readonly sessions: readonly SessionSummary[] }
   'sessions.create': { readonly session: TeachingSession }
   'sessions.get': SessionView

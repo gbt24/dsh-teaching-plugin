@@ -61083,6 +61083,52 @@ function registerRoutes(services) {
     await services.courses.save(updatedCourse);
     return envelope({ course: updatedCourse, revision: confirmed });
   });
+  route("courseGoals.update", async ({ body }) => {
+    const input = body;
+    if (typeof input?.courseId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 courseId");
+    if (!Array.isArray(input.goals)) throw appError("invalid-input", "goals \u5FC5\u987B\u662F\u5B57\u7B26\u4E32\u6570\u7EC4");
+    const goals = input.goals.filter((goal) => typeof goal === "string" && goal.trim() !== "").map((goal) => goal.trim().slice(0, 300)).slice(0, 20);
+    if (goals.length === 0) throw appError("invalid-input", "\u81F3\u5C11\u4FDD\u7559\u4E00\u4E2A\u5B66\u4E60\u76EE\u6807");
+    const course = await services.courses.get(input.courseId);
+    if (course === void 0) throw notFoundError("\u8BFE\u7A0B");
+    const active = await services.courses.getActiveRevision(course);
+    const revisions = await services.courses.listRevisions(course.id);
+    const background = typeof input.background === "string" ? input.background.trim().slice(0, 2e3) : void 0;
+    if (active === void 0) {
+      const draft = await services.courses.getDraftRevision(course);
+      if (draft === void 0) throw notFoundError("\u8BFE\u7A0B\u8349\u6848");
+      const next2 = {
+        ...draft,
+        id: courseRevisionId(),
+        version: (revisions.at(-1)?.version ?? draft.version) + 1,
+        createdAt: nowIso(),
+        state: "draft",
+        goals,
+        ...background === void 0 ? {} : { background },
+        changeSummary: "\u5B66\u751F\u66F4\u65B0\u4E86\u5B66\u4E60\u76EE\u6807\uFF08\u5F85\u786E\u8BA4\u8BFE\u7A0B\u7ED3\u6784\uFF09"
+      };
+      await services.courses.saveRevision(next2);
+      const updated2 = await services.courses.save({ ...course, draftRevisionId: next2.id, updatedAt: nowIso() });
+      return envelope({ course: updated2, revision: next2 });
+    }
+    const next = {
+      ...active,
+      id: courseRevisionId(),
+      version: (revisions.at(-1)?.version ?? active.version) + 1,
+      createdAt: nowIso(),
+      state: "confirmed",
+      confirmedAt: nowIso(),
+      provenance: "student-edit",
+      goals,
+      ...background === void 0 ? {} : { background },
+      changeSummary: "\u5B66\u751F\u66F4\u65B0\u4E86\u5B66\u4E60\u76EE\u6807\uFF08\u8BFE\u7A0B\u7ED3\u6784\u4E0D\u53D8\uFF09"
+    };
+    await services.courses.saveRevision(next);
+    const superseded = { ...active, state: "superseded" };
+    await services.courses.saveRevision(superseded);
+    const updated = await services.courses.save({ ...course, activeRevisionId: next.id, updatedAt: nowIso() });
+    return envelope({ course: updated, revision: next });
+  });
   route("sessions.list", async ({ query }) => {
     const courseId2 = query.get("courseId") ?? void 0;
     const sessions = await services.sessions.list(courseId2);

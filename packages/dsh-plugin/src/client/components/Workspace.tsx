@@ -78,6 +78,8 @@ export function TeachingWorkspace(props: {
     typeof navigator === 'undefined' ? true : navigator.onLine !== false)
   const [runResults, setRunResults] = useState<Record<string, CodeRunResultView>>({})
   const [deleteTarget, setDeleteTarget] = useState<{ readonly id: string; readonly title: string } | undefined>(undefined)
+  const [goalsEditor, setGoalsEditor] = useState<{ readonly courseId: string; readonly goals: string; readonly background: string } | undefined>(undefined)
+  const [savingGoals, setSavingGoals] = useState(false)
   const [deleteSources, setDeleteSources] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [notesDraft, setNotesDraft] = useState('')
@@ -642,6 +644,48 @@ export function TeachingWorkspace(props: {
     dispatch({ type: 'ui/tab', tab: 'sources' })
   }, [])
 
+
+  /** Open the goals editor for the active course. */
+  const openGoalsEditor = useCallback((): void => {
+    const current = state.courseDetail
+    if (current === undefined) return
+    const revision = current.activeRevision ?? current.draftRevision
+    setGoalsEditor({
+      courseId: current.course.id,
+      goals: (revision?.goals ?? []).join('\n'),
+      background: revision?.background ?? '',
+    })
+  }, [state.courseDetail])
+
+  /** Persist student-edited learning goals as a new course revision. */
+  const saveGoals = useCallback(async (): Promise<void> => {
+    if (goalsEditor === undefined) return
+    const goals = goalsEditor.goals.split('\n').map(line => line.trim()).filter(line => line !== '')
+    if (goals.length === 0) {
+      notify({ kind: 'warning', message: '请至少保留一个学习目标。' })
+      return
+    }
+    setSavingGoals(true)
+    try {
+      await apiPost('courseGoals.update', {
+        courseId: goalsEditor.courseId as never,
+        goals,
+        ...(goalsEditor.background.trim() === '' ? {} : { background: goalsEditor.background.trim() }),
+      })
+      const [detail, sessionsResponse] = await Promise.all([
+        apiGet('courses.get', { courseId: goalsEditor.courseId as never }),
+        apiGet('sessions.list', { courseId: goalsEditor.courseId as never }),
+      ])
+      dispatch({ type: 'course/loaded', detail, sessions: sessionsResponse.sessions })
+      notify({ kind: 'info', message: '学习目标已更新；已有学习会话保持不变，新会话使用更新后的目标。' })
+      setGoalsEditor(undefined)
+    } catch (error) {
+      notify({ kind: 'error', message: `更新学习目标失败：${describeError(error)}` })
+    } finally {
+      setSavingGoals(false)
+    }
+  }, [goalsEditor, notify])
+
   // ---- onboarding ------------------------------------------------------
 
   const createCourse = useCallback(async (input: {
@@ -916,6 +960,7 @@ export function TeachingWorkspace(props: {
               setDeleteSources(false)
               setDeleteTarget({ id: courseId, title })
             }}
+            onEditGoals={openGoalsEditor}
             onSelectSession={sessionId => { void selectSession(sessionId) }}
             onNewSession={() => {
               const courseId = detail?.course.id
@@ -983,6 +1028,37 @@ export function TeachingWorkspace(props: {
               onSaveNotes={saveNotes}
               onEvidenceClick={onEvidenceClick}
             />
+          </div>
+        </div>
+      )}
+      {goalsEditor !== undefined && (
+        <div className="ai-modal-overlay" role="dialog" aria-modal="true" aria-label="编辑学习目标">
+          <div className="ai-modal">
+            <h3>编辑学习目标</h3>
+            <p className="ai-muted" style={{ margin: '0 0 8px' }}>
+              每行一个目标。更新会生成新的课程结构修订；已有学习会话仍绑定原修订，新会话使用新目标。
+            </p>
+            <textarea
+              aria-label="学习目标（每行一个）"
+              rows={5}
+              style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'inherit', fontSize: 13 }}
+              value={goalsEditor.goals}
+              onChange={event => setGoalsEditor({ ...goalsEditor, goals: event.target.value })}
+            />
+            <label className="ai-muted" style={{ display: 'block', marginTop: 8, fontSize: 12 }}>我的基础/背景（可选）</label>
+            <textarea
+              aria-label="学习基础与背景"
+              rows={2}
+              style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'inherit', fontSize: 13 }}
+              value={goalsEditor.background}
+              onChange={event => setGoalsEditor({ ...goalsEditor, background: event.target.value })}
+            />
+            <div className="ai-modal-actions">
+              <button type="button" className="ai-small-button" disabled={savingGoals} onClick={() => setGoalsEditor(undefined)}>取消</button>
+              <button type="button" className="ai-primary-button" disabled={savingGoals} onClick={() => void saveGoals()}>
+                {savingGoals ? '保存中…' : '保存目标'}
+              </button>
+            </div>
           </div>
         </div>
       )}

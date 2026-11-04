@@ -600,6 +600,59 @@ export function registerRoutes(services: RouteServices): void {
   /* Sessions                                                             */
   /* ------------------------------------------------------------------ */
 
+  route('courseGoals.update', async ({ body }) => {
+    const input = body as ApiRequests['courseGoals.update']['body']
+    if (typeof input?.courseId !== 'string') throw appError('invalid-input', '缺少 courseId')
+    if (!Array.isArray(input.goals)) throw appError('invalid-input', 'goals 必须是字符串数组')
+    const goals = input.goals
+      .filter((goal): goal is string => typeof goal === 'string' && goal.trim() !== '')
+      .map(goal => goal.trim().slice(0, 300))
+      .slice(0, 20)
+    if (goals.length === 0) throw appError('invalid-input', '至少保留一个学习目标')
+    const course = await services.courses.get(input.courseId)
+    if (course === undefined) throw notFoundError('课程')
+    const active = await services.courses.getActiveRevision(course)
+    const revisions = await services.courses.listRevisions(course.id)
+    const background = typeof input.background === 'string' ? input.background.trim().slice(0, 2000) : undefined
+    if (active === undefined) {
+      // Draft-only course: replace the proposed draft's goals in a new draft revision.
+      const draft = await services.courses.getDraftRevision(course)
+      if (draft === undefined) throw notFoundError('课程草案')
+      const next: CourseRevision = {
+        ...draft,
+        id: newCourseRevisionId(),
+        version: (revisions.at(-1)?.version ?? draft.version) + 1,
+        createdAt: nowIso(),
+        state: 'draft',
+        goals,
+        ...(background === undefined ? {} : { background }),
+        changeSummary: '学生更新了学习目标（待确认课程结构）',
+      }
+      await services.courses.saveRevision(next)
+      const updated = await services.courses.save({ ...course, draftRevisionId: next.id, updatedAt: nowIso() })
+      return envelope({ course: updated, revision: next })
+    }
+    // Confirmed course: a new confirmed revision keeps old sessions traceable
+    // to the revision they were taught against while new sessions use the update.
+    const next: CourseRevision = {
+      ...active,
+      id: newCourseRevisionId(),
+      version: (revisions.at(-1)?.version ?? active.version) + 1,
+      createdAt: nowIso(),
+      state: 'confirmed',
+      confirmedAt: nowIso(),
+      provenance: 'student-edit',
+      goals,
+      ...(background === undefined ? {} : { background }),
+      changeSummary: '学生更新了学习目标（课程结构不变）',
+    }
+    await services.courses.saveRevision(next)
+    const superseded: CourseRevision = { ...active, state: 'superseded' }
+    await services.courses.saveRevision(superseded)
+    const updated = await services.courses.save({ ...course, activeRevisionId: next.id, updatedAt: nowIso() })
+    return envelope({ course: updated, revision: next })
+  })
+
   route('sessions.list', async ({ query }) => {
     const courseId = query.get('courseId') ?? undefined
     const sessions = await services.sessions.list(courseId)

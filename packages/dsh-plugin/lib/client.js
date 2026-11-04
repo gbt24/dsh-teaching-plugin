@@ -18852,7 +18852,19 @@ window.__ModuleLoader__.load({
           ] }, summary.course.id)),
           detail !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-muted", style: { marginTop: 4 }, children: [
             language === "en" ? "English" : language === "bilingual" ? "\u4E2D\u82F1\u53CC\u8BED" : "\u4E2D\u6587",
-            goal !== void 0 ? ` \xB7 \u76EE\u6807\uFF1A${truncate(goal, 24)}` : ""
+            goal !== void 0 ? ` \xB7 \u76EE\u6807\uFF1A${truncate(goal, 24)}` : "",
+            props.onEditGoals !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-link-button",
+                style: { marginLeft: 6 },
+                onClick: () => props.onEditGoals?.(),
+                "aria-label": "\u7F16\u8F91\u5B66\u4E60\u76EE\u6807",
+                title: "\u7F16\u8F91\u5B66\u4E60\u76EE\u6807\u4E0E\u57FA\u7840",
+                children: "\u270F\uFE0F \u7F16\u8F91\u76EE\u6807"
+              }
+            )
           ] })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-sidebar-section", children: [
@@ -19412,6 +19424,8 @@ window.__ModuleLoader__.load({
       const [online, setOnline] = (0, import_react10.useState)(() => typeof navigator === "undefined" ? true : navigator.onLine !== false);
       const [runResults, setRunResults] = (0, import_react10.useState)({});
       const [deleteTarget, setDeleteTarget] = (0, import_react10.useState)(void 0);
+      const [goalsEditor, setGoalsEditor] = (0, import_react10.useState)(void 0);
+      const [savingGoals, setSavingGoals] = (0, import_react10.useState)(false);
       const [deleteSources, setDeleteSources] = (0, import_react10.useState)(false);
       const [deleting, setDeleting] = (0, import_react10.useState)(false);
       const [notesDraft, setNotesDraft] = (0, import_react10.useState)("");
@@ -19877,6 +19891,43 @@ window.__ModuleLoader__.load({
         dispatch({ type: "ui/select-source", documentId: anchor.documentId });
         dispatch({ type: "ui/tab", tab: "sources" });
       }, []);
+      const openGoalsEditor = (0, import_react10.useCallback)(() => {
+        const current = state.courseDetail;
+        if (current === void 0) return;
+        const revision = current.activeRevision ?? current.draftRevision;
+        setGoalsEditor({
+          courseId: current.course.id,
+          goals: (revision?.goals ?? []).join("\n"),
+          background: revision?.background ?? ""
+        });
+      }, [state.courseDetail]);
+      const saveGoals = (0, import_react10.useCallback)(async () => {
+        if (goalsEditor === void 0) return;
+        const goals2 = goalsEditor.goals.split("\n").map((line) => line.trim()).filter((line) => line !== "");
+        if (goals2.length === 0) {
+          notify({ kind: "warning", message: "\u8BF7\u81F3\u5C11\u4FDD\u7559\u4E00\u4E2A\u5B66\u4E60\u76EE\u6807\u3002" });
+          return;
+        }
+        setSavingGoals(true);
+        try {
+          await apiPost("courseGoals.update", {
+            courseId: goalsEditor.courseId,
+            goals: goals2,
+            ...goalsEditor.background.trim() === "" ? {} : { background: goalsEditor.background.trim() }
+          });
+          const [detail2, sessionsResponse] = await Promise.all([
+            apiGet("courses.get", { courseId: goalsEditor.courseId }),
+            apiGet("sessions.list", { courseId: goalsEditor.courseId })
+          ]);
+          dispatch({ type: "course/loaded", detail: detail2, sessions: sessionsResponse.sessions });
+          notify({ kind: "info", message: "\u5B66\u4E60\u76EE\u6807\u5DF2\u66F4\u65B0\uFF1B\u5DF2\u6709\u5B66\u4E60\u4F1A\u8BDD\u4FDD\u6301\u4E0D\u53D8\uFF0C\u65B0\u4F1A\u8BDD\u4F7F\u7528\u66F4\u65B0\u540E\u7684\u76EE\u6807\u3002" });
+          setGoalsEditor(void 0);
+        } catch (error) {
+          notify({ kind: "error", message: `\u66F4\u65B0\u5B66\u4E60\u76EE\u6807\u5931\u8D25\uFF1A${describeError(error)}` });
+        } finally {
+          setSavingGoals(false);
+        }
+      }, [goalsEditor, notify]);
       const createCourse = (0, import_react10.useCallback)(async (input) => {
         dispatch({ type: "busy", label: "\u5EFA\u7ACB\u8BFE\u7A0B\u2026" });
         try {
@@ -20128,6 +20179,7 @@ window.__ModuleLoader__.load({
                 setDeleteSources(false);
                 setDeleteTarget({ id: courseId, title });
               },
+              onEditGoals: openGoalsEditor,
               onSelectSession: (sessionId) => {
                 void selectSession(sessionId);
               },
@@ -20212,6 +20264,35 @@ window.__ModuleLoader__.load({
             )
           ] })
         ] }),
+        goalsEditor !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u7F16\u8F91\u5B66\u4E60\u76EE\u6807", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-modal", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("h3", { children: "\u7F16\u8F91\u5B66\u4E60\u76EE\u6807" }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "ai-muted", style: { margin: "0 0 8px" }, children: "\u6BCF\u884C\u4E00\u4E2A\u76EE\u6807\u3002\u66F4\u65B0\u4F1A\u751F\u6210\u65B0\u7684\u8BFE\u7A0B\u7ED3\u6784\u4FEE\u8BA2\uFF1B\u5DF2\u6709\u5B66\u4E60\u4F1A\u8BDD\u4ECD\u7ED1\u5B9A\u539F\u4FEE\u8BA2\uFF0C\u65B0\u4F1A\u8BDD\u4F7F\u7528\u65B0\u76EE\u6807\u3002" }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+            "textarea",
+            {
+              "aria-label": "\u5B66\u4E60\u76EE\u6807\uFF08\u6BCF\u884C\u4E00\u4E2A\uFF09",
+              rows: 5,
+              style: { width: "100%", boxSizing: "border-box", fontFamily: "inherit", fontSize: 13 },
+              value: goalsEditor.goals,
+              onChange: (event) => setGoalsEditor({ ...goalsEditor, goals: event.target.value })
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("label", { className: "ai-muted", style: { display: "block", marginTop: 8, fontSize: 12 }, children: "\u6211\u7684\u57FA\u7840/\u80CC\u666F\uFF08\u53EF\u9009\uFF09" }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+            "textarea",
+            {
+              "aria-label": "\u5B66\u4E60\u57FA\u7840\u4E0E\u80CC\u666F",
+              rows: 2,
+              style: { width: "100%", boxSizing: "border-box", fontFamily: "inherit", fontSize: 13 },
+              value: goalsEditor.background,
+              onChange: (event) => setGoalsEditor({ ...goalsEditor, background: event.target.value })
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-modal-actions", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-small-button", disabled: savingGoals, onClick: () => setGoalsEditor(void 0), children: "\u53D6\u6D88" }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-primary-button", disabled: savingGoals, onClick: () => void saveGoals(), children: savingGoals ? "\u4FDD\u5B58\u4E2D\u2026" : "\u4FDD\u5B58\u76EE\u6807" })
+          ] })
+        ] }) }),
         deleteTarget !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u5220\u9664\u8BFE\u7A0B\u786E\u8BA4", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-modal", children: [
           /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("h3", { children: [
             "\u5220\u9664\u8BFE\u7A0B\u300C",
