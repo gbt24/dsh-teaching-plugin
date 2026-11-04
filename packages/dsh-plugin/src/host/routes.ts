@@ -19,7 +19,7 @@ import type {
 } from '@deepseek-teaching/core'
 import {
   CourseRepository, LearningRepository, ProfileRepository, SessionRepository,
-  activityStateFile, apiPath, courseId as newCourseId, courseRevisionId as newCourseRevisionId,
+  activityFile, activityStateFile, apiPath, courseId as newCourseId, courseRevisionId as newCourseRevisionId,
   nowIso, runFile,
 } from '@deepseek-teaching/core'
 import type { LocalState } from '@deepseek-teaching/core'
@@ -282,11 +282,73 @@ export function registerRoutes(services: RouteServices): void {
   route('courses.delete', async ({ body }) => {
     const input = body as ApiRequests['courses.delete']['body']
     if (typeof input?.courseId !== 'string') throw appError('invalid-input', '缺少 courseId')
+    const course = await services.courses.get(input.courseId)
+    if (course === undefined) return failure({ code: 'not-found', message: '课程不存在或已被删除' })
+
+    // 1. Remove the course's sessions together with their activities, student
+    //    activity state and run records (student data, explicitly requested).
     const sessions = await services.sessions.list(input.courseId)
-    for (const session of sessions) await services.sessions.delete(session.id)
+    let removedActivities = 0
+    const removedActivityIds = new Set<string>()
+    for (const session of sessions) {
+      for (const activity of await services.sessions.listActivities(session.id)) {
+        removedActivityIds.add(activity.id)
+        await services.state.remove(activityFile(services.state.dataDir, activity.id))
+        await services.state.remove(activityStateFile(services.state.dataDir, activity.id))
+        removedActivities += 1
+      }
+      await services.sessions.delete(session.id)
+    }
+    for (const name of await services.state.list('runs')) {
+      if (!name.endsWith('.json')) continue
+      const run = await services.state.readJson<{ sessionId?: string; activityId?: string }>(`runs/${name}`)
+      if (run === undefined) continue
+      const belongs = run.sessionId !== undefined && sessions.some(session => session.id === run.sessionId)
+      const activityRemoved = run.activityId !== undefined && removedActivityIds.has(run.activityId)
+      if (belongs || activityRemoved) await services.state.remove(`runs/${name}`)
+    }
+
+    // 2. Course structure revisions + course record.
     await services.courses.delete(input.courseId)
     await services.state.remove(`learning/${input.courseId}.json`)
-    return envelope({ deleted: true })
+
+    // 3. Sources: delete parsed records only when exclusively owned and the
+    //    student asked for it; otherwise just detach this course. Original files
+    //    on disk are never modified.
+    let detached = 0
+    let deletedSources = 0
+    for (const document of await services.courses.listSources(input.courseId)) {
+      const remaining = document.courseIds.filter(id => id !== input.courseId)
+      if (input.deleteSources === true && remaining.length === 0) {
+        await services.state.remove(`sources/${document.id}.json`)
+        await services.state.remove(`sources/${document.id}`)
+        deletedSources += 1
+        continue
+      }
+      await services.courses.saveSource({
+        ...document,
+        courseIds: remaining as never,
+        updatedAt: nowIso(),
+      })
+      detached += 1
+    }
+
+    services.logger('course deleted', {
+      courseId: input.courseId,
+      sessions: sessions.length,
+      activities: removedActivities,
+      sourcesDetached: detached,
+      sourcesDeleted: deletedSources,
+    })
+    return envelope({
+      deleted: true,
+      details: {
+        sessions: sessions.length,
+        activities: removedActivities,
+        sourcesDetached: detached,
+        sourcesDeleted: deletedSources,
+      },
+    })
   })
 
   /* ------------------------------------------------------------------ */

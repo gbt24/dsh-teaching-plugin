@@ -29,6 +29,8 @@ export interface SidebarProps {
   readonly onOpenSource: (documentId: string) => void
   /** Open the course-creation wizard (also used to add a second course). */
   readonly onNewCourse: () => void
+  /** Request deletion of one course (the workspace shows the confirmation). */
+  readonly onDeleteCourse: (courseId: string, title: string) => void
 }
 
 /** Ordered concepts of the active (or draft) course revision. */
@@ -74,25 +76,36 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
         </div>
         {props.courses.length === 0 && <div className="ai-muted">还没有课程</div>}
         {props.courses.map(summary => (
-          <button
-            key={summary.course.id}
-            type="button"
-            className="ai-course-button"
-            data-active={summary.course.id === activeCourseId}
-            onClick={() => props.onSelectCourse(summary.course.id)}
-            aria-label={`切换到课程 ${summary.course.title}`}
-          >
-            <span className="ai-course-title">{summary.course.title}</span>
-            <span className="ai-course-meta">
-              {summary.sourceCount} 份资料 · {summary.conceptCount} 个概念
-              {summary.lastSessionAt !== undefined ? ` · ${formatDay(summary.lastSessionAt)}` : ''}
-            </span>
-            {summary.course.id === activeCourseId && (
-              <span className="ai-progress" aria-label={`学习进度 ${props.progress.percent}%`}>
-                <span style={{ width: `${props.progress.percent}%` }} />
+          <div className="ai-course-row" key={summary.course.id}>
+            <button
+              type="button"
+              className="ai-course-button"
+              data-active={summary.course.id === activeCourseId}
+              onClick={() => props.onSelectCourse(summary.course.id)}
+              aria-label={`切换到课程 ${summary.course.title}`}
+            >
+              <span className="ai-course-title">{summary.course.title}</span>
+              <span className="ai-course-meta">
+                {summary.sourceCount} 份资料 · {summary.conceptCount} 个概念
+                {summary.lastSessionAt !== undefined ? ` · ${formatDay(summary.lastSessionAt)}` : ''}
               </span>
-            )}
-          </button>
+              {summary.course.id === activeCourseId && (
+                <span className="ai-progress" aria-label={`学习进度 ${props.progress.percent}%`}>
+                  <span style={{ width: `${props.progress.percent}%` }} />
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              className="ai-course-delete"
+              title={`删除课程 ${summary.course.title}`}
+              aria-label={`删除课程 ${summary.course.title}`}
+              disabled={props.busy}
+              onClick={() => props.onDeleteCourse(summary.course.id, summary.course.title)}
+            >
+              🗑
+            </button>
+          </div>
         ))}
         {detail !== undefined && (
           <div className="ai-muted" style={{ marginTop: 4 }}>

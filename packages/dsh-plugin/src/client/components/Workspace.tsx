@@ -77,6 +77,9 @@ export function TeachingWorkspace(props: {
   const [online, setOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine !== false)
   const [runResults, setRunResults] = useState<Record<string, CodeRunResultView>>({})
+  const [deleteTarget, setDeleteTarget] = useState<{ readonly id: string; readonly title: string } | undefined>(undefined)
+  const [deleteSources, setDeleteSources] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [notesDraft, setNotesDraft] = useState('')
   /** Draft/confirm/adhoc flow of the workspace "structure pending" card. */
   const [setup, setSetup] = useState<{
@@ -163,6 +166,40 @@ export function TeachingWorkspace(props: {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notify])
+  /** Delete one course after explicit confirmation (student data control). */
+  const confirmDeleteCourse = useCallback(async (): Promise<void> => {
+    if (deleteTarget === undefined) return
+    setDeleting(true)
+    try {
+      const result = await apiPost('courses.delete', {
+        courseId: deleteTarget.id as never,
+        deleteSources,
+      })
+      const { courses } = await apiGet('courses.list')
+      dispatch({ type: 'courses/loaded', courses })
+      const wasActive = state.courseDetail?.course.id === deleteTarget.id
+      if (wasActive) {
+        dispatch({ type: 'course/cleared' })
+        dispatch({ type: 'session/cleared' })
+        const next = courses[0]
+        if (next !== undefined) await selectCourse(next.course.id)
+      }
+      const details = result.details
+      notify({
+        kind: 'info',
+        message: `已删除课程「${deleteTarget.title}」${details === undefined
+          ? ''
+          : `（会话 ${details.sessions}、活动 ${details.activities}、解除资料关联 ${details.sourcesDetached}、删除解析记录 ${details.sourcesDeleted}；原文件未改动）`}。`,
+      })
+      setDeleteTarget(undefined)
+      setDeleteSources(false)
+    } catch (error) {
+      notify({ kind: 'error', message: `删除课程失败：${describeError(error)}` })
+    } finally {
+      setDeleting(false)
+    }
+  }, [deleteTarget, deleteSources, state.courseDetail, selectCourse, notify])
+
 
   const selectSession = useCallback(async (sessionId: string): Promise<void> => {
     try {
@@ -875,6 +912,10 @@ export function TeachingWorkspace(props: {
             busy={busy}
             onSelectCourse={courseId => { void selectCourse(courseId) }}
             onNewCourse={() => dispatch({ type: 'wizard/open' })}
+            onDeleteCourse={(courseId, title) => {
+              setDeleteSources(false)
+              setDeleteTarget({ id: courseId, title })
+            }}
             onSelectSession={sessionId => { void selectSession(sessionId) }}
             onNewSession={() => {
               const courseId = detail?.course.id
@@ -942,6 +983,42 @@ export function TeachingWorkspace(props: {
               onSaveNotes={saveNotes}
               onEvidenceClick={onEvidenceClick}
             />
+          </div>
+        </div>
+      )}
+      {deleteTarget !== undefined && (
+        <div className="ai-modal-overlay" role="dialog" aria-modal="true" aria-label="删除课程确认">
+          <div className="ai-modal">
+            <h3>删除课程「{deleteTarget.title}」？</h3>
+            <p className="ai-muted" style={{ margin: '0 0 10px' }}>
+              将删除该课程的课程结构、全部学习会话、活动、学习记录（尝试/掌握/复习/笔记）。<strong>你的原始资料文件不会被修改。</strong>
+            </p>
+            <label className="ai-row" style={{ alignItems: 'center', gap: 6, fontSize: 13 }}>
+              <input
+                type="checkbox"
+                checked={deleteSources}
+                onChange={event => setDeleteSources(event.target.checked)}
+              />
+              同时删除该课程导入的资料解析记录（仅限未被其他课程使用；原文件不受影响）
+            </label>
+            <div className="ai-modal-actions">
+              <button
+                type="button"
+                className="ai-small-button"
+                disabled={deleting}
+                onClick={() => { setDeleteTarget(undefined); setDeleteSources(false) }}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="ai-danger-button"
+                disabled={deleting}
+                onClick={() => void confirmDeleteCourse()}
+              >
+                {deleting ? '删除中…' : '确认删除'}
+              </button>
+            </div>
           </div>
         </div>
       )}

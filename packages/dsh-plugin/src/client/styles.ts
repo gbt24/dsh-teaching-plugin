@@ -226,4 +226,12 @@ export const TEACHING_CSS = `
   .ai-chat-panel { flex: 1 1 auto; border-right: none; min-height: 320px; }
   .ai-teaching-area { flex: 1 1 auto; }
 }
+.ai-course-row{display:flex;align-items:stretch;gap:4px}
+.ai-course-row .ai-course-button{flex:1;min-width:0}
+.ai-course-delete{border:1px solid var(--dsw-alias-border-l2,#d9d9d9);background:transparent;color:var(--dsw-alias-label-secondary,#888);border-radius:6px;cursor:pointer;padding:0 6px;font-size:12px}
+.ai-course-delete:hover{color:#c0392b;border-color:#c0392b}
+.ai-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:60}
+.ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.ai-modal h3{margin:0 0 8px;font-size:15px}
+.ai-modal .ai-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
 `

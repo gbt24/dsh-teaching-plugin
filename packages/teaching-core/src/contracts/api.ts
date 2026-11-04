@@ -139,7 +139,18 @@ export interface ApiRequests {
     readonly method: 'POST'
     readonly body: { readonly courseId: CourseId; readonly title?: string; readonly description?: string; readonly status?: Course['status'] }
   }
-  'courses.delete': { readonly method: 'POST'; readonly body: { readonly courseId: CourseId } }
+  'courses.delete': {
+    readonly method: 'POST'
+    readonly body: {
+      readonly courseId: CourseId
+      /**
+       * Also remove this course's imported source *records* (parsed copies and
+       * anchors). The student's original files are never touched. Sources
+       * shared with another course are only detached from this course.
+       */
+      readonly deleteSources?: boolean
+    }
+  }
   'sources.import': {
     readonly method: 'POST'
     readonly body: { readonly courseId?: CourseId; readonly paths: readonly string[] }
@@ -299,7 +310,15 @@ export interface ApiResponses {
   'courses.create': { readonly course: Course; readonly revision: CourseRevision }
   'courses.get': CourseDetail
   'courses.update': { readonly course: Course }
-  'courses.delete': { readonly deleted: boolean }
+  'courses.delete': {
+    readonly deleted: boolean
+    readonly details?: {
+      readonly sessions: number
+      readonly activities: number
+      readonly sourcesDetached: number
+      readonly sourcesDeleted: number
+    }
+  }
   'sources.import': { readonly task: TaskHandle }
   'sources.refresh': { readonly task: TaskHandle }
   'sources.get': SourceView

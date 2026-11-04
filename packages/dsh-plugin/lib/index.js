@@ -60804,11 +60804,63 @@ function registerRoutes(services) {
   route("courses.delete", async ({ body }) => {
     const input = body;
     if (typeof input?.courseId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 courseId");
+    const course = await services.courses.get(input.courseId);
+    if (course === void 0) return failure({ code: "not-found", message: "\u8BFE\u7A0B\u4E0D\u5B58\u5728\u6216\u5DF2\u88AB\u5220\u9664" });
     const sessions = await services.sessions.list(input.courseId);
-    for (const session of sessions) await services.sessions.delete(session.id);
+    let removedActivities = 0;
+    const removedActivityIds = /* @__PURE__ */ new Set();
+    for (const session of sessions) {
+      for (const activity of await services.sessions.listActivities(session.id)) {
+        removedActivityIds.add(activity.id);
+        await services.state.remove(activityFile(services.state.dataDir, activity.id));
+        await services.state.remove(activityStateFile(services.state.dataDir, activity.id));
+        removedActivities += 1;
+      }
+      await services.sessions.delete(session.id);
+    }
+    for (const name2 of await services.state.list("runs")) {
+      if (!name2.endsWith(".json")) continue;
+      const run = await services.state.readJson(`runs/${name2}`);
+      if (run === void 0) continue;
+      const belongs = run.sessionId !== void 0 && sessions.some((session) => session.id === run.sessionId);
+      const activityRemoved = run.activityId !== void 0 && removedActivityIds.has(run.activityId);
+      if (belongs || activityRemoved) await services.state.remove(`runs/${name2}`);
+    }
     await services.courses.delete(input.courseId);
     await services.state.remove(`learning/${input.courseId}.json`);
-    return envelope({ deleted: true });
+    let detached = 0;
+    let deletedSources = 0;
+    for (const document2 of await services.courses.listSources(input.courseId)) {
+      const remaining = document2.courseIds.filter((id) => id !== input.courseId);
+      if (input.deleteSources === true && remaining.length === 0) {
+        await services.state.remove(`sources/${document2.id}.json`);
+        await services.state.remove(`sources/${document2.id}`);
+        deletedSources += 1;
+        continue;
+      }
+      await services.courses.saveSource({
+        ...document2,
+        courseIds: remaining,
+        updatedAt: nowIso()
+      });
+      detached += 1;
+    }
+    services.logger("course deleted", {
+      courseId: input.courseId,
+      sessions: sessions.length,
+      activities: removedActivities,
+      sourcesDetached: detached,
+      sourcesDeleted: deletedSources
+    });
+    return envelope({
+      deleted: true,
+      details: {
+        sessions: sessions.length,
+        activities: removedActivities,
+        sourcesDetached: detached,
+        sourcesDeleted: deletedSources
+      }
+    });
   });
   route("sources.import", async ({ body }) => {
     const input = body;

@@ -267,6 +267,14 @@ window.__ModuleLoader__.load({
       .ai-chat-panel { flex: 1 1 auto; border-right: none; min-height: 320px; }
       .ai-teaching-area { flex: 1 1 auto; }
     }
+    .ai-course-row{display:flex;align-items:stretch;gap:4px}
+    .ai-course-row .ai-course-button{flex:1;min-width:0}
+    .ai-course-delete{border:1px solid var(--dsw-alias-border-l2,#d9d9d9);background:transparent;color:var(--dsw-alias-label-secondary,#888);border-radius:6px;cursor:pointer;padding:0 6px;font-size:12px}
+    .ai-course-delete:hover{color:#c0392b;border-color:#c0392b}
+    .ai-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:60}
+    .ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+    .ai-modal h3{margin:0 0 8px;font-size:15px}
+    .ai-modal .ai-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
     `;
 
     // packages/dsh-plugin/src/client/components/Workspace.tsx
@@ -18807,28 +18815,41 @@ window.__ModuleLoader__.load({
             )
           ] }),
           props.courses.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-muted", children: "\u8FD8\u6CA1\u6709\u8BFE\u7A0B" }),
-          props.courses.map((summary) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
-            "button",
-            {
-              type: "button",
-              className: "ai-course-button",
-              "data-active": summary.course.id === activeCourseId,
-              onClick: () => props.onSelectCourse(summary.course.id),
-              "aria-label": `\u5207\u6362\u5230\u8BFE\u7A0B ${summary.course.title}`,
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-course-title", children: summary.course.title }),
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "ai-course-meta", children: [
-                  summary.sourceCount,
-                  " \u4EFD\u8D44\u6599 \xB7 ",
-                  summary.conceptCount,
-                  " \u4E2A\u6982\u5FF5",
-                  summary.lastSessionAt !== void 0 ? ` \xB7 ${formatDay(summary.lastSessionAt)}` : ""
-                ] }),
-                summary.course.id === activeCourseId && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-progress", "aria-label": `\u5B66\u4E60\u8FDB\u5EA6 ${props.progress.percent}%`, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { style: { width: `${props.progress.percent}%` } }) })
-              ]
-            },
-            summary.course.id
-          )),
+          props.courses.map((summary) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-course-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+              "button",
+              {
+                type: "button",
+                className: "ai-course-button",
+                "data-active": summary.course.id === activeCourseId,
+                onClick: () => props.onSelectCourse(summary.course.id),
+                "aria-label": `\u5207\u6362\u5230\u8BFE\u7A0B ${summary.course.title}`,
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-course-title", children: summary.course.title }),
+                  /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "ai-course-meta", children: [
+                    summary.sourceCount,
+                    " \u4EFD\u8D44\u6599 \xB7 ",
+                    summary.conceptCount,
+                    " \u4E2A\u6982\u5FF5",
+                    summary.lastSessionAt !== void 0 ? ` \xB7 ${formatDay(summary.lastSessionAt)}` : ""
+                  ] }),
+                  summary.course.id === activeCourseId && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-progress", "aria-label": `\u5B66\u4E60\u8FDB\u5EA6 ${props.progress.percent}%`, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { style: { width: `${props.progress.percent}%` } }) })
+                ]
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-course-delete",
+                title: `\u5220\u9664\u8BFE\u7A0B ${summary.course.title}`,
+                "aria-label": `\u5220\u9664\u8BFE\u7A0B ${summary.course.title}`,
+                disabled: props.busy,
+                onClick: () => props.onDeleteCourse(summary.course.id, summary.course.title),
+                children: "\u{1F5D1}"
+              }
+            )
+          ] }, summary.course.id)),
           detail !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-muted", style: { marginTop: 4 }, children: [
             language === "en" ? "English" : language === "bilingual" ? "\u4E2D\u82F1\u53CC\u8BED" : "\u4E2D\u6587",
             goal !== void 0 ? ` \xB7 \u76EE\u6807\uFF1A${truncate(goal, 24)}` : ""
@@ -19390,6 +19411,9 @@ window.__ModuleLoader__.load({
       const saveTimers = (0, import_react10.useRef)({});
       const [online, setOnline] = (0, import_react10.useState)(() => typeof navigator === "undefined" ? true : navigator.onLine !== false);
       const [runResults, setRunResults] = (0, import_react10.useState)({});
+      const [deleteTarget, setDeleteTarget] = (0, import_react10.useState)(void 0);
+      const [deleteSources, setDeleteSources] = (0, import_react10.useState)(false);
+      const [deleting, setDeleting] = (0, import_react10.useState)(false);
       const [notesDraft, setNotesDraft] = (0, import_react10.useState)("");
       const [setup, setSetup] = (0, import_react10.useState)({ phase: "ready" });
       (0, import_react10.useEffect)(() => {
@@ -19454,6 +19478,36 @@ window.__ModuleLoader__.load({
           notify({ kind: "error", message: `\u52A0\u8F7D\u8BFE\u7A0B\u5931\u8D25\uFF1A${describeError(error)}`, ...error instanceof Error ? {} : {} });
         }
       }, [notify]);
+      const confirmDeleteCourse = (0, import_react10.useCallback)(async () => {
+        if (deleteTarget === void 0) return;
+        setDeleting(true);
+        try {
+          const result = await apiPost("courses.delete", {
+            courseId: deleteTarget.id,
+            deleteSources
+          });
+          const { courses } = await apiGet("courses.list");
+          dispatch({ type: "courses/loaded", courses });
+          const wasActive = state.courseDetail?.course.id === deleteTarget.id;
+          if (wasActive) {
+            dispatch({ type: "course/cleared" });
+            dispatch({ type: "session/cleared" });
+            const next = courses[0];
+            if (next !== void 0) await selectCourse(next.course.id);
+          }
+          const details = result.details;
+          notify({
+            kind: "info",
+            message: `\u5DF2\u5220\u9664\u8BFE\u7A0B\u300C${deleteTarget.title}\u300D${details === void 0 ? "" : `\uFF08\u4F1A\u8BDD ${details.sessions}\u3001\u6D3B\u52A8 ${details.activities}\u3001\u89E3\u9664\u8D44\u6599\u5173\u8054 ${details.sourcesDetached}\u3001\u5220\u9664\u89E3\u6790\u8BB0\u5F55 ${details.sourcesDeleted}\uFF1B\u539F\u6587\u4EF6\u672A\u6539\u52A8\uFF09`}\u3002`
+          });
+          setDeleteTarget(void 0);
+          setDeleteSources(false);
+        } catch (error) {
+          notify({ kind: "error", message: `\u5220\u9664\u8BFE\u7A0B\u5931\u8D25\uFF1A${describeError(error)}` });
+        } finally {
+          setDeleting(false);
+        }
+      }, [deleteTarget, deleteSources, state.courseDetail, selectCourse, notify]);
       const selectSession = (0, import_react10.useCallback)(async (sessionId) => {
         try {
           const view = await apiGet("sessions.get", { sessionId });
@@ -20070,6 +20124,10 @@ window.__ModuleLoader__.load({
                 void selectCourse(courseId);
               },
               onNewCourse: () => dispatch({ type: "wizard/open" }),
+              onDeleteCourse: (courseId, title) => {
+                setDeleteSources(false);
+                setDeleteTarget({ id: courseId, title });
+              },
               onSelectSession: (sessionId) => {
                 void selectSession(sessionId);
               },
@@ -20153,7 +20211,54 @@ window.__ModuleLoader__.load({
               }
             )
           ] })
-        ] })
+        ] }),
+        deleteTarget !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u5220\u9664\u8BFE\u7A0B\u786E\u8BA4", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-modal", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("h3", { children: [
+            "\u5220\u9664\u8BFE\u7A0B\u300C",
+            deleteTarget.title,
+            "\u300D\uFF1F"
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("p", { className: "ai-muted", style: { margin: "0 0 10px" }, children: [
+            "\u5C06\u5220\u9664\u8BE5\u8BFE\u7A0B\u7684\u8BFE\u7A0B\u7ED3\u6784\u3001\u5168\u90E8\u5B66\u4E60\u4F1A\u8BDD\u3001\u6D3B\u52A8\u3001\u5B66\u4E60\u8BB0\u5F55\uFF08\u5C1D\u8BD5/\u638C\u63E1/\u590D\u4E60/\u7B14\u8BB0\uFF09\u3002",
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("strong", { children: "\u4F60\u7684\u539F\u59CB\u8D44\u6599\u6587\u4EF6\u4E0D\u4F1A\u88AB\u4FEE\u6539\u3002" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("label", { className: "ai-row", style: { alignItems: "center", gap: 6, fontSize: 13 }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+              "input",
+              {
+                type: "checkbox",
+                checked: deleteSources,
+                onChange: (event) => setDeleteSources(event.target.checked)
+              }
+            ),
+            "\u540C\u65F6\u5220\u9664\u8BE5\u8BFE\u7A0B\u5BFC\u5165\u7684\u8D44\u6599\u89E3\u6790\u8BB0\u5F55\uFF08\u4EC5\u9650\u672A\u88AB\u5176\u4ED6\u8BFE\u7A0B\u4F7F\u7528\uFF1B\u539F\u6587\u4EF6\u4E0D\u53D7\u5F71\u54CD\uFF09"
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-modal-actions", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-small-button",
+                disabled: deleting,
+                onClick: () => {
+                  setDeleteTarget(void 0);
+                  setDeleteSources(false);
+                },
+                children: "\u53D6\u6D88"
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-danger-button",
+                disabled: deleting,
+                onClick: () => void confirmDeleteCourse(),
+                children: deleting ? "\u5220\u9664\u4E2D\u2026" : "\u786E\u8BA4\u5220\u9664"
+              }
+            )
+          ] })
+        ] }) })
       ] });
     }
 
