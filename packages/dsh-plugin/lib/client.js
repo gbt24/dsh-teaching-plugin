@@ -80,6 +80,9 @@ window.__ModuleLoader__.load({
     .ai-sidebar-section { margin-bottom: 14px; }
     .ai-sidebar-heading { font-size: 11px; text-transform: none; letter-spacing: 0.02em;
       opacity: 0.6; margin: 0 0 6px; font-weight: 600; }
+    .ai-sidebar-heading-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .ai-onboarding-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+
     .ai-course-button {
       display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left;
       border: 1px solid transparent; background: transparent; color: inherit; cursor: pointer;
@@ -641,6 +644,19 @@ window.__ModuleLoader__.load({
         }
         case "bootstrap/failed":
           return { ...state, phase: "fatal", fatalError: action.error };
+        case "wizard/open":
+          if (state.phase === "loading") return state;
+          return {
+            ...state,
+            phase: "onboarding",
+            courseDraft: void 0,
+            notice: void 0,
+            busy: void 0,
+            chat: { status: "idle", text: "", evidence: [] }
+          };
+        case "wizard/close":
+          if (state.phase !== "onboarding") return state;
+          return { ...state, phase: "ready", busy: void 0 };
         case "workspace/loading":
           return { ...state, phase: "loading", fatalError: void 0 };
         case "courses/loaded":
@@ -18544,7 +18560,10 @@ window.__ModuleLoader__.load({
         if (!result.ok) setDraftError(result.error ?? "\u968F\u95EE\u968F\u5B66\u4F1A\u8BDD\u521B\u5EFA\u5931\u8D25");
       };
       return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-onboarding", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("h2", { children: "\u5F00\u59CB\u4F60\u7684\u5B66\u4E60" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-onboarding-heading", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("h2", { style: { margin: 0 }, children: props.canCancel === true ? "\u6DFB\u52A0\u65B0\u8BFE\u7A0B" : "\u5F00\u59CB\u4F60\u7684\u5B66\u4E60" }),
+          props.canCancel === true && props.onCancel !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("button", { type: "button", className: "ai-small-button", onClick: () => props.onCancel?.(), "aria-label": "\u8FD4\u56DE\u5DE5\u4F5C\u533A", children: "\u8FD4\u56DE\u5DE5\u4F5C\u533A" })
+        ] }),
         /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { children: "\u8D44\u6599\u53EA\u4FDD\u5B58\u5728\u672C\u673A\u3002\u6559\u5B66\u4EE5\u4F60\u7684\u8BFE\u7A0B\u8D44\u6599\u4E3A\u4F9D\u636E\uFF1B\u6A21\u578B\u8865\u5145\u3001\u5916\u90E8\u7F51\u9875\u4E0E\u5B9E\u9A8C\u8F93\u51FA\u4F1A\u5206\u522B\u6807\u6CE8\u6765\u6E90\u3002 \u9996\u6B21\u4F7F\u7528\u9700\u8981\u786E\u8BA4\u8BFE\u7A0B\u7ED3\u6784\uFF0C\u4E4B\u540E\u53EF\u4EE5\u968F\u65F6\u63D0\u95EE\u6216\u7EE7\u7EED\u7CFB\u7EDF\u5B66\u4E60\u3002" }),
         props.bootstrap !== void 0 && props.bootstrap.features.imageOcr === false && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Banner, { kind: "warning", message: "\u5F53\u524D\u672A\u542F\u7528\u56FE\u7247/\u626B\u63CF\u8D44\u6599\u8BC6\u522B\u80FD\u529B\uFF1A\u626B\u63CF\u4EF6\u4E0E\u56FE\u7247\u4E2D\u7684\u516C\u5F0F\u56FE\u8868\u65E0\u6CD5\u4FDD\u8BC1\u88AB\u8BFB\u53D6\uFF0C\u53EF\u5728\u540E\u7EED\u7248\u672C\u63A5\u5165\u3002" }),
         props.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Banner, { kind: "error", message: props.error.message, details: props.error.code, onDismiss: props.onDismissError }),
@@ -18738,7 +18757,21 @@ window.__ModuleLoader__.load({
       const goal = detail?.activeRevision?.goals[0] ?? detail?.draftRevision?.goals[0];
       return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("nav", { className: "ai-teaching-sidebar", "aria-label": "\u8BFE\u7A0B\u5BFC\u822A", children: [
         /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-sidebar-section", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h3", { className: "ai-sidebar-heading", children: "\u8BFE\u7A0B" }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-sidebar-heading-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h3", { className: "ai-sidebar-heading", children: "\u8BFE\u7A0B" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-small-button",
+                onClick: () => props.onNewCourse(),
+                disabled: props.busy,
+                "aria-label": "\u65B0\u5EFA\u8BFE\u7A0B",
+                title: "\u65B0\u5EFA\u8BFE\u7A0B",
+                children: "\uFF0B \u65B0\u5EFA\u8BFE\u7A0B"
+              }
+            )
+          ] }),
           props.courses.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-muted", children: "\u8FD8\u6CA1\u6709\u8BFE\u7A0B" }),
           props.courses.map((summary) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
             "button",
@@ -19955,7 +19988,14 @@ window.__ModuleLoader__.load({
           /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "ai-muted", children: "\u65E0\u6CD5\u8FDE\u63A5\u6559\u5B66 Host\u3002\u8BF7\u786E\u8BA4\u63D2\u4EF6\u5DF2\u542F\u7528\u3001Harness \u4ECD\u5728\u8FD0\u884C\uFF1B\u5DF2\u5B8C\u6210\u7684\u672C\u5730\u5B66\u4E60\u8BB0\u5F55\u4E0D\u4F1A\u4E22\u5931\u3002" })
         ] }),
         state.phase === "loading" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: { padding: 24 }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Spinner, { label: "\u6B63\u5728\u8FDE\u63A5\u6559\u5B66 Host\u2026" }) }),
-        state.phase === "onboarding" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Onboarding, { ...onboardingCallbacks }),
+        state.phase === "onboarding" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+          Onboarding,
+          {
+            ...onboardingCallbacks,
+            canCancel: state.courses.length > 0,
+            onCancel: () => dispatch({ type: "wizard/close" })
+          }
+        ),
         state.phase === "ready" && needsCourseSetup(detail) && detail !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
           CourseSetupCard,
           {
@@ -19994,6 +20034,7 @@ window.__ModuleLoader__.load({
               onSelectCourse: (courseId) => {
                 void selectCourse(courseId);
               },
+              onNewCourse: () => dispatch({ type: "wizard/open" }),
               onSelectSession: (sessionId) => {
                 void selectSession(sessionId);
               },

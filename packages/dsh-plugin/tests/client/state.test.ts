@@ -204,3 +204,21 @@ test('upsertActivity keeps order for updates and appends new activities', () => 
   assert.deepEqual(updated.map(item => `${item.id}:${item.revision}`), ['a:2', 'b:1'])
   assert.equal(upsertActivity(list, activity('c', 1)).length, 3)
 })
+
+test('course wizard: opens from the workspace and cancels back without losing data', () => {
+    const ready = {
+      ...INITIAL_WORKSPACE_STATE,
+      phase: 'ready' as const,
+      courses: [{ course: { id: 'course-1' }, sourceCount: 1, conceptCount: 2, readySourceCount: 1 }] as never,
+    }
+    const opened = workspaceReducer(ready, { type: 'wizard/open' })
+    assert.equal(opened.phase, 'onboarding')
+    assert.equal(opened.courses.length, 1, 'existing courses stay loaded while adding a course')
+  const closed = workspaceReducer(opened, { type: 'wizard/close' })
+  assert.equal(closed.phase, 'ready')
+})
+
+test('course wizard: does not open while the workspace is still loading', () => {
+  const loading = { ...INITIAL_WORKSPACE_STATE, phase: 'loading' as const }
+  assert.equal(workspaceReducer(loading, { type: 'wizard/open' }), loading)
+})

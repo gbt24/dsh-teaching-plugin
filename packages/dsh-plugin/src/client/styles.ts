@@ -39,6 +39,9 @@ export const TEACHING_CSS = `
 .ai-sidebar-section { margin-bottom: 14px; }
 .ai-sidebar-heading { font-size: 11px; text-transform: none; letter-spacing: 0.02em;
   opacity: 0.6; margin: 0 0 6px; font-weight: 600; }
+.ai-sidebar-heading-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ai-onboarding-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+
 .ai-course-button {
   display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left;
   border: 1px solid transparent; background: transparent; color: inherit; cursor: pointer;

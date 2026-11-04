@@ -27,6 +27,8 @@ export interface SidebarProps {
   readonly onConceptClick: (concept: Concept) => void
   readonly onReviewConcept: (item: ReviewItem) => void
   readonly onOpenSource: (documentId: string) => void
+  /** Open the course-creation wizard (also used to add a second course). */
+  readonly onNewCourse: () => void
 }
 
 /** Ordered concepts of the active (or draft) course revision. */
@@ -57,7 +59,19 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
   return (
     <nav className="ai-teaching-sidebar" aria-label="课程导航">
       <div className="ai-sidebar-section">
-        <h3 className="ai-sidebar-heading">课程</h3>
+        <div className="ai-sidebar-heading-row">
+          <h3 className="ai-sidebar-heading">课程</h3>
+          <button
+            type="button"
+            className="ai-small-button"
+            onClick={() => props.onNewCourse()}
+            disabled={props.busy}
+            aria-label="新建课程"
+            title="新建课程"
+          >
+            ＋ 新建课程
+          </button>
+        </div>
         {props.courses.length === 0 && <div className="ai-muted">还没有课程</div>}
         {props.courses.map(summary => (
           <button

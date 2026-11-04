@@ -42,6 +42,10 @@ export interface OnboardingProps {
   readonly onConfirmDraft: (courseId: string, revisionId: string) => Promise<WizardResult>
   /** Ad-hoc start: confirm a minimal structure on the Host and open a session. */
   readonly onStartAdhoc: (courseId: string) => Promise<WizardResult>
+  /** Whether there are existing courses to return to (adding a course case). */
+  readonly canCancel?: boolean
+  /** Leave the wizard without creating a course. */
+  readonly onCancel?: () => void
 }
 
 type Step = 'course' | 'import' | 'draft'
@@ -140,7 +144,14 @@ export function Onboarding(props: OnboardingProps): React.ReactElement {
 
   return (
     <div className="ai-onboarding">
-      <h2>开始你的学习</h2>
+      <div className="ai-onboarding-heading">
+        <h2 style={{ margin: 0 }}>{props.canCancel === true ? '添加新课程' : '开始你的学习'}</h2>
+        {props.canCancel === true && props.onCancel !== undefined && (
+          <button type="button" className="ai-small-button" onClick={() => props.onCancel?.()} aria-label="返回工作区">
+            返回工作区
+          </button>
+        )}
+      </div>
       <p>
         资料只保存在本机。教学以你的课程资料为依据；模型补充、外部网页与实验输出会分别标注来源。
         首次使用需要确认课程结构，之后可以随时提问或继续系统学习。

@@ -106,6 +106,10 @@ export type WorkspaceAction =
   | { readonly type: 'notice'; readonly notice?: WorkspaceNotice }
   | { readonly type: 'busy'; readonly label?: string }
   | { readonly type: 'error/clear' }
+  /** Open the course-creation wizard from the workspace (keep loaded data). */
+  | { readonly type: 'wizard/open' }
+  /** Leave the wizard back to the workspace when courses already exist. */
+  | { readonly type: 'wizard/close' }
 
 /** Replace an activity with the newer revision or append it. */
 export function upsertActivity(
@@ -238,6 +242,19 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     }
     case 'bootstrap/failed':
       return { ...state, phase: 'fatal', fatalError: action.error }
+    case 'wizard/open':
+      if (state.phase === 'loading') return state
+      return {
+        ...state,
+        phase: 'onboarding',
+        courseDraft: undefined,
+        notice: undefined,
+        busy: undefined,
+        chat: { status: 'idle', text: '', evidence: [] },
+      }
+    case 'wizard/close':
+      if (state.phase !== 'onboarding') return state
+      return { ...state, phase: 'ready', busy: undefined }
     case 'workspace/loading':
       return { ...state, phase: 'loading', fatalError: undefined }
     case 'courses/loaded':

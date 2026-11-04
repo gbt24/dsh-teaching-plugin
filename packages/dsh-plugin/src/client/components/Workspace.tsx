@@ -837,7 +837,13 @@ export function TeachingWorkspace(): React.ReactElement {
       {state.phase === 'loading' && (
         <div style={{ padding: 24 }}><Spinner label="正在连接教学 Host…" /></div>
       )}
-      {state.phase === 'onboarding' && <Onboarding {...onboardingCallbacks} />}
+      {state.phase === 'onboarding' && (
+        <Onboarding
+          {...onboardingCallbacks}
+          canCancel={state.courses.length > 0}
+          onCancel={() => dispatch({ type: 'wizard/close' })}
+        />
+      )}
       {state.phase === 'ready' && needsCourseSetup(detail) && detail !== undefined && (
         <CourseSetupCard
           detail={detail}
@@ -864,6 +870,7 @@ export function TeachingWorkspace(): React.ReactElement {
             progress={progress}
             busy={busy}
             onSelectCourse={courseId => { void selectCourse(courseId) }}
+            onNewCourse={() => dispatch({ type: 'wizard/open' })}
             onSelectSession={sessionId => { void selectSession(sessionId) }}
             onNewSession={() => {
               const courseId = detail?.course.id
