@@ -48,10 +48,10 @@ export class TaskManager {
   private readonly active = new Map<TaskId, ActiveTask>()
   private readonly logger: (message: string, fields?: Record<string, unknown>) => void
 
-  constructor(
-    private readonly state: LocalState,
-    logger?: (message: string, fields?: Record<string, unknown>) => void,
-  ) {
+  private readonly state: LocalState
+
+  constructor(state: LocalState, logger?: (message: string, fields?: Record<string, unknown>) => void) {
+    this.state = state
     this.logger = logger ?? (() => undefined)
   }
 
