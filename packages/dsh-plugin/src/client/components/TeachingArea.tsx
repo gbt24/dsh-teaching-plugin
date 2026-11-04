@@ -110,9 +110,10 @@ function ActivityView(props: {
       mounted.dispose()
       element.textContent = ''
     }
-    // Only a different activity/revision remounts; editable state is not rebuilt
-    // on every keystroke, it flows through the Host and the live handle.
-  }, [activity.id, activity.revision, activity.updatedAt])
+    // Only a different activity/revision remounts; metadata updates (updatedAt)
+    // and editable-state saves do not rebuild the live handle, so an in-flight
+    // code run keeps its cancel control.
+  }, [activity.id, activity.revision])
   return <div ref={host} />
 }
 

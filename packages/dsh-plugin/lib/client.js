@@ -18920,7 +18920,7 @@ window.__ModuleLoader__.load({
           mounted.dispose();
           element.textContent = "";
         };
-      }, [activity.id, activity.revision, activity.updatedAt]);
+      }, [activity.id, activity.revision]);
       return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { ref: host });
     }
     function ActivityTab(props) {
