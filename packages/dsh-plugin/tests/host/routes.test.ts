@@ -20,6 +20,7 @@ import { createCorpusService } from '@deepseek-teaching/core/corpus'
 import { createTeachingService } from '@deepseek-teaching/core/teaching'
 import { createLearningService, createModelRubricAssessor, rubricFromActivityPayload } from '@deepseek-teaching/core/learning'
 import { createRunnerRegistry } from '@deepseek-teaching/core/experiments'
+import { createPortabilityService } from '@deepseek-teaching/core/portability'
 import { registerRoutes } from '../../src/host/routes.ts'
 import type { RouteServices } from '../../src/host/routes.ts'
 import { TaskManager } from '../../src/host/tasks.ts'
@@ -123,6 +124,15 @@ async function createHarness(replies: ConstructorParameters<typeof ScriptedModel
   const corpus = createCorpusService({ state, courses, learning, model })
   const teaching = createTeachingService()
   const experiments = createRunnerRegistry({ dataDir: dir })
+  const portability = createPortabilityService({
+    state,
+    courses,
+    sessions,
+    learning,
+    profiles,
+    pluginVersion: '0.1.0-test',
+    appVersion: '0.2.1-rc.5',
+  })
   const createLearningFor = (activity?: { payload: unknown }): ReturnType<typeof createLearningService> => createLearningService({
     repository: learning,
     resolveRevisionId: async (courseId: string) => {
@@ -152,6 +162,7 @@ async function createHarness(replies: ConstructorParameters<typeof ScriptedModel
     corpus: corpus as never,
     teaching,
     experiments,
+    portability,
     createLearningFor: createLearningFor as never,
     takeUsage: () => undefined,
     profiles,
@@ -349,8 +360,10 @@ describe('teaching host routes', () => {
     const noRevision = await harness.call('sessions.create', { body: { courseId: 'course-nope' } })
     assert.equal((noRevision.json as { error: { code: string } }).error.code, 'not-found')
 
-    const exportAttempt = await harness.call('portability.export', { body: { courseId: 'c' } })
-    assert.equal((exportAttempt.json as { error: { code: string } }).error.code, 'capability-missing')
+    const badScope = await harness.call('records.delete', { body: { scope: 'nonsense' } })
+    assert.equal((badScope.json as { error: { code: string } }).error.code, 'invalid-input')
+    const missingArchive = await harness.call('portability.inspect', { body: {} })
+    assert.equal((missingArchive.json as { error: { code: string } }).error.code, 'invalid-input')
   })
 
   it('rejects an activity patch whose expected revision is stale', async () => {

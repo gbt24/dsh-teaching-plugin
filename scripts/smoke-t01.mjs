@@ -60,8 +60,8 @@ async function authenticate() {
 
 /** Poll a task until it settles. */
 async function waitTask(taskId, label) {
-  for (let i = 0; i < 200; i += 1) {
-    await new Promise(resolve => setTimeout(resolve, 100))
+  for (let i = 0; i < 600; i += 1) {
+    await new Promise(resolve => setTimeout(resolve, 250))
     const { task } = await call('tasks.get', { method: 'GET', query: { taskId } })
     if (['completed', 'failed', 'cancelled', 'partial'].includes(task.status)) {
       console.log(`[task] ${label}: ${task.status}${task.error === undefined ? '' : ` (${task.error.code}: ${task.error.message})`}`)

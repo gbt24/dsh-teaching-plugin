@@ -26,6 +26,7 @@ import type { LocalState } from '@deepseek-teaching/core'
 import type { ModelClient } from '@deepseek-teaching/core'
 import { validationFromRun } from '@deepseek-teaching/core/experiments'
 import type { RunnerRegistry } from '@deepseek-teaching/core/experiments'
+import type { PortabilityService } from '@deepseek-teaching/core'
 import { detectRequestedForm } from '@deepseek-teaching/core/teaching'
 import type { TaskManager } from './tasks.ts'
 import type { WebBridge } from './web.ts'
@@ -57,6 +58,7 @@ export interface RouteServices {
   readonly corpus: CorpusServiceApi
   readonly teaching: TeachingService
   readonly experiments: RunnerRegistry
+  readonly portability: PortabilityService
   /** Build a learning service bound to the activity an attempt answers. */
   readonly createLearningFor: (activity?: LessonActivity) => LearningService
   /** Usage of the most recent model call in one session, then cleared. */
@@ -1097,15 +1099,133 @@ export function registerRoutes(services: RouteServices): void {
   /* Portability / records (T07)                                          */
   /* ------------------------------------------------------------------ */
 
-  for (const operation of [
-    'portability.export', 'portability.backup', 'portability.inspect', 'portability.restore',
-    'records.export', 'records.delete', 'records.reset',
-  ] as const) {
-    route(operation, async () => failure({
-      code: 'capability-missing',
-      message: '导出、备份与记录管理在 T07 接入',
-    }))
-  }
+  route('portability.export', async ({ body }) => {
+    const input = body as ApiRequests['portability.export']['body']
+    if (typeof input?.courseId !== 'string') throw appError('invalid-input', '缺少 courseId')
+    const handle = services.tasks.start({
+      kind: 'export-html',
+      label: '导出离线教学页面',
+      steps: [
+        { id: 'collect', label: '收集会话与活动' },
+        { id: 'render', label: '渲染离线页面' },
+        { id: 'write', label: '写入导出文件' },
+      ],
+    }, async context => {
+      context.step('collect', { status: 'running' })
+      const result = await services.portability.exportCourse({
+        courseId: input.courseId as never,
+        ...(input.sessionIds === undefined ? {} : { sessionIds: input.sessionIds as never }),
+        ...(input.outDir === undefined ? {} : { outDir: input.outDir }),
+        ...(input.format === undefined ? {} : { format: input.format }),
+      }, context.signal)
+      if (!result.ok) throw appError(result.error.code, result.error.message, result.error.details)
+      context.step('collect', { status: 'done' })
+      context.step('render', { status: 'done' })
+      context.step('write', { status: 'done', detail: `${result.value.manifest.files.length} 个文件` })
+      for (const warning of result.value.warnings) context.warn(warning)
+      context.result({
+        exportId: result.value.exportId,
+        htmlPath: result.value.htmlPath,
+        manifestPath: result.value.manifestPath,
+        nativeFiles: result.value.nativeFiles,
+        limitations: result.value.manifest.limitations,
+      })
+      return result.value
+    })
+    return envelope({ task: handle })
+  })
+
+  route('portability.backup', async ({ body }) => {
+    const input = body as ApiRequests['portability.backup']['body']
+    const handle = services.tasks.start({
+      kind: 'backup',
+      label: '创建本地备份',
+      steps: [
+        { id: 'collect', label: '收集本地数据' },
+        { id: 'archive', label: '打包并校验' },
+      ],
+    }, async context => {
+      context.step('collect', { status: 'running' })
+      const result = await services.portability.createBackup(input?.outDir, context.signal)
+      if (!result.ok) throw appError(result.error.code, result.error.message, result.error.details)
+      context.step('collect', { status: 'done' })
+      context.step('archive', { status: 'done', detail: `${result.value.bytes} 字节` })
+      context.result({
+        backupId: result.value.backupId,
+        archivePath: result.value.archivePath,
+        bytes: result.value.bytes,
+      })
+      return result.value
+    })
+    return envelope({ task: handle })
+  })
+
+  route('portability.inspect', async ({ body }) => {
+    const input = body as ApiRequests['portability.inspect']['body']
+    if (typeof input?.archivePath !== 'string' || input.archivePath.trim() === '') {
+      throw appError('invalid-input', '缺少备份文件路径')
+    }
+    const result = await services.portability.inspectBackup(input.archivePath)
+    if (!result.ok) return failure(result.error)
+    return envelope({ manifest: result.value })
+  })
+
+  route('portability.restore', async ({ body }) => {
+    const input = body as ApiRequests['portability.restore']['body']
+    if (typeof input?.archivePath !== 'string' || input.archivePath.trim() === '') {
+      throw appError('invalid-input', '缺少备份文件路径')
+    }
+    const result = await services.portability.restoreBackup(input.archivePath, {
+      ...(input.remapSources === undefined ? {} : { remapSources: input.remapSources }),
+    })
+    if (!result.ok) return failure(result.error)
+    return envelope({ report: result.value })
+  })
+
+  route('records.export', async ({ body }) => {
+    const input = body as ApiRequests['records.export']['body']
+    const handle = services.tasks.start({
+      kind: 'records-export',
+      label: '导出学习记录',
+      steps: [
+        { id: 'collect', label: '收集记录' },
+        { id: 'write', label: '写入 JSON' },
+      ],
+    }, async context => {
+      context.step('collect', { status: 'running' })
+      const result = await services.portability.exportRecords({
+        ...(input?.courseId === undefined ? {} : { courseId: input.courseId as never }),
+        ...(input?.outDir === undefined ? {} : { outDir: input.outDir }),
+      })
+      if (!result.ok) throw appError(result.error.code, result.error.message, result.error.details)
+      context.step('collect', { status: 'done' })
+      context.step('write', { status: 'done', detail: result.value.path })
+      context.result({ path: result.value.path, bytes: result.value.bytes })
+      return result.value
+    })
+    return envelope({ task: handle })
+  })
+
+  route('records.delete', async ({ body }) => {
+    const input = body as ApiRequests['records.delete']['body']
+    if (input?.scope === undefined) throw appError('invalid-input', '缺少删除范围')
+    const result = await services.portability.deleteRecords({
+      scope: input.scope,
+      ...(input.id === undefined ? {} : { id: input.id }),
+      ...(input.confirm === undefined ? {} : { confirm: input.confirm }),
+    })
+    if (!result.ok) return failure(result.error)
+    return envelope(result.value)
+  })
+
+  route('records.reset', async ({ body }) => {
+    const input = body as ApiRequests['records.reset']['body']
+    if (input?.scope !== 'learning' && input?.scope !== 'all') throw appError('invalid-input', '缺少重置范围')
+    const result = await services.portability.resetRecords(input.scope, input.confirm === true)
+    if (!result.ok) return failure(result.error)
+    return envelope(result.value)
+  })
+
 }
 
 /* ---------------------------------------------------------------------- */

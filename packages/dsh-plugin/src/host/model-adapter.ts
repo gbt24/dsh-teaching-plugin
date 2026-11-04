@@ -47,6 +47,10 @@ function toGenerateOptions(
   selection: { provider: string; model: string; reasoningEffort?: string },
   routingSessionId: string,
 ): Record<string, unknown> {
+  // Auxiliary structured calls must not inherit a "max reasoning" deployment
+  // default: reasoning tokens would starve the JSON output and truncate it.
+  const auxPurpose = request.purpose !== undefined && request.purpose !== 'chat'
+  const reasoningEffort = auxPurpose ? undefined : selection.reasoningEffort
   // Hand-built assistant messages must carry the durable-message source fields:
   // the Harness runtime reads `message.source.replayState` for assistant roles.
   const messages = request.messages.map((message, index) => message.role === 'assistant'
@@ -69,7 +73,7 @@ function toGenerateOptions(
   if (request.system !== undefined) options.system = request.system
   if (request.maxTokens !== undefined) options.maxTokens = request.maxTokens
   if (request.temperature !== undefined) options.temperature = request.temperature
-  if (selection.reasoningEffort !== undefined) options.reasoningEffort = selection.reasoningEffort
+  if (reasoningEffort !== undefined) options.reasoningEffort = reasoningEffort
   return options
 }
 
@@ -138,6 +142,7 @@ export class HarnessModelAdapter implements ModelClient {
       try {
         const selection = this.host.agentDefaultModel.currentSelection()
         const options = toGenerateOptions(effective, selection, this.options.routingSessionId)
+        if (attempt > 1) delete options.reasoningEffort
         options.signal = controller.signal
         for await (const chunk of this.host.llm.stream(options)) {
           const type = chunk.type
@@ -197,6 +202,13 @@ export class HarnessModelAdapter implements ModelClient {
       }
       this.options.onUsage?.(usageEntry)
 
+      if (terminal?.ok === true && text === '' && attempt < MAX_ATTEMPTS) {
+        // Some providers spend the whole output budget on reasoning for a
+        // max-effort call and return no visible text. Retry once without the
+        // forced reasoning effort so the student still gets an answer.
+        this.options.log?.('empty visible text; retrying without forced reasoning effort', { attempt })
+        continue
+      }
       if (terminal?.ok === true) {
         yield {
           type: 'done',

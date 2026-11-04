@@ -19,6 +19,7 @@ import { createCorpusService } from '@deepseek-teaching/core/corpus'
 import { createTeachingService } from '@deepseek-teaching/core/teaching'
 import { createLearningService, createModelRubricAssessor, rubricFromActivityPayload } from '@deepseek-teaching/core/learning'
 import { createRunnerRegistry } from '@deepseek-teaching/core/experiments'
+import { createPortabilityService } from '@deepseek-teaching/core/portability'
 import type { LearningService } from '@deepseek-teaching/core'
 import type { LessonActivity } from '@deepseek-teaching/core'
 import { HarnessModelAdapter } from './model-adapter.ts'
@@ -79,7 +80,8 @@ export function apply(ctx: HostContext, config: Config = {}): void {
   const learning = new LearningRepository(state)
   const tasks = new TaskManager(state, logger)
   const web = createWebBridge(ctx)
-  const teaching = createTeachingService()
+  // Teaching turns are long-form: give the model room for reasoning + text.
+  const teaching = createTeachingService({ maxTokens: 6000 })
   const experiments = createRunnerRegistry({ dataDir })
   const usageBySession = new Map<string, import('@deepseek-teaching/core').UsageEntry>()
   const model = new HarnessModelAdapter(ctx, {
@@ -91,6 +93,17 @@ export function apply(ctx: HostContext, config: Config = {}): void {
       })
     },
     log: logger,
+  })
+
+  /** Portability: backup/restore, record export/delete/reset, offline HTML export. */
+  const portability = createPortabilityService({
+    state,
+    courses,
+    sessions,
+    learning,
+    profiles,
+    pluginVersion: '0.1.0',
+    appVersion: '0.2.1-rc.5',
   })
 
   /** Corpus service: parsing, retrieval, course drafts, change detection. */
@@ -151,6 +164,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
     corpus,
     teaching,
     experiments,
+    portability,
     createLearningFor,
     takeUsage,
     profiles,
