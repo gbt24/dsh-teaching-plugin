@@ -91,15 +91,21 @@ function TeachingPage(props: { readonly pickDirectory?: () => Promise<string | n
   )
 }
 
-/** Bind the Harness directory chooser (desktop native dialog or Host OS chooser). */
-function bindDirectoryPicker(ctx: ClientSlotContext): (() => Promise<string | null>) | undefined {
-  const uiWorkspace = ctx.get?.('uiWorkspace') as
-    | { pickDirectory?: () => Promise<string | null> }
-    | undefined
-  if (uiWorkspace?.pickDirectory === undefined) return undefined
+/**
+ * Bind the Harness directory chooser lazily.
+ *
+ * The uiWorkspace service may activate after this plugin, so the lookup happens
+ * at click time; when the composition provides no chooser the promise resolves
+ * to null and the wizard keeps the manual path input.
+ */
+function bindDirectoryPicker(ctx: ClientSlotContext): () => Promise<string | null> {
   return async () => {
+    const uiWorkspace = ctx.get?.('uiWorkspace') as
+      | { pickDirectory?: () => Promise<string | null> }
+      | undefined
+    if (uiWorkspace?.pickDirectory === undefined) return null
     try {
-      return await uiWorkspace.pickDirectory!()
+      return await uiWorkspace.pickDirectory()
     } catch {
       return null
     }
@@ -126,7 +132,7 @@ export function apply(ctx: ClientSlotContext): void {
   const pickDirectory = bindDirectoryPicker(ctx)
   ctx.slots.inject('main', () => ctx.slots.register(
     { name: 'main', key: PANEL_ID },
-    () => <TeachingPage {...(pickDirectory === undefined ? {} : { pickDirectory })} />,
+    () => <TeachingPage pickDirectory={pickDirectory} />,
   ))
   // Left-sidebar entry.
   ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({

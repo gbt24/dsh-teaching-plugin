@@ -20212,9 +20212,9 @@ window.__ModuleLoader__.load({
       return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(PanelErrorBoundary, { children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(TeachingWorkspace, { ...props.pickDirectory === void 0 ? {} : { pickDirectory: props.pickDirectory } }) });
     }
     function bindDirectoryPicker(ctx) {
-      const uiWorkspace = ctx.get?.("uiWorkspace");
-      if (uiWorkspace?.pickDirectory === void 0) return void 0;
       return async () => {
+        const uiWorkspace = ctx.get?.("uiWorkspace");
+        if (uiWorkspace?.pickDirectory === void 0) return null;
         try {
           return await uiWorkspace.pickDirectory();
         } catch {
@@ -20226,7 +20226,7 @@ window.__ModuleLoader__.load({
       const pickDirectory = bindDirectoryPicker(ctx);
       ctx.slots.inject("main", () => ctx.slots.register(
         { name: "main", key: PANEL_ID },
-        () => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(TeachingPage, { ...pickDirectory === void 0 ? {} : { pickDirectory } })
+        () => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(TeachingPage, { pickDirectory })
       ));
       ctx.slots.inject("sidebar.panellist", () => ctx.slots.register({
         name: "sidebar.panellist",
