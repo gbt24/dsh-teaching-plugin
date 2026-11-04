@@ -1,0 +1,8 @@
+# AI 知识库教学插件（bundle patch）
+#
+# One Host row carries both halves: the Node entry (lib/index.js) registers the
+# teaching services and /api/teaching routes, and the same package declares
+# dsh.client so the browser loads lib/client.js for the sidebar panel.
+- insert:
+    - id: ai-teaching
+      name: 'dsh-ai-teaching'

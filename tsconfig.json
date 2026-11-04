@@ -20,7 +20,8 @@
     "packages/teaching-core/src/**/*.ts",
     "packages/teaching-core/tests/**/*.ts",
     "packages/dsh-plugin/src/**/*.ts",
-    "packages/dsh-plugin/src/**/*.tsx"
+    "packages/dsh-plugin/src/**/*.tsx",
+    "packages/dsh-plugin/tests/**/*.ts"
   ],
   "exclude": ["node_modules", "**/lib/**", "**/dist/**"]
 }

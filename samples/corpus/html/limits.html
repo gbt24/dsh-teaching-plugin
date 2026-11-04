@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh">
+<head><meta charset="utf-8"><title>极限与连续 - HTML 讲义</title></head>
+<body>
+  <h1>极限与连续</h1>
+  <p>极限描述函数值趋近的过程；英文术语为 <strong>limit</strong>。连续要求左极限、右极限与函数值一致。</p>
+  <h2>定义</h2>
+  <script type="math/tex">\forall \epsilon > 0, \exists \delta > 0: |x-a| < \delta \Rightarrow |f(x)-f(a)| < \epsilon</script>
+  <p>上面的公式是 epsilon-delta 定义。</p>
+  <h2>示例代码</h2>
+  <pre><code class="language-python">def is_continuous(f, a):
+    return limit_left(f, a) == limit_right(f, a) == f(a)
+</code></pre>
+  <h2>图示</h2>
+  <img src="../image/derivative-plot.png" alt="抛物线示意图" title="抛物线">
+  <h2>对照表</h2>
+  <table>
+    <tr><th>中文</th><th>English</th></tr>
+    <tr><td>极限</td><td>limit</td></tr>
+    <tr><td>连续</td><td>continuous</td></tr>
+  </table>
+  <p>外部图片（不下载）：<img src="https://example.invalid/figure.png" alt="外链图"></p>
+</body>
+</html>

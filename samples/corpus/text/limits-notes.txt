@@ -1,0 +1,17 @@
+Limits and continuity notes
+===========================
+
+A function is continuous at a point when the left-hand limit, right-hand
+limit and the function value all agree.
+
+Epsilon-delta definition:
+  for every epsilon > 0 there exists delta > 0 such that
+  |x - a| < delta implies |f(x) - f(a)| < epsilon.
+
+中文备注：极限存在要求左右极限相等；连续还要求函数值等于极限值。
+
+Example:
+  f(x) = (x^2 - 1) / (x - 1) is undefined at x = 1, but the limit is 2.
+  f(x) = |x| at x = 0 is continuous yet not differentiable.
+
+Key terms: limit, continuity, epsilon-delta, removable discontinuity.

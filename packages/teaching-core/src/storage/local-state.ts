@@ -68,11 +68,15 @@ class PathMutex {
   }
 }
 
-/** Resolve and validate a path that must stay inside the data dir. */
+/**
+ * Resolve and validate a path that must stay inside the data dir.
+ *
+ * Relative paths resolve against the data dir; absolute paths are accepted only
+ * when they stay inside it (layout helpers hand back absolute paths).
+ */
 function safePath(dataDir: string, relative: string): string {
-  if (isAbsolute(relative)) throw new StoreError({ code: 'invalid-input', message: `拒绝绝对路径写入: ${relative}` })
-  const full = normalize(join(dataDir, relative))
   const root = normalize(dataDir)
+  const full = isAbsolute(relative) ? normalize(relative) : normalize(join(root, relative))
   if (full !== root && !full.startsWith(`${root}/`)) {
     throw new StoreError({ code: 'invalid-input', message: `拒绝越界路径写入: ${relative}` })
   }

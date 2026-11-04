@@ -38,7 +38,11 @@ export function emptyProfile(): StudentProfile {
 
 /** Store for the single local student profile. */
 export class ProfileRepository {
-  constructor(private readonly state: LocalState) {}
+  private readonly state: LocalState
+
+  constructor(state: LocalState) {
+    this.state = state
+  }
 
   /** Read the profile, creating defaults on first use. */
   async get(): Promise<StudentProfile> {
@@ -65,7 +69,11 @@ export class ProfileRepository {
 
 /** Store for courses and their immutable structure revisions. */
 export class CourseRepository {
-  constructor(private readonly state: LocalState) {}
+  private readonly state: LocalState
+
+  constructor(state: LocalState) {
+    this.state = state
+  }
 
   /** All courses, newest first. */
   async list(): Promise<Course[]> {
@@ -188,7 +196,11 @@ export class CourseRepository {
 
 /** Store for teaching sessions, their message stream and activities. */
 export class SessionRepository {
-  constructor(private readonly state: LocalState) {}
+  private readonly state: LocalState
+
+  constructor(state: LocalState) {
+    this.state = state
+  }
 
   /** Sessions for one course (or all), newest first. */
   async list(courseId?: string): Promise<TeachingSession[]> {
@@ -267,7 +279,11 @@ export class SessionRepository {
 
 /** Store for per-course learning records (attempts, mastery, review, notes). */
 export class LearningRepository {
-  constructor(private readonly state: LocalState) {}
+  private readonly state: LocalState
+
+  constructor(state: LocalState) {
+    this.state = state
+  }
 
   /** Read one course learning record. */
   async get(courseId: string): Promise<CourseLearningRecord | undefined> {
