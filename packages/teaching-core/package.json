@@ -1,0 +1,17 @@
+{
+  "name": "@deepseek-teaching/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure domain logic for the AI knowledge-base teaching plugin",
+  "exports": {
+    ".": "./src/index.ts",
+    "./contracts": "./src/contracts/index.ts",
+    "./corpus": "./src/corpus/index.ts",
+    "./teaching": "./src/teaching/index.ts",
+    "./learning": "./src/learning/index.ts",
+    "./experiments": "./src/experiments/index.ts",
+    "./portability": "./src/portability/index.ts",
+    "./render": "./src/render/index.ts"
+  }
+}

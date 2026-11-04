@@ -1,11 +1,19 @@
 {
   "name": "deepseek-teaching-plugin",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "description": "AI knowledge-base teaching plugin for DeepSeek Harness Desktop",
+  "engines": {
+    "node": ">=22.19.0"
+  },
   "scripts": {
-    "build:spike": "node scripts/build-spike.mjs"
+    "build": "node scripts/build-plugin.mjs",
+    "build:spike": "node scripts/build-spike.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test \"packages/**/tests/**/*.test.ts\"",
+    "test:all": "pnpm typecheck && pnpm test",
+    "pack": "node scripts/pack-plugin.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
@@ -13,5 +21,8 @@
     "@types/react-dom": "^19.0.0",
     "esbuild": "^0.25.0",
     "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "katex": "^0.16.22"
   }
 }
