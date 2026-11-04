@@ -18683,7 +18683,7 @@ window.__ModuleLoader__.load({
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { className: "ai-muted", style: { margin: "8px 0 10px" }, children: "\u8FD9\u95E8\u8BFE\u7A0B\u8FD8\u6CA1\u6709\u786E\u8BA4\u7684\u8BFE\u7A0B\u7ED3\u6784\uFF0C\u7CFB\u7EDF\u5B66\u4E60\u4E0E\u7EC3\u4E60\u9700\u8981\u5148\u786E\u8BA4\u6982\u5FF5\u4E0E\u5B66\u4E60\u987A\u5E8F\uFF1B \u4E5F\u53EF\u4EE5\u76F4\u63A5\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7528\u6700\u5C0F\u7ED3\u6784\u5F00\u59CB\uFF0C\u4E4B\u540E\u518D\u8865\u5168\u3002" }),
         props.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { marginBottom: 10, borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { children: props.error }) }),
-        props.phase === "loading" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Spinner, { label: "\u6B63\u5728\u8BFB\u53D6\u8BFE\u7A0B\u8349\u6848\u2026" }),
+        props.phase === "loading" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Spinner, { label: "\u6B63\u5728\u751F\u6210/\u8BFB\u53D6\u8BFE\u7A0B\u7ED3\u6784\u2026\uFF08\u6A21\u578B\u5206\u6790\u8D44\u6599\u53EF\u80FD\u9700\u8981\u51E0\u5341\u79D2\uFF09" }),
         props.phase === "draft" && props.draft !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
           DraftReview,
           {
@@ -19837,10 +19837,10 @@ window.__ModuleLoader__.load({
         try {
           await apiPost("courseDraft.confirm", { courseId, revisionId });
           const { sessions } = await refreshCourse(courseId);
-          notify({ kind: "info", message: "\u8BFE\u7A0B\u7ED3\u6784\u5DF2\u786E\u8BA4\uFF0C\u5F00\u59CB\u7CFB\u7EDF\u5B66\u4E60\u3002" });
           const first = sessions[0];
           if (first !== void 0) await selectSession(first.id);
           else await createSession(courseId);
+          notify({ kind: "info", message: "\u8BFE\u7A0B\u7ED3\u6784\u5DF2\u786E\u8BA4\uFF0C\u5F00\u59CB\u7CFB\u7EDF\u5B66\u4E60\u3002" });
           return { ok: true };
         } catch (error) {
           return { ok: false, error: `\u786E\u8BA4\u8BFE\u7A0B\u7ED3\u6784\u5931\u8D25\uFF1A${describeError(error)}` };
@@ -19856,8 +19856,8 @@ window.__ModuleLoader__.load({
             mode: "adhoc"
           });
           await refreshCourse(courseId);
-          notify({ kind: "info", message: "\u5DF2\u7528\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u5F00\u59CB\uFF1A\u7ED3\u6784\u662F\u6700\u5C0F\u786E\u8BA4\u7248\u672C\uFF0C\u4E4B\u540E\u4ECD\u53EF\u751F\u6210\u5B8C\u6574\u8349\u6848\u3002" });
           await selectSession(session.id);
+          notify({ kind: "info", message: "\u5DF2\u7528\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u5F00\u59CB\uFF1A\u7ED3\u6784\u662F\u6700\u5C0F\u786E\u8BA4\u7248\u672C\uFF0C\u4E4B\u540E\u4ECD\u53EF\u751F\u6210\u5B8C\u6574\u8349\u6848\u3002" });
           return { ok: true };
         } catch (error) {
           return { ok: false, error: `\u968F\u95EE\u968F\u5B66\u4F1A\u8BDD\u521B\u5EFA\u5931\u8D25\uFF1A${describeError(error)}` };

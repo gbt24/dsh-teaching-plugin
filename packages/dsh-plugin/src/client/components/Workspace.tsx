@@ -701,10 +701,10 @@ export function TeachingWorkspace(): React.ReactElement {
     try {
       await apiPost('courseDraft.confirm', { courseId: courseId as never, revisionId })
       const { sessions } = await refreshCourse(courseId)
-      notify({ kind: 'info', message: '课程结构已确认，开始系统学习。' })
       const first = sessions[0]
       if (first !== undefined) await selectSession(first.id)
       else await createSession(courseId)
+      notify({ kind: 'info', message: '课程结构已确认，开始系统学习。' })
       return { ok: true }
     } catch (error) {
       return { ok: false, error: `确认课程结构失败：${describeError(error)}` }
@@ -723,8 +723,8 @@ export function TeachingWorkspace(): React.ReactElement {
         mode: 'adhoc',
       })
       await refreshCourse(courseId)
-      notify({ kind: 'info', message: '已用「先随便问问」开始：结构是最小确认版本，之后仍可生成完整草案。' })
       await selectSession(session.id)
+      notify({ kind: 'info', message: '已用「先随便问问」开始：结构是最小确认版本，之后仍可生成完整草案。' })
       return { ok: true }
     } catch (error) {
       return { ok: false, error: `随问随学会话创建失败：${describeError(error)}` }
