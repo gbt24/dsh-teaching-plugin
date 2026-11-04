@@ -25,6 +25,13 @@ flowchart LR
     T03 --> T08
 ```
 
+## 阶段状态
+
+| 阶段 | 状态 | 证据 |
+| --- | --- | --- |
+| P0 / T00 | 部分通过：bundled runtime 关键通路通过；Electron 进程内装载与 desktop profile 安装待做 | `docs/evidence/T00.md` |
+| P1 / T01 | 未开始 | — |
+
 ## 阶段与退出条件
 
 | 阶段 / 任务 | 交付 | 退出条件 |

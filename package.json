@@ -1,0 +1,17 @@
+{
+  "name": "deepseek-teaching-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI knowledge-base teaching plugin for DeepSeek Harness Desktop",
+  "scripts": {
+    "build:spike": "node scripts/build-spike.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.0"
+  }
+}

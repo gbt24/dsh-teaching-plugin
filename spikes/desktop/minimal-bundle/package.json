@@ -1,0 +1,26 @@
+{
+  "name": "dsh-teaching-spike",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "T00 minimal integration spike for the AI knowledge-base teaching plugin",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": ["lib", "cordis.patch.yml", "package.json"],
+  "engines": {
+    "dsh": "0.2.1-rc.5"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  }
+}

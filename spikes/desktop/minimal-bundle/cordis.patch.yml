@@ -1,0 +1,4 @@
+# T00 spike: one Host plugin row that also carries the browser half through dsh.client.
+- insert:
+    - id: teaching-spike
+      name: 'dsh-teaching-spike'

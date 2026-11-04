@@ -27,3 +27,16 @@
 6. 多 agent 公共文件冲突：T00/T01 单负责人冻结契约，之后按任务写入所有权整合。
 
 所有“待验证”均应产出证据或明确 gap；不能在文档中直接改成“已支持”。
+
+## T00 实测核对的宿主接口事实（2026-11-04，Desktop 0.2.1-rc.5）
+
+标记：**实测**＝在本机 Desktop 0.2.1-rc.5 的 bundled runtime 上真实执行通过。
+
+1. **实测**：exact Fetch route 的 `path` 必须形如 `/api/<segment>[/<segment>]`，否则插件激活时抛 `connection: invalid exact Fetch route`；它只对 owner peer 放行，其他 principal 403。Client 侧用 `fetch('/api/...', {credentials:'include'})` 即可，无需另接 gateway。
+2. **实测**：`ctx.slots.inject('main', …)` 注册 keyed 中央页面 + `ctx.slots.inject('sidebar.panellist', …)` 注册同 id 的左侧栏入口，是官方插件提供「左侧栏入口 + 页面」的组合；sidebar 会调 `ctx.layout.selectPanel(id)`。图标组件收到 `{ size, active }`，label 可为函数。
+3. **实测**：client bundle 格式为 `window.__ModuleLoader__.load({ id, factory(require) { … } })` 包裹的 CJS；宿主注入 baseline `require`（react、react/jsx-runtime 等）。构建时可把 baseline 模块列为 external。
+4. **实测**：Host 插件以 Electron Node 模式运行，可直接 `import 'node:child_process'` 并 `spawn`：`process.execPath` + `ELECTRON_RUN_AS_NODE=1` 可执行 JS；`python3` 可用（本机 3.15.2）。
+5. **实测**：`ctx.agentDefaultModel.currentSelection()` 返回部署默认 provider/model；`ctx.llm.stream()` 用宿主凭据真实生成。**pi-ai 系 provider 必须传 `GenerateOptions.sessionId`**（否则 400 `MissingSessionID`）；`StreamChunk` 以 `type` 区分（`text-delta` 带 `.text`，终止为 `finish.reason.kind` ∈ stop/tool-calls/max-tokens/aborted/error）。`usage` chunk 携带 token 用量。
+6. **实测**：bundled CLI `dsh plugin --profile <name> add|remove <spec>` 可管理非 desktop profile 的插件（含 `link:` 本地路径），重启后生效；desktop profile 由 Electron 应用独占，CLI 写入被应用/沙箱阻止，需应用内 plugin-manager 或用户操作。
+7. **实测**：独立离线导出不依赖 Slots：Host 生成自包含 HTML（内联 CSS/SVG/JS、无外部请求），`file://` + offline 下可交互，证明 T07 renderer 路线可行。
+8. **环境差异**：Electron 打包应用的桌面窗口在启动时未开 CDP；真实窗口内验证需用户刷新/重启或带 `--remote-debugging-port` 的启动。文件沙箱（workspace-write）阻止插件开发直接写 `~/.dsh`。
