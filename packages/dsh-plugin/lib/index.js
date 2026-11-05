@@ -62487,26 +62487,15 @@ import { basename as basename6, extname as extname7, join as join15 } from "node
 // packages/dsh-plugin/src/host/visual-service.ts
 var MAX_SOURCE_CHARS = 2e5;
 var VISUAL_SYSTEM_PROMPT = [
-  "\u4F60\u662F\u4E00\u4E2A\u5B66\u79D1\u65E0\u5173\u7684\u6559\u5B66\u53EF\u89C6\u5316\u751F\u6210\u5668\u3002\u4F60\u7684\u4EFB\u52A1\u4E0D\u662F\u5199\u957F\u7BC7\u8BB2\u89E3\uFF0C\u800C\u662F\u4EA7\u51FA\u4E00\u4E2A\u80FD\u5728\u6C99\u7BB1\u4E2D\u5B89\u5168\u663E\u793A\u7684\u3001\u81EA\u5305\u542B\u7684\u6559\u5B66\u56FE\u8868/\u4EA4\u4E92\u6F14\u793A\u3002",
+  "\u4F60\u662F\u4E00\u4E2A\u6559\u5B66\u56FE\u5F62\u751F\u6210\u5668\u3002\u53EA\u8F93\u51FA\u4E00\u4E2A\u5B89\u5168\u3001\u81EA\u5305\u542B\u7684\u53EF\u89C6\u5316\u6E90\u7801\u4EE3\u7801\u5757\uFF0C\u4E0D\u8981\u8F93\u51FA\u4EFB\u4F55\u89E3\u91CA\u3001JSON\u3001\u601D\u8003\u8FC7\u7A0B\u6216\u989D\u5916\u6587\u5B57\u3002",
   "",
-  "\u5DE5\u4F5C\u6D41\uFF08\u6765\u81EA math-visual \u6280\u80FD\uFF0C\u9002\u7528\u4E8E\u6240\u6709\u5B66\u79D1\uFF09\uFF1A",
-  "1. \u5148\u786E\u5B9A\u4E00\u4E2A\u6559\u5B66\u70B9\uFF1A\u63A7\u5236\u91CF\uFF08\u53EA\u4E3B\u52A8\u6539\u53D8\u4E00\u4E2A\u53C2\u6570\uFF09\u3001\u89C2\u6D4B\u91CF\u3001\u4E0D\u53D8\u91CF\u3001\u7ED3\u8BBA\u4E0E\u9002\u7528\u6761\u4EF6\uFF1B\u80FD\u4E00\u53E5\u8BDD\u8BF4\u660E\u201C\u6539\u53D8\u4EC0\u4E48\u3001\u89C2\u5BDF\u4EC0\u4E48\u201D\u3002",
-  "2. \u9009\u6700\u7B80\u8F7D\u4F53\uFF1A\u7ED3\u6784/\u51E0\u4F55\u7528 SVG\uFF1B\u53C2\u6570\u63A2\u7D22/\u62D6\u52A8\u6BD4\u8F83\u7528\u81EA\u5305\u542B\u4EA4\u4E92 HTML\uFF1B\u6D41\u7A0B/\u5173\u7CFB/\u5206\u7C7B\u7528 Mermaid\uFF1B\u8FDE\u7EED\u53D8\u5316\u624D\u7528\u52A8\u753B\uFF1B\u666E\u901A\u66F2\u7EBF/\u7B80\u5355\u6570\u636E\u7559\u7A7A\uFF08\u7531\u4E3B\u6559\u5B66\u6D41\u7A0B\u51B3\u5B9A\uFF09\uFF0C\u4E0D\u8981\u4E3A\u51D1\u56FE\u800C\u753B\u3002",
-  "3. \u6807\u7B7E\u3001\u56FE\u4F8B\u3001\u516C\u5F0F\u3001\u6570\u503C\u8BFB\u6570\u7B26\u53F7\u4E00\u81F4\uFF1B\u989C\u8272\u8F85\u4EE5\u7EBF\u578B/\u6807\u8BB0/\u6587\u5B57\uFF1B\u5750\u6807\u8303\u56F4\u7A33\u5B9A\uFF1B\u51E0\u4F55\u7528\u7B49\u6BD4\u4F8B\u5750\u6807\uFF0C\u975E\u7B49\u6BD4\u4F8B\u5FC5\u987B\u8BF4\u660E\u3002",
-  "4. \u89C6\u89C9\u662F\u76F4\u89C9\u8F85\u52A9\uFF0C\u4E0D\u662F\u8BC1\u660E\uFF1B\u6709\u9650\u56FE\u53EA\u80FD\u5C55\u793A\u8D8B\u52BF\uFF0C\u4E0D\u8981\u58F0\u79F0\u201C\u56FE\u8BC1\u660E\u4E86\u7ED3\u8BBA\u201D\u3002",
-  "5. \u5FC5\u987B\u5B8C\u5168\u81EA\u5305\u542B\uFF1A\u5185\u8054 CSS/SVG/\u811A\u672C\uFF1B\u7981\u6B62\u5916\u90E8 CDN\u3001\u5B57\u4F53\u3001\u5E93\u3001\u56FE\u7247\u6216\u7F51\u7EDC\u8BF7\u6C42\uFF1B\u4E0D\u8981\u5B8C\u6574 HTML \u6587\u6863\u5916\u58F3\uFF08\u4E0D\u8981 doctype/html/head/body\uFF09\uFF0C\u53EA\u7ED9\u7247\u6BB5\u3002",
-  "6. \u4E0D\u7F16\u9020\u4E0E\u8BFE\u7A0B/\u5B66\u751F\u4E0A\u4E0B\u6587\u4E0D\u7B26\u7684\u4E8B\u5B9E\uFF1B\u65E0\u6CD5\u6838\u5B9E\u7684\u5185\u5BB9\u7528\u201C\u6A21\u578B\u8865\u5145\u201D\u6807\u6CE8\u5728 caption/conditions \u4E2D\u3002",
-  "7. \u4F18\u5148 SVG \u9759\u6001\u56FE\uFF1B\u53EA\u6709\u5B66\u751F\u660E\u786E\u8981\u6C42\u62D6\u52A8/\u4EA4\u4E92\u65F6\u624D\u7528 HTML\uFF1B\u6E90\u7801\u63A7\u5236\u5728 6000 \u5B57\u7B26\u4EE5\u5185\uFF0C\u5199\u5B8C\u6574\u95ED\u5408\u6807\u7B7E\uFF0C\u4E0D\u8981\u7528\u957F\u7BC7 CSS\u3002",
-  "",
-  "\u53EA\u8F93\u51FA\u4EE5\u4E0B\u4E24\u4E2A\u6807\u8BB0\u533A\u5757\uFF0C\u4E0D\u8981\u8F93\u51FA\u4EFB\u4F55\u5176\u4ED6\u6587\u5B57\uFF1A",
-  "<<<VISUAL_BRIEF>>>",
-  '{"renderer":"svg|html|mermaid","title":"...","caption":"\u4E00\u53E5\u8BDD\u7ED3\u8BBA","observe":"\u6CE8\u610F\u770B\u2026\u2026","conditions":["\u9002\u7528\u6761\u4EF6/\u8FB9\u754C/\u53CD\u4F8B"],"formula":"\u53EF\u9009 LaTeX","visualType":"diagram|flow|timeline|tree|map|chart|animation|interactive|other","interactive":false,"height":420,"fallbackText":"\u65E0\u6CD5\u663E\u793A\u65F6\u7684\u6587\u5B57\u8BF4\u660E"}',
-  "<<<VISUAL_SOURCE>>>",
-  "```svg",
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420">...</svg>',
-  "```",
-  "",
-  "\u6E32\u67D3\u5668\u9009\u62E9\u89C4\u5219\uFF1Asource \u662F SVG \u6807\u8BB0 \u2192 renderer=svg\uFF1B\u81EA\u5305\u542B HTML \u7247\u6BB5 \u2192 html\uFF1BMermaid \u6E90\u7801 \u2192 mermaid\u3002\u6E90\u7801\u5FC5\u987B\u5B8C\u6574\u3001\u53EF\u89E3\u6790\uFF1B\u5B81\u53EF\u7B80\u5355\u4E5F\u4E0D\u8981\u622A\u65AD\u3002"
+  "\u8981\u6C42\uFF1A",
+  "- \u9ED8\u8BA4\u8F93\u51FA SVG\uFF1B\u5982\u679C\u5B66\u751F\u660E\u786E\u8981\u6C42\u62D6\u52A8/\u4EA4\u4E92/\u6309\u94AE\uFF0C\u5219\u8F93\u51FA\u81EA\u5305\u542B HTML \u7247\u6BB5\uFF1B\u5982\u679C\u5B66\u751F\u660E\u786E\u8981\u6C42 Mermaid\uFF0C\u5219\u8F93\u51FA Mermaid \u6E90\u7801\u3002",
+  "- \u6E90\u7801\u5FC5\u987B\u5B8C\u6574\u3001\u53EF\u89E3\u6790\uFF0C\u4F18\u5148\u63A7\u5236\u5728 6000 \u5B57\u7B26\u4EE5\u5185\uFF1B\u4E0D\u8981\u622A\u65AD\uFF1BSVG \u5FC5\u987B\u6709\u95ED\u5408\u6807\u7B7E\u3002",
+  "- \u5FC5\u987B\u5B8C\u5168\u81EA\u5305\u542B\uFF1A\u5185\u8054 CSS/SVG/\u811A\u672C\uFF1B\u7981\u6B62\u5916\u90E8 CDN\u3001\u5B57\u4F53\u3001\u5E93\u3001\u56FE\u7247\u6216\u7F51\u7EDC\u8BF7\u6C42\uFF1B\u4E0D\u8981\u5B8C\u6574 HTML \u6587\u6863\u5916\u58F3\uFF08\u4E0D\u8981 doctype/html/head/body\uFF09\u3002",
+  "- \u6807\u7B7E\u3001\u56FE\u4F8B\u3001\u516C\u5F0F\u3001\u6570\u503C\u8BFB\u6570\u7B26\u53F7\u4E00\u81F4\uFF1B\u989C\u8272\u8F85\u4EE5\u7EBF\u578B/\u6807\u8BB0/\u6587\u5B57\uFF1B\u5750\u6807\u8303\u56F4\u7A33\u5B9A\uFF1B\u51E0\u4F55\u5C3D\u91CF\u7B49\u6BD4\u4F8B\uFF0C\u975E\u7B49\u6BD4\u4F8B\u8981\u5728\u56FE\u5185\u8BF4\u660E\u3002",
+  "- \u89C6\u89C9\u662F\u76F4\u89C9\u8F85\u52A9\uFF0C\u4E0D\u662F\u8BC1\u660E\uFF1B\u4E0D\u8981\u5728\u56FE\u5185\u58F0\u79F0\u201C\u56FE\u8BC1\u660E\u4E86\u7ED3\u8BBA\u201D\u3002",
+  "- \u53EA\u8F93\u51FA\u5F62\u5982 ```svg \u2026``` \u7684\u4E00\u4E2A\u4EE3\u7801\u5757\uFF1B\u4E0D\u8981\u5728\u4EE3\u7801\u5757\u5916\u5199\u4EFB\u4F55\u6587\u5B57\u3002"
 ].join("\n");
 function extractBetween(text2, start, end) {
   const startIndex = text2.indexOf(start);
@@ -62559,46 +62548,64 @@ function normalizeSource(source) {
 }
 async function generateVisual(model, input, signal) {
   const info2 = await model.info();
-  const completion = await model.complete({
+  const interactive = /交互|拖动|拖拽|滑杆|滑块|按钮|播放|暂停|html/iu.test(input.studentText);
+  const mermaid = !interactive && /mermaid|流程图|关系图|时间线|状态机|分类图/iu.test(input.studentText);
+  const renderer = interactive ? "html" : mermaid ? "mermaid" : "svg";
+  const languageHint = renderer === "html" ? "\u4E00\u4E2A\u81EA\u5305\u542B HTML \u7247\u6BB5\uFF08\u4E0D\u542B doctype/html/head/body \u5916\u58F3\uFF09" : renderer === "mermaid" ? "\u4E00\u6BB5 Mermaid \u6E90\u7801" : "\u4E00\u4E2A\u81EA\u5305\u542B SVG\uFF08\u4E0D\u8981\u5B8C\u6574 HTML \u6587\u6863\uFF09";
+  const request = {
     system: VISUAL_SYSTEM_PROMPT,
     messages: [{
       role: "user",
       text: [
+        `\u4EFB\u52A1\uFF1A\u4E3A\u4E0B\u9762\u7684\u6559\u5B66\u573A\u666F\u751F\u6210${languageHint}\uFF0C\u7528 \`\`\`${renderer} \u4EE3\u7801\u5757\u8F93\u51FA\uFF0C\u6E90\u7801\u5FC5\u987B\u5B8C\u6574\u3002`,
         `\u8BFE\u7A0B\uFF1A${input.courseTitle}`,
         input.conceptTitle === void 0 ? "" : `\u5F53\u524D\u6982\u5FF5\uFF1A${input.conceptTitle}`,
         `\u5B66\u751F\u672C\u8F6E\u8BF7\u6C42\uFF1A${input.studentText}`,
-        `\u4E3B\u6559\u5B66\u56DE\u590D\u8282\u9009\uFF1A${input.teachingText.slice(0, 1200)}`,
+        `\u4E3B\u6559\u5B66\u56DE\u590D\u8282\u9009\uFF1A${input.teachingText.slice(0, 800)}`,
         "",
-        "\u8BF7\u751F\u6210\u672C\u8F6E\u6700\u5408\u9002\u7684\u53EF\u89C6\u5316\u3002\u53EA\u8F93\u51FA\u4E24\u4E2A\u6807\u8BB0\u533A\u5757\u548C\u7B80\u77ED\u6E90\u7801\uFF1B\u6E90\u7801\u5FC5\u987B\u5B8C\u6574\u3002"
+        "\u53EA\u8F93\u51FA\u4EE3\u7801\u5757\uFF0C\u4E0D\u8981\u89E3\u91CA\u3002"
       ].filter((line) => line !== "").join("\n")
     }],
-    maxTokens: 6e3,
+    maxTokens: 12e3,
+    temperature: 0.2,
     purpose: "visual",
     sessionId: input.sessionId,
     language: "zh"
-  }, signal);
-  const fence = extractFence(completion.text);
+  };
+  let completion = await model.complete(request, signal);
+  let fence = extractFence(completion.text);
+  if (fence === void 0) {
+    completion = await model.complete({
+      ...request,
+      messages: [
+        ...request.messages,
+        { role: "assistant", text: completion.text.slice(0, 2e3) },
+        { role: "user", text: `\u4E0A\u6B21\u6CA1\u6709\u8F93\u51FA\u5B8C\u6574\u53EF\u89E3\u6790\u7684 ${renderer} \u6E90\u7801\u3002\u73B0\u5728\u53EA\u8F93\u51FA\u4E00\u4E2A\u5B8C\u6574\u7684 \`\`\`${renderer} \u4EE3\u7801\u5757\uFF0C\u4E0D\u8981\u4EFB\u4F55\u5176\u4ED6\u6587\u5B57\u3002` }
+      ]
+    }, signal);
+    fence = extractFence(completion.text);
+  }
   if (fence === void 0) return void 0;
   const source = normalizeSource(fence.source);
   if (source === void 0) return void 0;
   const brief = parseBrief(completion.text);
-  const renderer = (() => {
-    const value = stringField(brief, "renderer");
-    if (value === "svg" || value === "html" || value === "mermaid") return value;
-    return fence.renderer;
-  })();
-  const title = stringField(brief, "title");
+  const heading = /^#{1,4}\s+(.+)$/mu.exec(input.teachingText)?.[1]?.trim();
+  const title = stringField(brief, "title") ?? input.conceptTitle ?? heading;
+  const caption = stringField(brief, "caption");
+  const observe = stringField(brief, "observe");
+  const formula = stringField(brief, "formula");
+  const conditions = conditionsField(brief);
   const payload = {
     type: "visual",
-    renderer,
+    renderer: fence.renderer,
     source,
     ...title === void 0 ? {} : { title: title.slice(0, 120) },
-    ...stringField(brief, "caption") === void 0 ? {} : { caption: stringField(brief, "caption").slice(0, 300) },
-    ...stringField(brief, "observe") === void 0 ? {} : { observe: stringField(brief, "observe").slice(0, 300) },
-    ...stringField(brief, "formula") === void 0 ? {} : { formula: stringField(brief, "formula").slice(0, 1e3) },
-    ...conditionsField(brief).length === 0 ? {} : { conditions: conditionsField(brief) },
+    ...caption === void 0 ? {} : { caption: caption.slice(0, 300) },
+    ...observe === void 0 ? {} : { observe: observe.slice(0, 300) },
+    ...formula === void 0 ? {} : { formula: formula.slice(0, 1e3) },
+    ...conditions.length === 0 ? {} : { conditions },
     ...typeof brief["visualType"] === "string" ? { visualType: brief["visualType"] } : {},
-    ...typeof brief["interactive"] === "boolean" ? { interactive: brief["interactive"] } : {},
+    ...interactive ? { interactive: true } : {},
     ...typeof brief["height"] === "number" && Number.isFinite(brief["height"]) ? { height: Math.max(120, Math.min(2e3, Math.round(brief["height"]))) } : {},
     ...stringField(brief, "fallbackText") === void 0 ? {} : { fallbackText: stringField(brief, "fallbackText").slice(0, 1e3) }
   };
@@ -63948,7 +63955,8 @@ ${buildSummaryInput(selection.compacted)}
               throw appError(event.error.code, event.error.message, event.error.details);
             }
           }
-          if (!createdActivities.some((activity) => activity.kind === "visual") && wantsVisual(input.text)) {
+          const visualKinds = /* @__PURE__ */ new Set(["visual", "interactive-graph", "static-figure", "animation"]);
+          if (!createdActivities.some((activity) => visualKinds.has(activity.kind)) && wantsVisual(input.text)) {
             send({ type: "progress", label: "\u751F\u6210\u53EF\u89C6\u5316" });
             try {
               const generated = await generateVisual(services.model, {

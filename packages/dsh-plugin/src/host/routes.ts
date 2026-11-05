@@ -1348,7 +1348,8 @@ ${buildSummaryInput(selection.compacted)}
           // for large SVG/HTML source (escaped quotes/newlines get truncated).
           // When the student asked for a visual and no visual activity arrived,
           // ask a separate model call for a compact brief + fenced source.
-          if (!createdActivities.some(activity => activity.kind === 'visual') && wantsVisual(input.text)) {
+          const visualKinds = new Set(['visual', 'interactive-graph', 'static-figure', 'animation'])
+          if (!createdActivities.some(activity => visualKinds.has(activity.kind)) && wantsVisual(input.text)) {
             send({ type: 'progress', label: '生成可视化' })
             try {
               const generated = await generateVisual(services.model, {

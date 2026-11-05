@@ -29,26 +29,15 @@ export interface GeneratedVisual {
 const MAX_SOURCE_CHARS = 200_000
 
 const VISUAL_SYSTEM_PROMPT = [
-  '你是一个学科无关的教学可视化生成器。你的任务不是写长篇讲解，而是产出一个能在沙箱中安全显示的、自包含的教学图表/交互演示。',
+  '你是一个教学图形生成器。只输出一个安全、自包含的可视化源码代码块，不要输出任何解释、JSON、思考过程或额外文字。',
   '',
-  '工作流（来自 math-visual 技能，适用于所有学科）：',
-  '1. 先确定一个教学点：控制量（只主动改变一个参数）、观测量、不变量、结论与适用条件；能一句话说明“改变什么、观察什么”。',
-  '2. 选最简载体：结构/几何用 SVG；参数探索/拖动比较用自包含交互 HTML；流程/关系/分类用 Mermaid；连续变化才用动画；普通曲线/简单数据留空（由主教学流程决定），不要为凑图而画。',
-  '3. 标签、图例、公式、数值读数符号一致；颜色辅以线型/标记/文字；坐标范围稳定；几何用等比例坐标，非等比例必须说明。',
-  '4. 视觉是直觉辅助，不是证明；有限图只能展示趋势，不要声称“图证明了结论”。',
-  '5. 必须完全自包含：内联 CSS/SVG/脚本；禁止外部 CDN、字体、库、图片或网络请求；不要完整 HTML 文档外壳（不要 doctype/html/head/body），只给片段。',
-  '6. 不编造与课程/学生上下文不符的事实；无法核实的内容用“模型补充”标注在 caption/conditions 中。',
-  '7. 优先 SVG 静态图；只有学生明确要求拖动/交互时才用 HTML；源码控制在 6000 字符以内，写完整闭合标签，不要用长篇 CSS。',
-  '',
-  '只输出以下两个标记区块，不要输出任何其他文字：',
-  '<<<VISUAL_BRIEF>>>',
-  '{"renderer":"svg|html|mermaid","title":"...","caption":"一句话结论","observe":"注意看……","conditions":["适用条件/边界/反例"],"formula":"可选 LaTeX","visualType":"diagram|flow|timeline|tree|map|chart|animation|interactive|other","interactive":false,"height":420,"fallbackText":"无法显示时的文字说明"}',
-  '<<<VISUAL_SOURCE>>>',
-  '```svg',
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420">...</svg>',
-  '```',
-  '',
-  '渲染器选择规则：source 是 SVG 标记 → renderer=svg；自包含 HTML 片段 → html；Mermaid 源码 → mermaid。源码必须完整、可解析；宁可简单也不要截断。',
+  '要求：',
+  '- 默认输出 SVG；如果学生明确要求拖动/交互/按钮，则输出自包含 HTML 片段；如果学生明确要求 Mermaid，则输出 Mermaid 源码。',
+  '- 源码必须完整、可解析，优先控制在 6000 字符以内；不要截断；SVG 必须有闭合标签。',
+  '- 必须完全自包含：内联 CSS/SVG/脚本；禁止外部 CDN、字体、库、图片或网络请求；不要完整 HTML 文档外壳（不要 doctype/html/head/body）。',
+  '- 标签、图例、公式、数值读数符号一致；颜色辅以线型/标记/文字；坐标范围稳定；几何尽量等比例，非等比例要在图内说明。',
+  '- 视觉是直觉辅助，不是证明；不要在图内声称“图证明了结论”。',
+  '- 只输出形如 ```svg …``` 的一个代码块；不要在代码块外写任何文字。',
 ].join('\n')
 
 function extractBetween(text: string, start: string, end: string): string | undefined {
@@ -111,8 +100,9 @@ function normalizeSource(source: string): string | undefined {
 }
 
 /**
- * Ask the model for one self-contained visual and validate the outer shape.
- * Returns `undefined` when the output is unusable; the caller degrades to text.
+ * Ask the model for one self-contained visual source and validate the outer shape.
+ * The output format is intentionally just one fenced block: embedding large
+ * SVG/HTML inside JSON metadata is what caused truncated/escaped-data failures.
  */
 export async function generateVisual(
   model: ModelClient,
@@ -120,46 +110,69 @@ export async function generateVisual(
   signal?: AbortSignal,
 ): Promise<GeneratedVisual | undefined> {
   const info = await model.info()
-  const completion = await model.complete({
+  const interactive = /交互|拖动|拖拽|滑杆|滑块|按钮|播放|暂停|html/iu.test(input.studentText)
+  const mermaid = !interactive && /mermaid|流程图|关系图|时间线|状态机|分类图/iu.test(input.studentText)
+  const renderer: VisualPayload['renderer'] = interactive ? 'html' : mermaid ? 'mermaid' : 'svg'
+  const languageHint = renderer === 'html'
+    ? '一个自包含 HTML 片段（不含 doctype/html/head/body 外壳）'
+    : renderer === 'mermaid'
+      ? '一段 Mermaid 源码'
+      : '一个自包含 SVG（不要完整 HTML 文档）'
+  const request = {
     system: VISUAL_SYSTEM_PROMPT,
     messages: [{
-      role: 'user',
+      role: 'user' as const,
       text: [
+        `任务：为下面的教学场景生成${languageHint}，用 \`\`\`${renderer} 代码块输出，源码必须完整。`,
         `课程：${input.courseTitle}`,
         input.conceptTitle === undefined ? '' : `当前概念：${input.conceptTitle}`,
         `学生本轮请求：${input.studentText}`,
-        `主教学回复节选：${input.teachingText.slice(0, 1_200)}`,
+        `主教学回复节选：${input.teachingText.slice(0, 800)}`,
         '',
-        '请生成本轮最合适的可视化。只输出两个标记区块和简短源码；源码必须完整。',
+        '只输出代码块，不要解释。',
       ].filter(line => line !== '').join('\n'),
     }],
-    maxTokens: 6_000,
-    purpose: 'visual',
+    maxTokens: 12_000,
+    temperature: 0.2,
+    purpose: 'visual' as const,
     sessionId: input.sessionId,
-    language: 'zh',
-  }, signal)
-  const fence = extractFence(completion.text)
+    language: 'zh' as const,
+  }
+  let completion = await model.complete(request, signal)
+  let fence = extractFence(completion.text)
+  if (fence === undefined) {
+    // One strict retry: some models emit analysis only on the first attempt.
+    completion = await model.complete({
+      ...request,
+      messages: [
+        ...request.messages,
+        { role: 'assistant' as const, text: completion.text.slice(0, 2_000) },
+        { role: 'user' as const, text: `上次没有输出完整可解析的 ${renderer} 源码。现在只输出一个完整的 \`\`\`${renderer} 代码块，不要任何其他文字。` },
+      ],
+    }, signal)
+    fence = extractFence(completion.text)
+  }
   if (fence === undefined) return undefined
   const source = normalizeSource(fence.source)
   if (source === undefined) return undefined
   const brief = parseBrief(completion.text)
-  const renderer = (() => {
-    const value = stringField(brief, 'renderer')
-    if (value === 'svg' || value === 'html' || value === 'mermaid') return value
-    return fence.renderer
-  })()
-  const title = stringField(brief, 'title')
+  const heading = /^#{1,4}\s+(.+)$/mu.exec(input.teachingText)?.[1]?.trim()
+  const title = stringField(brief, 'title') ?? input.conceptTitle ?? heading
+  const caption = stringField(brief, 'caption')
+  const observe = stringField(brief, 'observe')
+  const formula = stringField(brief, 'formula')
+  const conditions = conditionsField(brief)
   const payload: VisualPayload = {
     type: 'visual',
-    renderer,
+    renderer: fence.renderer,
     source,
     ...(title === undefined ? {} : { title: title.slice(0, 120) }),
-    ...(stringField(brief, 'caption') === undefined ? {} : { caption: stringField(brief, 'caption')!.slice(0, 300) }),
-    ...(stringField(brief, 'observe') === undefined ? {} : { observe: stringField(brief, 'observe')!.slice(0, 300) }),
-    ...(stringField(brief, 'formula') === undefined ? {} : { formula: stringField(brief, 'formula')!.slice(0, 1_000) }),
-    ...(conditionsField(brief).length === 0 ? {} : { conditions: conditionsField(brief) }),
+    ...(caption === undefined ? {} : { caption: caption.slice(0, 300) }),
+    ...(observe === undefined ? {} : { observe: observe.slice(0, 300) }),
+    ...(formula === undefined ? {} : { formula: formula.slice(0, 1_000) }),
+    ...(conditions.length === 0 ? {} : { conditions }),
     ...(typeof brief['visualType'] === 'string' ? { visualType: brief['visualType'] as VisualPayload['visualType'] } : {}),
-    ...(typeof brief['interactive'] === 'boolean' ? { interactive: brief['interactive'] } : {}),
+    ...(interactive ? { interactive: true } : {}),
     ...(typeof brief['height'] === 'number' && Number.isFinite(brief['height'])
       ? { height: Math.max(120, Math.min(2_000, Math.round(brief['height']))) }
       : {}),
