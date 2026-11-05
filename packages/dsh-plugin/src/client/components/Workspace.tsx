@@ -20,7 +20,7 @@ import {
 } from '../api.ts'
 import {
   INITIAL_WORKSPACE_STATE, computeCourseProgress, draftConceptCount, isChatBusy, needsCourseSetup,
-  selectedActivity, sortedReview, workspaceReducer, type WorkspaceNotice,
+  selectedActivity, sortedReview, visualAutoExpand, workspaceReducer, type WorkspaceNotice,
 } from '../state.ts'
 import { Banner, ErrorBanner, Spinner } from './Banner.tsx'
 import { ChatPanel, QUICK_ACTION_PROMPTS, type QuickAction } from './ChatPanel.tsx'
@@ -129,6 +129,23 @@ export function TeachingWorkspace(props: {
     // Bootstrap runs once for the panel lifetime.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  /** Visual activities already auto-revealed; a manual re-collapse must stick. */
+  const seenVisualActivityIds = useRef<ReadonlySet<string>>(new Set())
+  useEffect(() => {
+    const decision = visualAutoExpand({
+      activities: state.activities,
+      seenVisualIds: seenVisualActivityIds.current,
+      rightCollapsed: state.rightCollapsed,
+    })
+    if (decision.seenVisualIds !== seenVisualActivityIds.current) {
+      seenVisualActivityIds.current = decision.seenVisualIds
+    }
+    if (decision.expand) {
+      // A new visual activity arrived while the teaching column was collapsed.
+      dispatch({ type: 'ui/collapse', panel: 'right', collapsed: false })
+    }
+  }, [state.activities, state.rightCollapsed])
 
   // Persist the plugin-column layout choice.
   useEffect(() => {

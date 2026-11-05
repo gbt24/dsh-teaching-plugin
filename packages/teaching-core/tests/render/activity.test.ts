@@ -23,6 +23,7 @@ const VALID_PAYLOADS: ActivityPayload[] = [
   { type: 'proof-task', claim: 'c', assumptions: ['a'], rubric: [{ id: 'r', label: 'l', weight: 1 }] },
   { type: 'open-question', prompt: 'p', rubric: [{ id: 'r', label: 'l', weight: 1 }] },
   { type: 'experiment-note', title: 't', markdown: 'm', limitations: ['l'] },
+  { type: 'visual', renderer: 'svg', source: '<svg xmlns="http://www.w3.org/2000/svg"></svg>' },
 ]
 
 test('every declared activity kind has a valid payload', () => {
@@ -176,5 +177,24 @@ test('mountActivity accepts a full LessonActivity record', () => {
   assert.match(shim.textContent, /来自 Host 的活动/u)
   assert.equal(shim.getAttribute('data-activity-id'), 'act-9')
   assert.equal(shim.getAttribute('data-activity-revision'), '2')
+  mounted.dispose()
+})
+
+
+test('mountActivity dispatches the visual renderer without touching script policy', () => {
+  const document = createTestDocument()
+  const container = asShim(document.createElement('div'))
+  const payload = VALID_PAYLOADS[10] as Extract<ActivityPayload, { type: 'visual' }>
+  const mounted = mountActivity(container as unknown as HTMLElement, {
+    payload,
+    title: '可视化活动',
+    verification: { kind: 'none', note: '只观察' },
+  }, { document })
+  const shim = asShim(mounted.element)
+  const iframe = shim.findOne('iframe')
+  assert.ok(iframe !== undefined, 'visual iframe mounts')
+  assert.equal(iframe.attributes.get('sandbox'), '')
+  assert.match(iframe.attributes.get('srcdoc') ?? '', /Content-Security-Policy/u)
+  assert.deepEqual(mounted.getState(), {})
   mounted.dispose()
 })

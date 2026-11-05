@@ -86,6 +86,7 @@ const KIND_LABELS: Readonly<Record<LessonActivity['kind'], string>> = {
   'proof-task': '证明任务',
   'open-question': '开放问题',
   'experiment-note': '实验记录',
+  visual: '可视化',
 }
 
 /** Labels for persisted run states. */

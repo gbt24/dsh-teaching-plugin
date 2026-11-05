@@ -21,6 +21,11 @@ export { mountDerivation } from './derivation.ts'
 export type { DerivationHandle, DerivationMountOptions } from './derivation.ts'
 export { createClientRunId, mountCodeRun } from './code-run.ts'
 export type { CodeRunCheckView, CodeRunHandle, CodeRunMountOptions, CodeRunResultView, CodeRunRunRequest } from './code-run.ts'
+export {
+  VISUAL_CSP_BASE, VISUAL_LIMITS, VISUAL_RENDERERS, VISUAL_TYPES, buildVisualCsp,
+  buildVisualDocument, looksLikeFullHtmlDocument, mountVisual, validateVisualPayload, visualSandbox,
+} from './visual.ts'
+export type { VisualHandle, VisualMountOptions } from './visual.ts'
 export { mountQuiz } from './quiz.ts'
 export type { QuizHandle, QuizMountOptions } from './quiz.ts'
 export {

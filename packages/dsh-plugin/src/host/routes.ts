@@ -19,7 +19,8 @@ import type {
 } from '@deepseek-teaching/core'
 import {
   CourseRepository, LearningRepository, ProfileRepository, SessionRepository,
-  activityFile, activityStateFile, apiPath, conceptId as newConceptId, courseId as newCourseId,
+  activityFile, activityStateFile, activityId as newActivityId, apiPath, conceptId as newConceptId,
+  courseId as newCourseId,
   courseRevisionId as newCourseRevisionId, nowIso, runFile,
 } from '@deepseek-teaching/core'
 import type { LocalState } from '@deepseek-teaching/core'
@@ -32,6 +33,7 @@ import { detectRequestedForm } from '@deepseek-teaching/core/teaching'
 import type { TaskManager } from './tasks.ts'
 import type { WebBridge } from './web.ts'
 import type { SettingsStore } from './settings.ts'
+import { generateVisual } from './visual-service.ts'
 import {
   buildSummaryInput, estimateCompactedTokens, estimateMessageTokens, estimateTokens,
   resolveCompactionPolicy, selectCompactionRange, SUMMARY_MAX_TOKENS, TEACHING_COMPACTION_INSTRUCTION,
@@ -1342,6 +1344,88 @@ ${buildSummaryInput(selection.compacted)}
               throw appError(event.error.code, event.error.message, event.error.details)
             }
           }
+          // Dedicated visual generation: the main teaching JSON is a bad carrier
+          // for large SVG/HTML source (escaped quotes/newlines get truncated).
+          // When the student asked for a visual and no visual activity arrived,
+          // ask a separate model call for a compact brief + fenced source.
+          if (!createdActivities.some(activity => activity.kind === 'visual') && wantsVisual(input.text)) {
+            send({ type: 'progress', label: '生成可视化' })
+            try {
+              const generated = await generateVisual(services.model, {
+                courseTitle: course.title,
+                ...(currentConcept === undefined ? {} : { conceptTitle: currentConcept.title }),
+                studentText: input.text.trim(),
+                teachingText: finalText,
+                language: profile.language,
+                sessionId: session.id,
+              }, controller.signal)
+              if (generated !== undefined) {
+                const now = nowIso()
+                const heading = /^#{1,4}\s+(.+)$/mu.exec(finalText)?.[1]?.trim()
+                const title = generated.payload.title ?? heading ?? currentConcept?.title ?? '可视化演示'
+                const activity: LessonActivity = {
+                  id: newActivityId(),
+                  kind: 'visual',
+                  sessionId: session.id,
+                  courseId: course.id,
+                  conceptIds: currentConcept === undefined ? [] : [currentConcept.id],
+                  goal: currentConcept?.title ?? title,
+                  title,
+                  createdAt: now,
+                  updatedAt: now,
+                  revision: 1,
+                  status: 'active',
+                  sourceRefs: hits.slice(0, 3).map(hit => hit.anchor),
+                  verification: { kind: 'none', note: '模型生成的可视化；需人工核对数学/事实正确性' },
+                  independent: false,
+                  payload: generated.payload,
+                }
+                await services.sessions.saveActivity(activity)
+                createdActivities.push(activity)
+                send({ type: 'activity', activity })
+              } else {
+                limitations.push('可视化生成未返回可用的自包含源码，本轮按文字讲解继续。')
+              }
+            } catch (cause) {
+              const message = cause instanceof Error ? cause.message : String(cause)
+              limitations.push(`可视化生成失败（${message}），本轮按文字讲解继续。`)
+            }
+          }
+          // Robust fallback: when the model draws a diagram in prose (fenced
+          // svg/html/mermaid) but the metadata fails or omits the activity, turn
+          // the fence into a first-class visual activity so the right panel shows it.
+          if (!createdActivities.some(activity => activity.kind === 'visual')) {
+            const fenced = extractVisualFence(finalText)
+            if (fenced !== undefined) {
+              const now = nowIso()
+              const heading = /^#{1,4}\s+(.+)$/mu.exec(finalText)?.[1]?.trim()
+              const activity: LessonActivity = {
+                id: newActivityId(),
+                kind: 'visual',
+                sessionId: session.id,
+                courseId: course.id,
+                conceptIds: currentConcept === undefined ? [] : [currentConcept.id],
+                goal: currentConcept?.title ?? (heading ?? '可视化演示'),
+                title: heading ?? '可视化演示',
+                createdAt: now,
+                updatedAt: now,
+                revision: 1,
+                status: 'active',
+                sourceRefs: hits.slice(0, 3).map(hit => hit.anchor),
+                verification: { kind: 'none', note: '模型生成的可视化；需人工核对数学/事实正确性' },
+                independent: false,
+                payload: {
+                  type: 'visual',
+                  renderer: fenced.renderer,
+                  source: fenced.source,
+                  ...(heading === undefined ? {} : { title: heading }),
+                },
+              }
+              await services.sessions.saveActivity(activity)
+              createdActivities.push(activity)
+              send({ type: 'activity', activity })
+            }
+          }
           const usage = services.takeUsage(session.id)
           const teacher = teacherMessage({
             sessionId: session.id,
@@ -2166,6 +2250,21 @@ async function validateAttempt(
     }
   }
   return undefined
+}
+
+/** Heuristic: the student explicitly asked for a visual/交互演示. */
+function wantsVisual(text: string): boolean {
+  return /画(?:一|个|张|幅|出|图|下)|可视化|示意图|图表|动画|svg|mermaid|交互(?:式|图)|拖动|参数(?:滑杆|调节)/iu.test(text)
+}
+
+/** Extract the first prose-level visual fence (`sv/h/html/mermaid`) from visible text. */
+function extractVisualFence(text: string): { renderer: 'svg' | 'html' | 'mermaid'; source: string } | undefined {
+  const match = /```(svg|html|mermaid)[^\n]*\n([\s\S]*?)```/iu.exec(text)
+  if (match === null) return undefined
+  const source = (match[2] ?? '').trim()
+  if (source === '' || source.length > 200_000) return undefined
+  if (/<!doctype\s+html|<html[\s>]|<\/html\s*>/iu.test(source)) return undefined
+  return { renderer: (match[1] ?? 'svg').toLowerCase() as 'svg' | 'html' | 'mermaid', source }
 }
 
 /** Empty learning record for a course. */

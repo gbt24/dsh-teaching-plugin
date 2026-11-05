@@ -11,7 +11,7 @@ import type {
   ActivityKind, ActivityPayload, ActivityVerification, DerivationPayload, DerivationStep, FigurePayload,
   GraphPayload, PlotColor, PlotParam, PlotSeries, ProofTaskPayload, QuizPayload,
   ReadingTaskPayload, RubricCriterion, ExplanationPayload, CodeRunPayload, CodeTest,
-  ExperimentNotePayload, OpenQuestionPayload,
+  ExperimentNotePayload, OpenQuestionPayload, VisualPayload, VisualRenderer, VisualType,
 } from '../contracts/activity.ts'
 import type { ConceptId } from '../contracts/ids.ts'
 import type { AppError, AppErrorCode } from '../contracts/result.ts'
@@ -490,6 +490,7 @@ const KIND_BY_PAYLOAD: Readonly<Record<string, ActivityKind>> = {
   'proof-task': 'proof-task',
   'open-question': 'open-question',
   'experiment-note': 'experiment-note',
+  visual: 'visual',
 }
 
 const KIND_TITLES: Readonly<Record<string, string>> = {
@@ -504,9 +505,27 @@ const KIND_TITLES: Readonly<Record<string, string>> = {
   'proof-task': '证明练习',
   'open-question': '开放问题',
   'experiment-note': '实验记录',
+  visual: '可视化讲解',
 }
 
 const PLOT_COLORS = new Set<PlotColor>(['blue', 'orange', 'green', 'purple', 'red', 'gray'])
+
+/* 可视化活动（visual）的归一化边界：自包含、可沙箱渲染、尺寸有界。 */
+const VISUAL_RENDERERS = new Set<VisualRenderer>(['svg', 'html', 'mermaid'])
+const VISUAL_TYPES = new Set<VisualType>([
+  'diagram', 'flow', 'timeline', 'tree', 'map', 'chart', 'animation', 'interactive', 'other',
+])
+const VISUAL_SOURCE_MAX = 200_000
+const VISUAL_HEIGHT_MIN = 120
+const VISUAL_HEIGHT_MAX = 2000
+const VISUAL_CONDITIONS_MAX = 8
+const VISUAL_CONDITION_CHARS = 300
+/** 完整 HTML 文档（不是可嵌入片段）。 */
+const FULL_HTML_PATTERN = /^\s*(?:<!doctype\s+html|<html[\s>])/i
+/** 外部资源引用（CDN/字体/脚本/图片/网络）；自包含视觉不允许。 */
+const EXTERNAL_RESOURCE_PATTERN = /(?:\bsrc|\bhref|\burl)\s*[=:(]\s*['"]?\s*(?:https?:)?\/\//i
+const SCRIPT_SRC_PATTERN = /<script[^>]*\bsrc\s*=/i
+const EXTERNAL_ONLY_PATTERN = /^\s*https?:\/\/\S+\s*$/i
 
 function buildRubric(value: unknown): RubricCriterion[] | undefined {
   if (!Array.isArray(value) || value.length === 0) return undefined
@@ -812,6 +831,73 @@ function buildExperimentNotePayload(payload: Record<string, unknown>): Experimen
   }
 }
 
+/**
+ * 校验并归一化可视化活动 payload。
+ *
+ * 安全/质量边界：只接受自包含片段（SVG/HTML fragment/Mermaid），拒绝完整 HTML
+ * 文档、外部 CDN/字体/库/网络引用与纯外链；尺寸、条件数量与文本长度有界；
+ * 未知字段忽略。不合格返回中文原因，由上层丢弃活动并写入 uncertainty。
+ */
+function buildVisualPayload(payload: Record<string, unknown>): VisualPayload | string {
+  const rendererRaw = asString(payload.renderer, 20)
+  if (rendererRaw === undefined) return 'visual 缺少 renderer（svg/html/mermaid）'
+  if (!VISUAL_RENDERERS.has(rendererRaw as VisualRenderer)) {
+    return `visual renderer「${rendererRaw}」不合法（只支持 svg/html/mermaid）`
+  }
+  const renderer = rendererRaw as VisualRenderer
+
+  if (typeof payload.source !== 'string') return 'visual 缺少 source（自包含片段）'
+  const source = payload.source.trim()
+  if (source === '') return 'visual source 不能为空'
+  if (source.length > VISUAL_SOURCE_MAX) {
+    return `visual source 超过 ${VISUAL_SOURCE_MAX} 字符上限（请精简为教学所需的最小片段）`
+  }
+  if (EXTERNAL_ONLY_PATTERN.test(source)) {
+    return 'visual source 不能是外部链接，必须是可沙箱渲染的自包含片段'
+  }
+  if (FULL_HTML_PATTERN.test(source) || /<\/html\s*>/i.test(source)) {
+    return 'visual source 必须是自包含片段，不能是完整 HTML 文档（不要 doctype/html/head/body 外壳）'
+  }
+  if (SCRIPT_SRC_PATTERN.test(source) || EXTERNAL_RESOURCE_PATTERN.test(source)) {
+    return 'visual source 不能引用外部 CDN/字体/库/网络资源；请内联为自包含片段'
+  }
+
+  const visualTypeRaw = asString(payload.visualType, 30)
+  if (visualTypeRaw !== undefined && !VISUAL_TYPES.has(visualTypeRaw as VisualType)) {
+    return `visual visualType「${visualTypeRaw}」不合法（可用：diagram/flow/timeline/tree/map/chart/animation/interactive/other）`
+  }
+  const title = asString(payload.title, 120)
+  const caption = asString(payload.caption, 300) ?? title
+  const observe = asString(payload.observe, 300)
+  const formula = asString(payload.formula, 1000)
+  const fallbackText = asString(payload.fallbackText, 1000)
+  const alt = asString(payload.alt, 300) ?? title ?? caption ?? '教学可视化'
+  const conditions = asStringArray(payload.conditions, VISUAL_CONDITIONS_MAX, VISUAL_CONDITION_CHARS)
+  const heightRaw = asFiniteNumber(payload.height)
+  const height = heightRaw === undefined
+    ? undefined
+    : Math.min(VISUAL_HEIGHT_MAX, Math.max(VISUAL_HEIGHT_MIN, Math.round(heightRaw)))
+  // HTML 片段若包含脚本则默认按交互处理（沙箱策略不同）；显式 interactive 优先。
+  const interactive = asBoolean(payload.interactive)
+    ?? (renderer === 'html' && /<script[\s>]/i.test(source))
+
+  return {
+    type: 'visual',
+    renderer,
+    source,
+    ...(title === undefined ? {} : { title }),
+    ...(visualTypeRaw === undefined ? {} : { visualType: visualTypeRaw as VisualType }),
+    ...(caption === undefined ? {} : { caption }),
+    ...(observe === undefined ? {} : { observe }),
+    ...(formula === undefined ? {} : { formula }),
+    ...(conditions === undefined ? {} : { conditions }),
+    interactive,
+    ...(height === undefined ? {} : { height }),
+    ...(fallbackText === undefined ? {} : { fallbackText }),
+    alt,
+  }
+}
+
 function verificationFor(kind: ActivityProposal['kind']): ActivityVerification {
   switch (kind) {
     case 'quiz':
@@ -822,6 +908,8 @@ function verificationFor(kind: ActivityProposal['kind']): ActivityVerification {
       return { kind: 'rubric', note: '按 rubric 评价，局限会记录并允许学生异议' }
     case 'open-question':
       return { kind: 'open', note: '按 rubric 评价，保留判断依据与局限' }
+    case 'visual':
+      return { kind: 'none', note: '可视化用于建立直觉/展示结构，不单独作为掌握证据' }
     default:
       return { kind: 'none', note: '探索/展示型活动，不单独作为掌握证据' }
   }
@@ -916,6 +1004,12 @@ export function normalizeActivityProposal(
     }
     case 'experiment-note': {
       const built = buildExperimentNotePayload(payloadRaw)
+      if (typeof built === 'string') return { warnings: [`活动 payload 不合法：${built}`] }
+      payload = built
+      break
+    }
+    case 'visual': {
+      const built = buildVisualPayload(payloadRaw)
       if (typeof built === 'string') return { warnings: [`活动 payload 不合法：${built}`] }
       payload = built
       break

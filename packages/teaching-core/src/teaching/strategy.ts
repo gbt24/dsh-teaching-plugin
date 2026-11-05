@@ -332,23 +332,28 @@ export function buildNextActions(
 /** 活动类型是否适合本轮任务形态与阶段（活动要服务于学习目标）。 */
 export function activityKindCompatible(plan: TeachingPlan, stage: LearningStage, kind: ActivityKind): boolean {
   const practiceLike = stage === 'practice' || stage === 'transfer'
+  // 纯展示/讲解型活动不适合练习阶段；visual 可以是交互式练习产物，不在此列。
   if (practiceLike && (kind === 'explanation' || kind === 'static-figure' || kind === 'experiment-note')) {
     return false
   }
+  // 目标设定阶段不主动塞视觉活动；idle 仍可能是学生的随问随学/看图请求，
+  // 因此允许 visual（Host 仍会按资料与阶段给出不确定性说明）。
+  if (kind === 'visual' && stage === 'goal-setting') return false
   switch (plan.taskShape) {
     case 'proof':
-      return ['proof-task', 'derivation', 'quiz', 'open-question', 'explanation'].includes(kind)
+      return ['proof-task', 'derivation', 'quiz', 'open-question', 'explanation', 'visual'].includes(kind)
     case 'procedure':
-      return ['code-run', 'quiz', 'interactive-graph', 'explanation', 'derivation'].includes(kind)
+      return ['code-run', 'quiz', 'interactive-graph', 'explanation', 'derivation', 'visual'].includes(kind)
     case 'reading':
-      return ['reading-task', 'quiz', 'open-question', 'explanation'].includes(kind)
+      return ['reading-task', 'quiz', 'open-question', 'explanation', 'visual'].includes(kind)
     case 'contrast':
-      return ['quiz', 'open-question', 'explanation', 'static-figure', 'interactive-graph'].includes(kind)
+      return ['quiz', 'open-question', 'explanation', 'static-figure', 'interactive-graph', 'visual'].includes(kind)
     case 'open-argument':
-      return ['open-question', 'proof-task', 'explanation', 'reading-task'].includes(kind)
+      return ['open-question', 'proof-task', 'explanation', 'reading-task', 'visual'].includes(kind)
     case 'problem-set':
-      return ['quiz', 'proof-task', 'code-run', 'open-question', 'explanation'].includes(kind)
+      return ['quiz', 'proof-task', 'code-run', 'open-question', 'explanation', 'visual'].includes(kind)
     default:
+      // 概念/默认形态：visual 可用于讲解或练习；其余沿用原有“默认允许”策略。
       return true
   }
 }

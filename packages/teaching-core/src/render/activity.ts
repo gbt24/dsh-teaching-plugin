@@ -10,7 +10,7 @@
 import type {
   ActivityPayload, ActivityState, ActivityVerification, DerivationPayload, ExplanationPayload,
   ExperimentNotePayload, FigurePayload, GraphPayload, LessonActivity, OpenQuestionPayload,
-  ProofTaskPayload, QuizPayload, ReadingTaskPayload, RubricCriterion,
+  ProofTaskPayload, QuizPayload, ReadingTaskPayload, RubricCriterion, VisualPayload,
 } from '../contracts/activity.ts'
 import type { ActivityId } from '../contracts/ids.ts'
 import { err, ok, type Result } from '../contracts/result.ts'
@@ -23,6 +23,7 @@ import { compileExpression } from './expr.ts'
 import { mountFigure } from './figure.ts'
 import { mountGraph } from './graph.ts'
 import { mountQuiz } from './quiz.ts'
+import { mountVisual, validateVisualPayload } from './visual.ts'
 import {
   appendAnchors, mountExplanation, mountExperimentNote, mountOpenQuestion, mountProofTask,
   mountReadingTask,
@@ -331,6 +332,7 @@ export function validateActivityPayload(input: unknown): Result<ActivityPayload>
     case 'open-question': return validateOpenQuestion(payload)
     case 'explanation': return validateExplanation(payload)
     case 'experiment-note': return validateExperimentNote(payload)
+    case 'visual': return validateVisualPayload(payload)
     default: return validationError(`不支持的活动类型「${payload.type}」`)
   }
 }
@@ -510,6 +512,11 @@ export function mountActivity(
     }
     case 'experiment-note': {
       const handle = mountExperimentNote(content, payload, { document })
+      disposers.push(() => handle.dispose())
+      break
+    }
+    case 'visual': {
+      const handle = mountVisual(content, payload as VisualPayload, { document, showTitle: false })
       disposers.push(() => handle.dispose())
       break
     }

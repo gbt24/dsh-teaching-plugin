@@ -111,6 +111,7 @@ const KIND_BY_TYPE: Readonly<Record<ActivityPayload['type'], LessonActivity['kin
   'proof-task': 'proof-task',
   'open-question': 'open-question',
   'experiment-note': 'experiment-note',
+  visual: 'visual',
 }
 
 /** Build a complete activity record around one payload. */

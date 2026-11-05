@@ -639,6 +639,91 @@ describe('teaching host routes', () => {
     assert.deepEqual(confirmed.revision.chapters[0]?.conceptIds, [first])
   })
 
+  it('generates a visual through the dedicated visual call when the student asks for one', async () => {
+    const teacher = [
+      '我先把这张图要说明的关系讲清楚。',
+      '',
+      '<<<TEACHING_META>>>',
+      JSON.stringify({
+        intent: 'explain', stage: 'teaching', conceptIds: [],
+        evidence: { usedMaterialRefs: [], usedCrossCourseRefs: [], usedWebRefs: [], usedModelKnowledge: true },
+        conflicts: [], activity: null, nextActions: [], uncertainty: [],
+      }),
+    ].join('\n')
+    const visualReply = [
+      '<<<VISUAL_BRIEF>>>',
+      JSON.stringify({
+        renderer: 'svg', title: '抛物线示意', caption: '开口向上的抛物线。',
+        observe: '注意顶点位置。', conditions: ['只展示有限区间'], visualType: 'diagram', height: 360,
+      }),
+      '<<<VISUAL_SOURCE>>>',
+      '```svg',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M10 90 Q50 10 90 90" fill="none" stroke="blue"/></svg>',
+      '```',
+    ].join('\n')
+    const harness = await createHarness([
+      { kind: 'text', text: DRAFT_REPLY },
+      { kind: 'text', text: teacher },
+      { kind: 'text', text: visualReply },
+    ])
+    const { courseId } = await preparedCourse(harness)
+    const session = unwrap<{ session: { id: string } }>((
+      await harness.call('sessions.create', { body: { courseId } })
+    ).json)
+    const response = await harness.call('chat.send', {
+      body: { sessionId: session.session.id, text: '画一张抛物线示意图' },
+    })
+    const events = await readSse(response.response)
+    const activityEvent = events.find(event => event.type === 'activity') as
+      | { activity: { kind: string; payload: { type: string; source: string; title?: string } } }
+      | undefined
+    assert.equal(activityEvent?.activity.kind, 'visual')
+    assert.equal(activityEvent?.activity.payload.type, 'visual')
+    assert.ok(activityEvent?.activity.payload.source.includes('<svg'))
+    assert.equal(activityEvent?.activity.payload.title, '抛物线示意')
+  })
+
+  it('creates a visual activity from a prose SVG fence when metadata has no activity', async () => {
+    const reply = [
+      '看这张示意图：',
+      '',
+      '```svg',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="blue"/></svg>',
+      '```',
+      '',
+      '图里是一个圆。',
+      '',
+      '<<<TEACHING_META>>>',
+      JSON.stringify({
+        intent: 'explain', stage: 'teaching', conceptIds: [],
+        evidence: { usedMaterialRefs: [], usedCrossCourseRefs: [], usedWebRefs: [], usedModelKnowledge: true },
+        conflicts: [], activity: null, nextActions: [], uncertainty: [],
+      }),
+    ].join('\n')
+    const harness = await createHarness([
+      { kind: 'text', text: DRAFT_REPLY },
+      { kind: 'text', text: reply },
+    ])
+    const { courseId } = await preparedCourse(harness)
+    const session = unwrap<{ session: { id: string } }>((
+      await harness.call('sessions.create', { body: { courseId } })
+    ).json)
+    const response = await harness.call('chat.send', { body: { sessionId: session.session.id, text: '画一个圆' } })
+    const events = await readSse(response.response)
+    const activityEvent = events.find(event => event.type === 'activity') as
+      | { activity: { kind: string; payload: { type: string; renderer: string; source: string } } }
+      | undefined
+    assert.equal(activityEvent?.activity.kind, 'visual')
+    assert.equal(activityEvent?.activity.payload.renderer, 'svg')
+    assert.ok(activityEvent?.activity.payload.source.includes('<circle'))
+    const view = unwrap<{ activities: { kind: string; payload: { type: string } }[]; session: { position: { activityId?: string } } }>((
+      await harness.call('sessions.get', { method: 'GET', query: { sessionId: session.session.id } })
+    ).json)
+    assert.equal(view.activities.length, 1)
+    assert.equal(view.activities[0]?.payload.type, 'visual')
+    assert.equal(view.session.position.activityId, (activityEvent?.activity as { id?: string }).id)
+  })
+
   it('lists models, applies a plugin model override and resets to the host default', async () => {
     const harness = await createHarness([])
     const initial = unwrap<{

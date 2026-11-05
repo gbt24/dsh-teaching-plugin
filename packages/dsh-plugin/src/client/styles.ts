@@ -363,6 +363,28 @@ export const TEACHING_CSS = `
 .ai-compacted-block > summary { cursor: pointer; opacity: 0.8; font-size: 11px; }
 .ai-compacted-messages { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; opacity: 0.85; }
 .ai-compress-modal { max-width: 560px; }
+.teaching-visual { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25));
+  border-radius: 10px; padding: 10px 12px; background: var(--dsw-alias-bg-base, transparent); }
+.teaching-visual-title { color: inherit; }
+.teaching-visual-caption { color: inherit; }
+.teaching-visual-observe { color: var(--dsw-alias-state-warn-primary, #b45309); }
+.teaching-visual-frame { display: block; width: 100%; border: 0; border-radius: 8px;
+  background: transparent; }
+.teaching-visual-formula { margin: 4px 0; overflow-x: auto; }
+.teaching-visual-conditions { color: var(--dsw-alias-state-warn-primary, #b45309); }
+.teaching-visual-fallback { white-space: pre-wrap; }
+.teaching-visual-limitation { opacity: 0.65; }
+.teaching-visual-error { color: var(--dsw-alias-state-error-primary, #b91c1c); }
+.ai-chat-visuals { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.ai-chat-visual { border: 1px dashed var(--dsw-alias-border-l2, rgba(127,127,127,0.35));
+  border-radius: 8px; padding: 8px; background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.05)); }
+.ai-chat-visual-caption { font-size: 11px; opacity: 0.72; margin-bottom: 6px; }
+.ai-chat-visual-error { font-size: 11px; color: var(--dsw-alias-state-error-primary, #b91c1c); }
+.ai-chat-visual-source { margin-top: 4px; font-size: 11px; }
+.ai-chat-visual-source > summary { cursor: pointer; opacity: 0.7; }
+.ai-chat-visual-source pre { margin: 4px 0 0; padding: 6px; border-radius: 6px; max-height: 240px;
+  overflow: auto; white-space: pre-wrap; word-break: break-word;
+  background: var(--dsw-alias-markdown-code-block, rgba(127,127,127,0.1)); font-size: 11px; }
 .ai-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:60}
 .ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
 .ai-modal h3{margin:0 0 8px;font-size:15px}

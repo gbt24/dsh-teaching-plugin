@@ -6880,23 +6880,23 @@ function chapterRoleOf(rawRole, title) {
 }
 function validateAnchors(rawAnchors, digest) {
   const anchors = [];
-  let invalid = 0;
-  if (!Array.isArray(rawAnchors)) return { anchors, invalid };
+  let invalid2 = 0;
+  if (!Array.isArray(rawAnchors)) return { anchors, invalid: invalid2 };
   for (const rawAnchor of rawAnchors.slice(0, 6)) {
     const record = asRecord(rawAnchor);
     if (record === void 0) {
-      invalid += 1;
+      invalid2 += 1;
       continue;
     }
     const documentId = record["documentId"];
     const unitId2 = record["unitId"];
     if (typeof documentId !== "string" || typeof unitId2 !== "string") {
-      invalid += 1;
+      invalid2 += 1;
       continue;
     }
     const found = digest.anchorIndex.get(`${documentId}|${unitId2}`);
     if (found === void 0) {
-      invalid += 1;
+      invalid2 += 1;
       continue;
     }
     anchors.push({
@@ -6909,7 +6909,7 @@ function validateAnchors(rawAnchors, digest) {
       label: `${found.document.title} \xB7 ${locatorDescription(found.unit.locator)}`
     });
   }
-  return { anchors, invalid };
+  return { anchors, invalid: invalid2 };
 }
 function validateStructureValue(value, digest, input, limits) {
   const record = asRecord(value);
@@ -6957,8 +6957,8 @@ function validateStructureValue(value, digest, input, limits) {
       const conceptTitle = typeof conceptRecord["title"] === "string" ? conceptRecord["title"].trim().slice(0, 120) : "";
       if (conceptTitle === "" || seenTitles.has(conceptTitle)) continue;
       seenTitles.add(conceptTitle);
-      const { anchors, invalid } = validateAnchors(conceptRecord["anchors"], digest);
-      invalidAnchors += invalid;
+      const { anchors, invalid: invalid2 } = validateAnchors(conceptRecord["anchors"], digest);
+      invalidAnchors += invalid2;
       if (anchors.length === 0) anchorlessConcepts += 1;
       concepts.push({
         title: conceptTitle,
@@ -35746,19 +35746,20 @@ function activityKindCompatible(plan, stage, kind) {
   if (practiceLike && (kind === "explanation" || kind === "static-figure" || kind === "experiment-note")) {
     return false;
   }
+  if (kind === "visual" && stage === "goal-setting") return false;
   switch (plan.taskShape) {
     case "proof":
-      return ["proof-task", "derivation", "quiz", "open-question", "explanation"].includes(kind);
+      return ["proof-task", "derivation", "quiz", "open-question", "explanation", "visual"].includes(kind);
     case "procedure":
-      return ["code-run", "quiz", "interactive-graph", "explanation", "derivation"].includes(kind);
+      return ["code-run", "quiz", "interactive-graph", "explanation", "derivation", "visual"].includes(kind);
     case "reading":
-      return ["reading-task", "quiz", "open-question", "explanation"].includes(kind);
+      return ["reading-task", "quiz", "open-question", "explanation", "visual"].includes(kind);
     case "contrast":
-      return ["quiz", "open-question", "explanation", "static-figure", "interactive-graph"].includes(kind);
+      return ["quiz", "open-question", "explanation", "static-figure", "interactive-graph", "visual"].includes(kind);
     case "open-argument":
-      return ["open-question", "proof-task", "explanation", "reading-task"].includes(kind);
+      return ["open-question", "proof-task", "explanation", "reading-task", "visual"].includes(kind);
     case "problem-set":
-      return ["quiz", "proof-task", "code-run", "open-question", "explanation"].includes(kind);
+      return ["quiz", "proof-task", "code-run", "open-question", "explanation", "visual"].includes(kind);
     default:
       return true;
   }
@@ -35944,6 +35945,12 @@ function buildTeachingSystemPrompt(ctx) {
     "- \u8BCA\u65AD\uFF1A\u5F53\u5B66\u751F\u7B54\u6848\u9519\u8BEF\u6216\u542B\u7CCA\u65F6\uFF0C\u6307\u51FA\u5177\u4F53\u662F\u54EA\u4E00\u6B65/\u54EA\u4E2A\u524D\u63D0\u51FA\u9519\uFF08\u5F15\u7528\u5B66\u751F\u539F\u8BDD\uFF09\uFF0C\u7ED9\u4E00\u4E2A\u9488\u5BF9\u6027\u8FFD\u95EE\u6216\u8BCA\u65AD\u6D3B\u52A8\uFF0C\u800C\u4E0D\u662F\u53EA\u516C\u5E03\u6B63\u786E\u7B54\u6848\u3002",
     "- \u5B66\u60C5\u9002\u914D\uFF1A\u53C2\u8003\u300C\u5B66\u4E60\u72B6\u6001\u300D\u8C03\u6574\u6DF1\u5EA6\uFF1B\u5DF2\u638C\u63E1\u7684\u6982\u5FF5\u4E0D\u8981\u91CD\u590D\u957F\u7BC7\u8BB2\u89E3\uFF0C\u672A\u63A5\u89E6\u7684\u6982\u5FF5\u5148\u5EFA\u76F4\u89C9\u3002",
     "- \u4E0B\u4E00\u6B65\uFF1A\u7528 nextActions \u7ED9\u51FA 1\u20133 \u4E2A\u5B66\u751F\u53EF\u70B9\u7684\u4E0B\u4E00\u6B65\uFF08\u5982\u5F00\u59CB\u7EC3\u4E60\u3001\u770B\u63D0\u793A\u3001\u770B\u5B8C\u6574\u7B54\u6848\u3001\u56DE\u5230\u5F53\u524D\u7EC3\u4E60\uFF09\u3002",
+    "",
+    "## \u53EF\u89C6\u5316\u6559\u5B66\uFF08Host \u8D1F\u8D23\u751F\u6210\uFF09",
+    "- \u5148\u786E\u5B9A\u4E00\u4E2A\u6559\u5B66\u70B9\uFF1A\u63A7\u5236\u91CF\uFF08\u53EA\u4E3B\u52A8\u6539\u53D8\u4E00\u4E2A\u53C2\u6570\uFF09\u3001\u89C2\u6D4B\u91CF\u3001\u4E0D\u53D8\u91CF\u3001\u7ED3\u8BBA\u4E0E\u9002\u7528\u6761\u4EF6\uFF1B\u80FD\u7528\u4E00\u53E5\u8BDD\u8BF4\u660E\u201C\u6539\u53D8\u4EC0\u4E48\uFF0C\u6CE8\u610F\u89C2\u5BDF\u4EC0\u4E48\u201D\u3002",
+    "- \u666E\u901A\u51FD\u6570/\u7B80\u5355\u6570\u636E\u56FE\u4F18\u5148\u7528\u58F0\u660E\u5F0F graph/figure \u6D3B\u52A8\u3002\u7ED3\u6784\u3001\u51E0\u4F55\u3001\u6D41\u7A0B\u3001\u4EA4\u4E92\u6F14\u793A\u7B49\u9700\u8981\u81EA\u5B9A\u4E49\u7ED8\u5236\u65F6\uFF0C\u6B63\u6587\u7528\u4E00\u4E24\u53E5\u8BDD\u8BF4\u660E\u56FE\u8981\u5C55\u793A\u7684\u5173\u7CFB\u3001\u89C2\u5BDF\u91CD\u70B9\u548C\u5C40\u9650\uFF0C**\u4E0D\u8981\u5728\u4E3B\u56DE\u590D\u91CC\u5199 SVG/HTML/Mermaid \u6E90\u7801\uFF0C\u4E5F\u4E0D\u8981\u58F0\u79F0\u5DF2\u7ECF\u753B\u597D**\u2014\u2014Host \u4F1A\u8C03\u7528\u4E13\u95E8\u7684\u89C6\u89C9\u751F\u6210\u6B65\u9AA4\uFF0C\u628A\u5B89\u5168\u6C99\u7BB1\u4E2D\u7684\u53EF\u89C6\u5316\u663E\u793A\u5728\u53F3\u4FA7\u6559\u5B66\u533A\u3002",
+    "- \u89C6\u89C9\u662F\u76F4\u89C9\u8F85\u52A9\uFF0C\u4E0D\u662F\u8BC1\u660E\uFF1A\u4E0D\u8981\u58F0\u79F0\u201C\u56FE\u8BC1\u660E\u4E86\u7ED3\u8BBA\u201D\uFF1B\u6709\u9650\u56FE/\u6709\u9650\u6B65\u53EA\u80FD\u5C55\u793A\u8D8B\u52BF\uFF0C\u7ED3\u8BBA\u4ECD\u9700\u6587\u5B57\u63A8\u7406\u6216\u8BC1\u660E\uFF1B\u89C6\u89C9\u6D3B\u52A8\u4E0D\u5355\u72EC\u4F5C\u4E3A\u638C\u63E1\u8BC1\u636E\u3002",
+    "- \u6CA1\u6709\u89C6\u89C9\u6536\u76CA\u65F6\u7528\u6587\u5B57/\u8868\u683C\uFF0C\u4E0D\u8981\u4E3A\u4E86\u51D1\u56FE\u800C\u8981\u6C42\u53EF\u89C6\u5316\u3002",
     "",
     "## \u6D3B\u52A8\u63D0\u6848\u89C4\u5219\uFF08activity \u5B57\u6BB5\uFF09",
     "- \u6D3B\u52A8\u5FC5\u987B\u670D\u52A1\u4E8E\u672C\u8F6E\u5B66\u4E60\u76EE\u6807\uFF1Bkind \u4E0E payload.type \u5FC5\u987B\u5339\u914D\uFF0Cpayload \u53EA\u80FD\u5305\u542B\u4E0B\u5217\u58F0\u660E\u5F0F\u5B57\u6BB5\u3002",
@@ -36481,7 +36488,8 @@ var KIND_BY_PAYLOAD = {
   "reading-task": "reading-task",
   "proof-task": "proof-task",
   "open-question": "open-question",
-  "experiment-note": "experiment-note"
+  "experiment-note": "experiment-note",
+  visual: "visual"
 };
 var KIND_TITLES = {
   explanation: "\u8BB2\u89E3\u5361",
@@ -36494,9 +36502,31 @@ var KIND_TITLES = {
   "reading-task": "\u9605\u8BFB\u4EFB\u52A1",
   "proof-task": "\u8BC1\u660E\u7EC3\u4E60",
   "open-question": "\u5F00\u653E\u95EE\u9898",
-  "experiment-note": "\u5B9E\u9A8C\u8BB0\u5F55"
+  "experiment-note": "\u5B9E\u9A8C\u8BB0\u5F55",
+  visual: "\u53EF\u89C6\u5316\u8BB2\u89E3"
 };
 var PLOT_COLORS = /* @__PURE__ */ new Set(["blue", "orange", "green", "purple", "red", "gray"]);
+var VISUAL_RENDERERS = /* @__PURE__ */ new Set(["svg", "html", "mermaid"]);
+var VISUAL_TYPES = /* @__PURE__ */ new Set([
+  "diagram",
+  "flow",
+  "timeline",
+  "tree",
+  "map",
+  "chart",
+  "animation",
+  "interactive",
+  "other"
+]);
+var VISUAL_SOURCE_MAX = 2e5;
+var VISUAL_HEIGHT_MIN = 120;
+var VISUAL_HEIGHT_MAX = 2e3;
+var VISUAL_CONDITIONS_MAX = 8;
+var VISUAL_CONDITION_CHARS = 300;
+var FULL_HTML_PATTERN = /^\s*(?:<!doctype\s+html|<html[\s>])/i;
+var EXTERNAL_RESOURCE_PATTERN = /(?:\bsrc|\bhref|\burl)\s*[=:(]\s*['"]?\s*(?:https?:)?\/\//i;
+var SCRIPT_SRC_PATTERN = /<script[^>]*\bsrc\s*=/i;
+var EXTERNAL_ONLY_PATTERN = /^\s*https?:\/\/\S+\s*$/i;
 function buildRubric(value) {
   if (!Array.isArray(value) || value.length === 0) return void 0;
   const criteria = [];
@@ -36779,6 +36809,58 @@ function buildExperimentNotePayload(payload) {
     ...asStringArray2(payload.limitations, 6, 300) === void 0 ? {} : { limitations: asStringArray2(payload.limitations, 6, 300) }
   };
 }
+function buildVisualPayload(payload) {
+  const rendererRaw = asString(payload.renderer, 20);
+  if (rendererRaw === void 0) return "visual \u7F3A\u5C11 renderer\uFF08svg/html/mermaid\uFF09";
+  if (!VISUAL_RENDERERS.has(rendererRaw)) {
+    return `visual renderer\u300C${rendererRaw}\u300D\u4E0D\u5408\u6CD5\uFF08\u53EA\u652F\u6301 svg/html/mermaid\uFF09`;
+  }
+  const renderer = rendererRaw;
+  if (typeof payload.source !== "string") return "visual \u7F3A\u5C11 source\uFF08\u81EA\u5305\u542B\u7247\u6BB5\uFF09";
+  const source = payload.source.trim();
+  if (source === "") return "visual source \u4E0D\u80FD\u4E3A\u7A7A";
+  if (source.length > VISUAL_SOURCE_MAX) {
+    return `visual source \u8D85\u8FC7 ${VISUAL_SOURCE_MAX} \u5B57\u7B26\u4E0A\u9650\uFF08\u8BF7\u7CBE\u7B80\u4E3A\u6559\u5B66\u6240\u9700\u7684\u6700\u5C0F\u7247\u6BB5\uFF09`;
+  }
+  if (EXTERNAL_ONLY_PATTERN.test(source)) {
+    return "visual source \u4E0D\u80FD\u662F\u5916\u90E8\u94FE\u63A5\uFF0C\u5FC5\u987B\u662F\u53EF\u6C99\u7BB1\u6E32\u67D3\u7684\u81EA\u5305\u542B\u7247\u6BB5";
+  }
+  if (FULL_HTML_PATTERN.test(source) || /<\/html\s*>/i.test(source)) {
+    return "visual source \u5FC5\u987B\u662F\u81EA\u5305\u542B\u7247\u6BB5\uFF0C\u4E0D\u80FD\u662F\u5B8C\u6574 HTML \u6587\u6863\uFF08\u4E0D\u8981 doctype/html/head/body \u5916\u58F3\uFF09";
+  }
+  if (SCRIPT_SRC_PATTERN.test(source) || EXTERNAL_RESOURCE_PATTERN.test(source)) {
+    return "visual source \u4E0D\u80FD\u5F15\u7528\u5916\u90E8 CDN/\u5B57\u4F53/\u5E93/\u7F51\u7EDC\u8D44\u6E90\uFF1B\u8BF7\u5185\u8054\u4E3A\u81EA\u5305\u542B\u7247\u6BB5";
+  }
+  const visualTypeRaw = asString(payload.visualType, 30);
+  if (visualTypeRaw !== void 0 && !VISUAL_TYPES.has(visualTypeRaw)) {
+    return `visual visualType\u300C${visualTypeRaw}\u300D\u4E0D\u5408\u6CD5\uFF08\u53EF\u7528\uFF1Adiagram/flow/timeline/tree/map/chart/animation/interactive/other\uFF09`;
+  }
+  const title = asString(payload.title, 120);
+  const caption = asString(payload.caption, 300) ?? title;
+  const observe = asString(payload.observe, 300);
+  const formula = asString(payload.formula, 1e3);
+  const fallbackText = asString(payload.fallbackText, 1e3);
+  const alt = asString(payload.alt, 300) ?? title ?? caption ?? "\u6559\u5B66\u53EF\u89C6\u5316";
+  const conditions = asStringArray2(payload.conditions, VISUAL_CONDITIONS_MAX, VISUAL_CONDITION_CHARS);
+  const heightRaw = asFiniteNumber(payload.height);
+  const height = heightRaw === void 0 ? void 0 : Math.min(VISUAL_HEIGHT_MAX, Math.max(VISUAL_HEIGHT_MIN, Math.round(heightRaw)));
+  const interactive = asBoolean(payload.interactive) ?? (renderer === "html" && /<script[\s>]/i.test(source));
+  return {
+    type: "visual",
+    renderer,
+    source,
+    ...title === void 0 ? {} : { title },
+    ...visualTypeRaw === void 0 ? {} : { visualType: visualTypeRaw },
+    ...caption === void 0 ? {} : { caption },
+    ...observe === void 0 ? {} : { observe },
+    ...formula === void 0 ? {} : { formula },
+    ...conditions === void 0 ? {} : { conditions },
+    interactive,
+    ...height === void 0 ? {} : { height },
+    ...fallbackText === void 0 ? {} : { fallbackText },
+    alt
+  };
+}
 function verificationFor(kind) {
   switch (kind) {
     case "quiz":
@@ -36789,6 +36871,8 @@ function verificationFor(kind) {
       return { kind: "rubric", note: "\u6309 rubric \u8BC4\u4EF7\uFF0C\u5C40\u9650\u4F1A\u8BB0\u5F55\u5E76\u5141\u8BB8\u5B66\u751F\u5F02\u8BAE" };
     case "open-question":
       return { kind: "open", note: "\u6309 rubric \u8BC4\u4EF7\uFF0C\u4FDD\u7559\u5224\u65AD\u4F9D\u636E\u4E0E\u5C40\u9650" };
+    case "visual":
+      return { kind: "none", note: "\u53EF\u89C6\u5316\u7528\u4E8E\u5EFA\u7ACB\u76F4\u89C9/\u5C55\u793A\u7ED3\u6784\uFF0C\u4E0D\u5355\u72EC\u4F5C\u4E3A\u638C\u63E1\u8BC1\u636E" };
     default:
       return { kind: "none", note: "\u63A2\u7D22/\u5C55\u793A\u578B\u6D3B\u52A8\uFF0C\u4E0D\u5355\u72EC\u4F5C\u4E3A\u638C\u63E1\u8BC1\u636E" };
   }
@@ -36872,6 +36956,12 @@ function normalizeActivityProposal(raw, ctx) {
     }
     case "experiment-note": {
       const built = buildExperimentNotePayload(payloadRaw);
+      if (typeof built === "string") return { warnings: [`\u6D3B\u52A8 payload \u4E0D\u5408\u6CD5\uFF1A${built}`] };
+      payload = built;
+      break;
+    }
+    case "visual": {
+      const built = buildVisualPayload(payloadRaw);
       if (typeof built === "string") return { warnings: [`\u6D3B\u52A8 payload \u4E0D\u5408\u6CD5\uFF1A${built}`] };
       payload = built;
       break;
@@ -38024,8 +38114,8 @@ function createLearningService(options) {
   }
   return {
     async submitAttempt(input) {
-      const invalid = validateAttemptInput(input);
-      if (invalid !== void 0) return err("invalid-input", invalid);
+      const invalid2 = validateAttemptInput(input);
+      if (invalid2 !== void 0) return err("invalid-input", invalid2);
       try {
         const independence = classifyIndependence(input);
         const validation = await resolveValidation(input, independence);
@@ -56811,6 +56901,275 @@ function mountQuiz(container, payload, options = {}) {
   };
 }
 
+// packages/teaching-core/src/render/visual.ts
+var VISUAL_LIMITS = {
+  sourceChars: 2e5,
+  heightMin: 120,
+  heightMax: 2e3,
+  defaultHeight: 420,
+  titleChars: 200,
+  captionChars: 500,
+  observeChars: 500,
+  conditionChars: 300,
+  conditionsMax: 12,
+  formulaChars: 2e3,
+  fallbackChars: 2e3,
+  altChars: 500
+};
+var VISUAL_RENDERERS2 = ["svg", "html", "mermaid"];
+var VISUAL_TYPES2 = [
+  "diagram",
+  "flow",
+  "timeline",
+  "tree",
+  "map",
+  "chart",
+  "animation",
+  "interactive",
+  "other"
+];
+var VISUAL_CSP_BASE = [
+  "default-src 'none'",
+  "style-src 'unsafe-inline'",
+  "img-src data: blob:",
+  "font-src data:",
+  "connect-src 'none'",
+  "frame-src 'none'",
+  "media-src data: blob:"
+].join("; ");
+function visualSandbox(payload) {
+  return payload.renderer === "html" && payload.interactive === true ? "allow-scripts" : "";
+}
+function buildVisualCsp(payload) {
+  const scriptPolicy = payload.renderer === "html" && payload.interactive === true ? "script-src 'unsafe-inline'" : "script-src 'none'";
+  return `${VISUAL_CSP_BASE}; ${scriptPolicy}`;
+}
+function isRecord3(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function invalid(message) {
+  return err("invalid-input", `\u53EF\u89C6\u5316\u6D3B\u52A8\u6570\u636E\u65E0\u6548\uFF1A${message}`);
+}
+function optionalString(record, field, maxChars) {
+  const value = record[field];
+  if (value === void 0) return ok(void 0);
+  if (typeof value !== "string") return invalid(`${field} \u5FC5\u987B\u662F\u5B57\u7B26\u4E32`);
+  if (value.length > maxChars) return invalid(`${field} \u4E0D\u80FD\u8D85\u8FC7 ${maxChars} \u5B57\u7B26`);
+  return ok(value);
+}
+function looksLikeFullHtmlDocument(source) {
+  return /<!doctype\s+html/iu.test(source) || /<html[\s>]/iu.test(source) || /<\/html\s*>/iu.test(source);
+}
+function validateVisualPayload(input) {
+  if (!isRecord3(input)) return invalid("payload \u4E0D\u662F\u5BF9\u8C61");
+  if (input.type !== void 0 && input.type !== "visual") return invalid("type \u5FC5\u987B\u662F visual");
+  const renderer = input.renderer;
+  if (typeof renderer !== "string" || !VISUAL_RENDERERS2.includes(renderer)) {
+    return invalid(`renderer \u5FC5\u987B\u662F ${VISUAL_RENDERERS2.join(" / ")} \u4E4B\u4E00`);
+  }
+  const source = input.source;
+  if (typeof source !== "string") return invalid("source \u5FC5\u987B\u662F\u5B57\u7B26\u4E32");
+  if (source.trim() === "") return invalid("source \u4E0D\u80FD\u4E3A\u7A7A");
+  if (source.length > VISUAL_LIMITS.sourceChars) {
+    return invalid(`source \u4E0D\u80FD\u8D85\u8FC7 ${VISUAL_LIMITS.sourceChars} \u5B57\u7B26`);
+  }
+  if (looksLikeFullHtmlDocument(source)) {
+    return invalid("source \u4E0D\u80FD\u662F\u5B8C\u6574 HTML \u6587\u6863\uFF08\u4E0D\u8981\u5305\u542B <!DOCTYPE>/<html>\uFF09\uFF1B\u8BF7\u63D0\u4F9B\u81EA\u5305\u542B\u7684\u7247\u6BB5");
+  }
+  if (input.visualType !== void 0) {
+    if (typeof input.visualType !== "string" || !VISUAL_TYPES2.includes(input.visualType)) {
+      return invalid(`visualType \u5FC5\u987B\u662F ${VISUAL_TYPES2.join(" / ")} \u4E4B\u4E00`);
+    }
+  }
+  if (input.interactive !== void 0 && typeof input.interactive !== "boolean") {
+    return invalid("interactive \u5FC5\u987B\u662F\u5E03\u5C14\u503C");
+  }
+  if (input.height !== void 0) {
+    if (typeof input.height !== "number" || !Number.isFinite(input.height)) return invalid("height \u5FC5\u987B\u662F\u6570\u5B57");
+    if (input.height < VISUAL_LIMITS.heightMin || input.height > VISUAL_LIMITS.heightMax) {
+      return invalid(`height \u5FC5\u987B\u5728 ${VISUAL_LIMITS.heightMin}..${VISUAL_LIMITS.heightMax} \u4E4B\u95F4`);
+    }
+  }
+  const title = optionalString(input, "title", VISUAL_LIMITS.titleChars);
+  if (!title.ok) return title;
+  const caption = optionalString(input, "caption", VISUAL_LIMITS.captionChars);
+  if (!caption.ok) return caption;
+  const observe = optionalString(input, "observe", VISUAL_LIMITS.observeChars);
+  if (!observe.ok) return observe;
+  const formula = optionalString(input, "formula", VISUAL_LIMITS.formulaChars);
+  if (!formula.ok) return formula;
+  const fallbackText = optionalString(input, "fallbackText", VISUAL_LIMITS.fallbackChars);
+  if (!fallbackText.ok) return fallbackText;
+  const alt = optionalString(input, "alt", VISUAL_LIMITS.altChars);
+  if (!alt.ok) return alt;
+  if (input.conditions !== void 0) {
+    if (!Array.isArray(input.conditions)) return invalid("conditions \u5FC5\u987B\u662F\u5B57\u7B26\u4E32\u6570\u7EC4");
+    if (input.conditions.length > VISUAL_LIMITS.conditionsMax) {
+      return invalid(`conditions \u6700\u591A ${VISUAL_LIMITS.conditionsMax} \u6761`);
+    }
+    for (const condition of input.conditions) {
+      if (typeof condition !== "string") return invalid("conditions \u91CC\u7684\u6BCF\u4E00\u9879\u5FC5\u987B\u662F\u5B57\u7B26\u4E32");
+      if (condition.length > VISUAL_LIMITS.conditionChars) {
+        return invalid(`conditions \u7684\u6BCF\u4E00\u9879\u4E0D\u80FD\u8D85\u8FC7 ${VISUAL_LIMITS.conditionChars} \u5B57\u7B26`);
+      }
+    }
+  }
+  return ok(input);
+}
+function escapeHtmlText(text2) {
+  return text2.replace(/&/gu, "&amp;").replace(/</gu, "&lt;").replace(/>/gu, "&gt;").replace(/"/gu, "&quot;").replace(/'/gu, "&#39;");
+}
+function escapeHtmlAttribute(text2) {
+  return escapeHtmlText(text2).replace(/\r/gu, "&#13;").replace(/\n/gu, "&#10;");
+}
+var IFRAME_BASE_CSS = [
+  ":root{color-scheme:light dark}",
+  "html,body{margin:0;padding:0}",
+  'body{font-family:ui-sans-serif,system-ui,-apple-system,"PingFang SC",sans-serif;',
+  "font-size:13px;line-height:1.5;color:CanvasText;background:Canvas;padding:8px;box-sizing:border-box}",
+  "svg,img,canvas{max-width:100%;height:auto}",
+  ".visual-root{max-width:100%;overflow:auto}",
+  ".visual-note{font-size:11px;opacity:.7;margin:0 0 6px}",
+  ".visual-source{white-space:pre-wrap;word-break:break-word;font-size:12px;",
+  "background:rgba(127,127,127,.08);padding:8px;border-radius:6px;margin:0}",
+  "*{box-sizing:border-box}"
+].join("");
+function buildVisualBody(payload) {
+  if (payload.renderer === "mermaid") {
+    const fallback = payload.fallbackText !== void 0 && payload.fallbackText !== "" ? `<p class="visual-note">${escapeHtmlText(payload.fallbackText)}</p>` : "";
+    return [
+      '<div class="visual-root">',
+      '<p class="visual-note">Mermaid \u6E90\uFF08\u6E32\u67D3\u5668\u5F85 P2\uFF09\uFF1A\u4E0B\u9762\u663E\u793A\u539F\u59CB\u6E90\u7801\uFF0C\u672A\u6267\u884C\u4EFB\u4F55 Mermaid \u6E32\u67D3\u3002</p>',
+      `<pre class="visual-source">${escapeHtmlText(payload.source)}</pre>`,
+      fallback,
+      "</div>"
+    ].join("");
+  }
+  return `<div class="visual-root">${payload.source}</div>`;
+}
+function buildVisualDocument(payload) {
+  const csp = escapeHtmlAttribute(buildVisualCsp(payload));
+  const title = payload.title !== void 0 ? escapeHtmlText(payload.title) : "\u53EF\u89C6\u5316";
+  return [
+    "<!DOCTYPE html>",
+    `<html lang="zh"><head><meta charset="utf-8">`,
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    `<meta http-equiv="Content-Security-Policy" content="${csp}">`,
+    `<meta name="referrer" content="no-referrer">`,
+    `<style>${IFRAME_BASE_CSS}</style>`,
+    `<title>${title}</title>`,
+    "</head><body>",
+    buildVisualBody(payload),
+    "</body></html>"
+  ].join("");
+}
+function mountVisual(container, payload, options = {}) {
+  const document2 = resolveDocument(options);
+  const validation = validateVisualPayload(payload);
+  const wrapper = createElement(document2, "div", {
+    className: "teaching-visual",
+    attrs: { "data-visual-renderer": payload.renderer }
+  });
+  if (!validation.ok) {
+    wrapper.appendChild(createElement(document2, "div", {
+      className: "teaching-visual-error",
+      text: `\u53EF\u89C6\u5316\u65E0\u6CD5\u663E\u793A\uFF1A${validation.error.message}`,
+      styles: { color: "var(--dsw-alias-state-error-primary, #b91c1c)", fontSize: "12px" }
+    }));
+    container.appendChild(wrapper);
+    return { element: wrapper, dispose: () => {
+      wrapper.remove();
+    } };
+  }
+  const valid = validation.value;
+  const height = valid.height ?? VISUAL_LIMITS.defaultHeight;
+  if (options.showTitle !== false && valid.title !== void 0 && valid.title !== "") {
+    wrapper.appendChild(createElement(document2, "div", {
+      className: "teaching-visual-title",
+      text: valid.title,
+      styles: { fontWeight: "600", fontSize: "13px", marginBottom: "4px" }
+    }));
+  }
+  if (valid.caption !== void 0 && valid.caption !== "") {
+    wrapper.appendChild(createElement(document2, "div", {
+      className: "teaching-visual-caption",
+      text: valid.caption,
+      styles: { fontSize: "12px", opacity: "0.8", marginBottom: "4px" }
+    }));
+  }
+  if (valid.observe !== void 0 && valid.observe !== "") {
+    wrapper.appendChild(createElement(document2, "div", {
+      className: "teaching-visual-observe",
+      text: `\u6CE8\u610F\u89C2\u5BDF\uFF1A${valid.observe}`,
+      styles: { fontSize: "12px", color: "var(--dsw-alias-state-warn-primary, #b45309)", marginBottom: "4px" }
+    }));
+  }
+  if (valid.formula !== void 0 && valid.formula !== "") {
+    const formula = createElement(document2, "div", { className: "teaching-visual-formula" });
+    formula.appendChild(renderMath(valid.formula, true, { document: document2 }));
+    wrapper.appendChild(formula);
+  }
+  const iframe = createElement(document2, "iframe", {
+    className: "teaching-visual-frame",
+    ariaLabel: valid.alt ?? valid.title ?? "\u53EF\u89C6\u5316\u6D3B\u52A8",
+    attrs: {
+      sandbox: visualSandbox(valid),
+      srcdoc: buildVisualDocument(valid),
+      title: valid.alt ?? valid.title ?? "\u53EF\u89C6\u5316\u6D3B\u52A8",
+      loading: "lazy",
+      referrerpolicy: "no-referrer",
+      // Keep the frame from escaping via form submission or top navigation.
+      allow: "fullscreen"
+    },
+    styles: {
+      width: "100%",
+      height: `${Math.round(height)}px`,
+      border: "0",
+      borderRadius: "8px",
+      background: "transparent",
+      display: "block"
+    }
+  });
+  wrapper.appendChild(iframe);
+  if (valid.renderer === "mermaid") {
+    wrapper.appendChild(createElement(document2, "p", {
+      className: "teaching-visual-limitation",
+      text: "Mermaid \u76EE\u524D\u53EA\u663E\u793A\u6E90\u7801\uFF0C\u4E0D\u505A\u5B9E\u65F6\u6E32\u67D3\uFF08\u6E32\u67D3\u5668\u5F85 P2\uFF09\u3002",
+      styles: { fontSize: "11px", opacity: "0.65", margin: "4px 0 0" }
+    }));
+  }
+  if (valid.fallbackText !== void 0 && valid.fallbackText !== "") {
+    wrapper.appendChild(createElement(document2, "div", {
+      className: "teaching-visual-fallback",
+      text: valid.fallbackText,
+      styles: { fontSize: "12px", opacity: "0.75", marginTop: "4px", whiteSpace: "pre-wrap" }
+    }));
+  }
+  if ((valid.conditions ?? []).length > 0) {
+    wrapper.appendChild(createElement(document2, "div", {
+      className: "teaching-visual-conditions-title",
+      text: "\u9002\u7528\u6761\u4EF6\u4E0E\u6CE8\u610F",
+      styles: { fontWeight: "600", fontSize: "12px", marginTop: "6px" }
+    }));
+    const list = createElement(document2, "ul", {
+      className: "teaching-visual-conditions",
+      styles: { margin: "2px 0", paddingLeft: "18px", fontSize: "12px", color: "var(--dsw-alias-state-warn-primary, #b45309)" }
+    });
+    for (const condition of valid.conditions ?? []) {
+      list.appendChild(createElement(document2, "li", { text: condition }));
+    }
+    wrapper.appendChild(list);
+  }
+  container.appendChild(wrapper);
+  return {
+    element: wrapper,
+    documentHtml: buildVisualDocument(valid),
+    dispose: () => {
+      wrapper.remove();
+    }
+  };
+}
+
 // packages/teaching-core/src/render/tasks.ts
 function mountExplanation(container, payload, options = {}) {
   const document2 = resolveDocument(options);
@@ -57331,6 +57690,8 @@ function validateActivityPayload(input) {
       return validateExplanation(payload);
     case "experiment-note":
       return validateExperimentNote(payload);
+    case "visual":
+      return validateVisualPayload(payload);
     default:
       return validationError(`\u4E0D\u652F\u6301\u7684\u6D3B\u52A8\u7C7B\u578B\u300C${payload.type}\u300D`);
   }
@@ -57486,6 +57847,11 @@ function mountActivity(container, input, options = {}) {
     }
     case "experiment-note": {
       const handle = mountExperimentNote(content, payload, { document: document2 });
+      disposers.push(() => handle.dispose());
+      break;
+    }
+    case "visual": {
+      const handle = mountVisual(content, payload, { document: document2, showTitle: false });
       disposers.push(() => handle.dispose());
       break;
     }
@@ -57702,10 +58068,10 @@ var HTML_VOID_ELEMENTS = /* @__PURE__ */ new Set([
   "wbr"
 ]);
 var SVG_NAMESPACE = "http://www.w3.org/2000/svg";
-function escapeHtmlText(text2) {
+function escapeHtmlText2(text2) {
   return text2.replace(/&/gu, "&amp;").replace(/</gu, "&lt;").replace(/>/gu, "&gt;");
 }
-function escapeHtmlAttribute(value) {
+function escapeHtmlAttribute2(value) {
   return value.replace(/&/gu, "&amp;").replace(/</gu, "&lt;").replace(/>/gu, "&gt;").replace(/"/gu, "&quot;").replace(/'/gu, "&#39;");
 }
 function stylePropertyName(name2) {
@@ -57724,24 +58090,24 @@ function booleanAttribute(name2) {
   return ` ${name2}`;
 }
 function serializeNode(node) {
-  if (node.nodeType === 3) return escapeHtmlText(node.data);
+  if (node.nodeType === 3) return escapeHtmlText2(node.data);
   const element = node;
   const isSvg = element.namespaceURI === SVG_NAMESPACE;
   const tag = element.tagName;
   const attributes = [];
   for (const [name2, value] of element.attributes) {
-    attributes.push(` ${name2}="${escapeHtmlAttribute(value)}"`);
+    attributes.push(` ${name2}="${escapeHtmlAttribute2(value)}"`);
   }
   const style = serializeStyle(element.style);
-  if (style !== "") attributes.push(` style="${escapeHtmlAttribute(style)}"`);
+  if (style !== "") attributes.push(` style="${escapeHtmlAttribute2(style)}"`);
   if (element.disabled) attributes.push(booleanAttribute("disabled"));
   if (element.checked) attributes.push(booleanAttribute("checked"));
   if (element.tagName === "input" && element.value !== "" && !element.attributes.has("value")) {
-    attributes.push(` value="${escapeHtmlAttribute(element.value)}"`);
+    attributes.push(` value="${escapeHtmlAttribute2(element.value)}"`);
   }
   const open2 = `<${tag}${attributes.join("")}`;
   if (element.tagName === "textarea") {
-    return `${open2}>${escapeHtmlText(element.value)}</textarea>`;
+    return `${open2}>${escapeHtmlText2(element.value)}</textarea>`;
   }
   if (element.tagName === "style" || element.tagName === "script") {
     return `${open2}>${element.textContent}</${tag}>`;
@@ -62118,6 +62484,127 @@ import { randomUUID as randomUUID2 } from "node:crypto";
 import { readdir as readdir5, stat as stat6 } from "node:fs/promises";
 import { basename as basename6, extname as extname7, join as join15 } from "node:path";
 
+// packages/dsh-plugin/src/host/visual-service.ts
+var MAX_SOURCE_CHARS = 2e5;
+var VISUAL_SYSTEM_PROMPT = [
+  "\u4F60\u662F\u4E00\u4E2A\u5B66\u79D1\u65E0\u5173\u7684\u6559\u5B66\u53EF\u89C6\u5316\u751F\u6210\u5668\u3002\u4F60\u7684\u4EFB\u52A1\u4E0D\u662F\u5199\u957F\u7BC7\u8BB2\u89E3\uFF0C\u800C\u662F\u4EA7\u51FA\u4E00\u4E2A\u80FD\u5728\u6C99\u7BB1\u4E2D\u5B89\u5168\u663E\u793A\u7684\u3001\u81EA\u5305\u542B\u7684\u6559\u5B66\u56FE\u8868/\u4EA4\u4E92\u6F14\u793A\u3002",
+  "",
+  "\u5DE5\u4F5C\u6D41\uFF08\u6765\u81EA math-visual \u6280\u80FD\uFF0C\u9002\u7528\u4E8E\u6240\u6709\u5B66\u79D1\uFF09\uFF1A",
+  "1. \u5148\u786E\u5B9A\u4E00\u4E2A\u6559\u5B66\u70B9\uFF1A\u63A7\u5236\u91CF\uFF08\u53EA\u4E3B\u52A8\u6539\u53D8\u4E00\u4E2A\u53C2\u6570\uFF09\u3001\u89C2\u6D4B\u91CF\u3001\u4E0D\u53D8\u91CF\u3001\u7ED3\u8BBA\u4E0E\u9002\u7528\u6761\u4EF6\uFF1B\u80FD\u4E00\u53E5\u8BDD\u8BF4\u660E\u201C\u6539\u53D8\u4EC0\u4E48\u3001\u89C2\u5BDF\u4EC0\u4E48\u201D\u3002",
+  "2. \u9009\u6700\u7B80\u8F7D\u4F53\uFF1A\u7ED3\u6784/\u51E0\u4F55\u7528 SVG\uFF1B\u53C2\u6570\u63A2\u7D22/\u62D6\u52A8\u6BD4\u8F83\u7528\u81EA\u5305\u542B\u4EA4\u4E92 HTML\uFF1B\u6D41\u7A0B/\u5173\u7CFB/\u5206\u7C7B\u7528 Mermaid\uFF1B\u8FDE\u7EED\u53D8\u5316\u624D\u7528\u52A8\u753B\uFF1B\u666E\u901A\u66F2\u7EBF/\u7B80\u5355\u6570\u636E\u7559\u7A7A\uFF08\u7531\u4E3B\u6559\u5B66\u6D41\u7A0B\u51B3\u5B9A\uFF09\uFF0C\u4E0D\u8981\u4E3A\u51D1\u56FE\u800C\u753B\u3002",
+  "3. \u6807\u7B7E\u3001\u56FE\u4F8B\u3001\u516C\u5F0F\u3001\u6570\u503C\u8BFB\u6570\u7B26\u53F7\u4E00\u81F4\uFF1B\u989C\u8272\u8F85\u4EE5\u7EBF\u578B/\u6807\u8BB0/\u6587\u5B57\uFF1B\u5750\u6807\u8303\u56F4\u7A33\u5B9A\uFF1B\u51E0\u4F55\u7528\u7B49\u6BD4\u4F8B\u5750\u6807\uFF0C\u975E\u7B49\u6BD4\u4F8B\u5FC5\u987B\u8BF4\u660E\u3002",
+  "4. \u89C6\u89C9\u662F\u76F4\u89C9\u8F85\u52A9\uFF0C\u4E0D\u662F\u8BC1\u660E\uFF1B\u6709\u9650\u56FE\u53EA\u80FD\u5C55\u793A\u8D8B\u52BF\uFF0C\u4E0D\u8981\u58F0\u79F0\u201C\u56FE\u8BC1\u660E\u4E86\u7ED3\u8BBA\u201D\u3002",
+  "5. \u5FC5\u987B\u5B8C\u5168\u81EA\u5305\u542B\uFF1A\u5185\u8054 CSS/SVG/\u811A\u672C\uFF1B\u7981\u6B62\u5916\u90E8 CDN\u3001\u5B57\u4F53\u3001\u5E93\u3001\u56FE\u7247\u6216\u7F51\u7EDC\u8BF7\u6C42\uFF1B\u4E0D\u8981\u5B8C\u6574 HTML \u6587\u6863\u5916\u58F3\uFF08\u4E0D\u8981 doctype/html/head/body\uFF09\uFF0C\u53EA\u7ED9\u7247\u6BB5\u3002",
+  "6. \u4E0D\u7F16\u9020\u4E0E\u8BFE\u7A0B/\u5B66\u751F\u4E0A\u4E0B\u6587\u4E0D\u7B26\u7684\u4E8B\u5B9E\uFF1B\u65E0\u6CD5\u6838\u5B9E\u7684\u5185\u5BB9\u7528\u201C\u6A21\u578B\u8865\u5145\u201D\u6807\u6CE8\u5728 caption/conditions \u4E2D\u3002",
+  "7. \u4F18\u5148 SVG \u9759\u6001\u56FE\uFF1B\u53EA\u6709\u5B66\u751F\u660E\u786E\u8981\u6C42\u62D6\u52A8/\u4EA4\u4E92\u65F6\u624D\u7528 HTML\uFF1B\u6E90\u7801\u63A7\u5236\u5728 6000 \u5B57\u7B26\u4EE5\u5185\uFF0C\u5199\u5B8C\u6574\u95ED\u5408\u6807\u7B7E\uFF0C\u4E0D\u8981\u7528\u957F\u7BC7 CSS\u3002",
+  "",
+  "\u53EA\u8F93\u51FA\u4EE5\u4E0B\u4E24\u4E2A\u6807\u8BB0\u533A\u5757\uFF0C\u4E0D\u8981\u8F93\u51FA\u4EFB\u4F55\u5176\u4ED6\u6587\u5B57\uFF1A",
+  "<<<VISUAL_BRIEF>>>",
+  '{"renderer":"svg|html|mermaid","title":"...","caption":"\u4E00\u53E5\u8BDD\u7ED3\u8BBA","observe":"\u6CE8\u610F\u770B\u2026\u2026","conditions":["\u9002\u7528\u6761\u4EF6/\u8FB9\u754C/\u53CD\u4F8B"],"formula":"\u53EF\u9009 LaTeX","visualType":"diagram|flow|timeline|tree|map|chart|animation|interactive|other","interactive":false,"height":420,"fallbackText":"\u65E0\u6CD5\u663E\u793A\u65F6\u7684\u6587\u5B57\u8BF4\u660E"}',
+  "<<<VISUAL_SOURCE>>>",
+  "```svg",
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420">...</svg>',
+  "```",
+  "",
+  "\u6E32\u67D3\u5668\u9009\u62E9\u89C4\u5219\uFF1Asource \u662F SVG \u6807\u8BB0 \u2192 renderer=svg\uFF1B\u81EA\u5305\u542B HTML \u7247\u6BB5 \u2192 html\uFF1BMermaid \u6E90\u7801 \u2192 mermaid\u3002\u6E90\u7801\u5FC5\u987B\u5B8C\u6574\u3001\u53EF\u89E3\u6790\uFF1B\u5B81\u53EF\u7B80\u5355\u4E5F\u4E0D\u8981\u622A\u65AD\u3002"
+].join("\n");
+function extractBetween(text2, start, end) {
+  const startIndex = text2.indexOf(start);
+  if (startIndex < 0) return void 0;
+  const from = startIndex + start.length;
+  const endIndex = text2.indexOf(end, from);
+  if (endIndex < 0) return void 0;
+  return text2.slice(from, endIndex).trim();
+}
+function extractFence(text2) {
+  const match = /```(svg|html|mermaid)[^\n]*\n([\s\S]*?)```/iu.exec(text2);
+  if (match !== null) {
+    const source = (match[2] ?? "").trim();
+    if (source !== "") {
+      return { renderer: (match[1] ?? "svg").toLowerCase(), source };
+    }
+  }
+  const svg = /<svg[\s\S]*<\/svg>/iu.exec(text2)?.[0];
+  if (svg !== void 0 && svg.trim() !== "") return { renderer: "svg", source: svg.trim() };
+  return void 0;
+}
+function parseBrief(text2) {
+  const raw = extractBetween(text2, "<<<VISUAL_BRIEF>>>", "<<<VISUAL_SOURCE>>>") ?? text2.split("```")[0]?.match(/\{[\s\S]*\}/u)?.[0];
+  if (raw === void 0) return {};
+  try {
+    const value = JSON.parse(raw.trim());
+    return typeof value === "object" && value !== null ? value : {};
+  } catch {
+    return {};
+  }
+}
+function stringField(record, field) {
+  const value = record[field];
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : void 0;
+}
+function conditionsField(record) {
+  const value = record["conditions"];
+  if (!Array.isArray(value)) return [];
+  return value.filter((item) => typeof item === "string" && item.trim() !== "").slice(0, 8).map((item) => item.trim().slice(0, 300));
+}
+function normalizeSource(source) {
+  let text2 = source.trim();
+  if (text2 === "" || text2.length > MAX_SOURCE_CHARS) return void 0;
+  if (/<!doctype\s+html/iu.test(text2) || /<html[\s>]/iu.test(text2)) {
+    const body = /<body[^>]*>([\s\S]*?)<\/body>/iu.exec(text2)?.[1];
+    if (body === void 0) return void 0;
+    text2 = body.trim();
+  }
+  return text2 === "" ? void 0 : text2;
+}
+async function generateVisual(model, input, signal) {
+  const info2 = await model.info();
+  const completion = await model.complete({
+    system: VISUAL_SYSTEM_PROMPT,
+    messages: [{
+      role: "user",
+      text: [
+        `\u8BFE\u7A0B\uFF1A${input.courseTitle}`,
+        input.conceptTitle === void 0 ? "" : `\u5F53\u524D\u6982\u5FF5\uFF1A${input.conceptTitle}`,
+        `\u5B66\u751F\u672C\u8F6E\u8BF7\u6C42\uFF1A${input.studentText}`,
+        `\u4E3B\u6559\u5B66\u56DE\u590D\u8282\u9009\uFF1A${input.teachingText.slice(0, 1200)}`,
+        "",
+        "\u8BF7\u751F\u6210\u672C\u8F6E\u6700\u5408\u9002\u7684\u53EF\u89C6\u5316\u3002\u53EA\u8F93\u51FA\u4E24\u4E2A\u6807\u8BB0\u533A\u5757\u548C\u7B80\u77ED\u6E90\u7801\uFF1B\u6E90\u7801\u5FC5\u987B\u5B8C\u6574\u3002"
+      ].filter((line) => line !== "").join("\n")
+    }],
+    maxTokens: 6e3,
+    purpose: "visual",
+    sessionId: input.sessionId,
+    language: "zh"
+  }, signal);
+  const fence = extractFence(completion.text);
+  if (fence === void 0) return void 0;
+  const source = normalizeSource(fence.source);
+  if (source === void 0) return void 0;
+  const brief = parseBrief(completion.text);
+  const renderer = (() => {
+    const value = stringField(brief, "renderer");
+    if (value === "svg" || value === "html" || value === "mermaid") return value;
+    return fence.renderer;
+  })();
+  const title = stringField(brief, "title");
+  const payload = {
+    type: "visual",
+    renderer,
+    source,
+    ...title === void 0 ? {} : { title: title.slice(0, 120) },
+    ...stringField(brief, "caption") === void 0 ? {} : { caption: stringField(brief, "caption").slice(0, 300) },
+    ...stringField(brief, "observe") === void 0 ? {} : { observe: stringField(brief, "observe").slice(0, 300) },
+    ...stringField(brief, "formula") === void 0 ? {} : { formula: stringField(brief, "formula").slice(0, 1e3) },
+    ...conditionsField(brief).length === 0 ? {} : { conditions: conditionsField(brief) },
+    ...typeof brief["visualType"] === "string" ? { visualType: brief["visualType"] } : {},
+    ...typeof brief["interactive"] === "boolean" ? { interactive: brief["interactive"] } : {},
+    ...typeof brief["height"] === "number" && Number.isFinite(brief["height"]) ? { height: Math.max(120, Math.min(2e3, Math.round(brief["height"]))) } : {},
+    ...stringField(brief, "fallbackText") === void 0 ? {} : { fallbackText: stringField(brief, "fallbackText").slice(0, 1e3) }
+  };
+  return { payload, provider: info2.provider, model: info2.model };
+}
+
 // packages/dsh-plugin/src/host/context.ts
 var CHARS_PER_TOKEN = 2.5;
 var RESERVED_COMPLETION_TOKENS = 12e3;
@@ -63461,6 +63948,81 @@ ${buildSummaryInput(selection.compacted)}
               throw appError(event.error.code, event.error.message, event.error.details);
             }
           }
+          if (!createdActivities.some((activity) => activity.kind === "visual") && wantsVisual(input.text)) {
+            send({ type: "progress", label: "\u751F\u6210\u53EF\u89C6\u5316" });
+            try {
+              const generated = await generateVisual(services.model, {
+                courseTitle: course.title,
+                ...currentConcept2 === void 0 ? {} : { conceptTitle: currentConcept2.title },
+                studentText: input.text.trim(),
+                teachingText: finalText,
+                language: profile.language,
+                sessionId: session.id
+              }, controller.signal);
+              if (generated !== void 0) {
+                const now = nowIso();
+                const heading = /^#{1,4}\s+(.+)$/mu.exec(finalText)?.[1]?.trim();
+                const title = generated.payload.title ?? heading ?? currentConcept2?.title ?? "\u53EF\u89C6\u5316\u6F14\u793A";
+                const activity = {
+                  id: activityId(),
+                  kind: "visual",
+                  sessionId: session.id,
+                  courseId: course.id,
+                  conceptIds: currentConcept2 === void 0 ? [] : [currentConcept2.id],
+                  goal: currentConcept2?.title ?? title,
+                  title,
+                  createdAt: now,
+                  updatedAt: now,
+                  revision: 1,
+                  status: "active",
+                  sourceRefs: hits.slice(0, 3).map((hit) => hit.anchor),
+                  verification: { kind: "none", note: "\u6A21\u578B\u751F\u6210\u7684\u53EF\u89C6\u5316\uFF1B\u9700\u4EBA\u5DE5\u6838\u5BF9\u6570\u5B66/\u4E8B\u5B9E\u6B63\u786E\u6027" },
+                  independent: false,
+                  payload: generated.payload
+                };
+                await services.sessions.saveActivity(activity);
+                createdActivities.push(activity);
+                send({ type: "activity", activity });
+              } else {
+                limitations.push("\u53EF\u89C6\u5316\u751F\u6210\u672A\u8FD4\u56DE\u53EF\u7528\u7684\u81EA\u5305\u542B\u6E90\u7801\uFF0C\u672C\u8F6E\u6309\u6587\u5B57\u8BB2\u89E3\u7EE7\u7EED\u3002");
+              }
+            } catch (cause) {
+              const message = cause instanceof Error ? cause.message : String(cause);
+              limitations.push(`\u53EF\u89C6\u5316\u751F\u6210\u5931\u8D25\uFF08${message}\uFF09\uFF0C\u672C\u8F6E\u6309\u6587\u5B57\u8BB2\u89E3\u7EE7\u7EED\u3002`);
+            }
+          }
+          if (!createdActivities.some((activity) => activity.kind === "visual")) {
+            const fenced = extractVisualFence(finalText);
+            if (fenced !== void 0) {
+              const now = nowIso();
+              const heading = /^#{1,4}\s+(.+)$/mu.exec(finalText)?.[1]?.trim();
+              const activity = {
+                id: activityId(),
+                kind: "visual",
+                sessionId: session.id,
+                courseId: course.id,
+                conceptIds: currentConcept2 === void 0 ? [] : [currentConcept2.id],
+                goal: currentConcept2?.title ?? (heading ?? "\u53EF\u89C6\u5316\u6F14\u793A"),
+                title: heading ?? "\u53EF\u89C6\u5316\u6F14\u793A",
+                createdAt: now,
+                updatedAt: now,
+                revision: 1,
+                status: "active",
+                sourceRefs: hits.slice(0, 3).map((hit) => hit.anchor),
+                verification: { kind: "none", note: "\u6A21\u578B\u751F\u6210\u7684\u53EF\u89C6\u5316\uFF1B\u9700\u4EBA\u5DE5\u6838\u5BF9\u6570\u5B66/\u4E8B\u5B9E\u6B63\u786E\u6027" },
+                independent: false,
+                payload: {
+                  type: "visual",
+                  renderer: fenced.renderer,
+                  source: fenced.source,
+                  ...heading === void 0 ? {} : { title: heading }
+                }
+              };
+              await services.sessions.saveActivity(activity);
+              createdActivities.push(activity);
+              send({ type: "activity", activity });
+            }
+          }
           const usage = services.takeUsage(session.id);
           const teacher = teacherMessage({
             sessionId: session.id,
@@ -64202,6 +64764,17 @@ async function validateAttempt(services, activity, input) {
     };
   }
   return void 0;
+}
+function wantsVisual(text2) {
+  return /画(?:一|个|张|幅|出|图|下)|可视化|示意图|图表|动画|svg|mermaid|交互(?:式|图)|拖动|参数(?:滑杆|调节)/iu.test(text2);
+}
+function extractVisualFence(text2) {
+  const match = /```(svg|html|mermaid)[^\n]*\n([\s\S]*?)```/iu.exec(text2);
+  if (match === null) return void 0;
+  const source = (match[2] ?? "").trim();
+  if (source === "" || source.length > 2e5) return void 0;
+  if (/<!doctype\s+html|<html[\s>]|<\/html\s*>/iu.test(source)) return void 0;
+  return { renderer: (match[1] ?? "svg").toLowerCase(), source };
 }
 function emptyLearning(courseId2, courseRevisionId2) {
   return {

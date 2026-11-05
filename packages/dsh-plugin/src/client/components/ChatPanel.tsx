@@ -12,6 +12,8 @@ import { EVIDENCE_KIND_LABELS, STAGE_LABELS, formatTime, truncate } from '../hel
 import { RenderedMarkdown } from './Markdown.tsx'
 import { Banner } from './Banner.tsx'
 import { compactedMessageIds, compressionBannerText } from '../context-compress.ts'
+import { extractChatVisualFences } from '../chat-visuals.ts'
+import { ChatVisualPreview } from './ChatVisualPreview.tsx'
 
 /** One quick action the student can request during teaching. */
 export type QuickAction = 'skip' | 'hint' | 'full-answer' | 'restyle'
@@ -118,6 +120,7 @@ function MessageBubble(props: {
 }): React.ReactElement {
   const { message } = props
   const roleClass = message.role === 'student' ? 'ai-msg-student' : message.role === 'system' ? 'ai-msg-system' : 'ai-msg-teacher'
+  const visualFences = message.role === 'teacher' ? extractChatVisualFences(message.text) : []
   const linkedActivities = (message.activityIds ?? [])
     .map(id => props.activities.find(activity => activity.id === id))
     .filter((activity): activity is LessonActivity => activity !== undefined)
@@ -129,6 +132,13 @@ function MessageBubble(props: {
       {message.markdown === true
         ? <RenderedMarkdown source={message.text} />
         : <div style={{ whiteSpace: 'pre-wrap' }}>{message.text}</div>}
+      {visualFences.length > 0 && (
+        <div className="ai-chat-visuals">
+          {visualFences.map(fence => (
+            <ChatVisualPreview key={`${fence.renderer}-${fence.index}`} fence={fence} />
+          ))}
+        </div>
+      )}
       {linkedActivities.length > 0 && (
         <div className="ai-evidence-row">
           {linkedActivities.map(activity => (

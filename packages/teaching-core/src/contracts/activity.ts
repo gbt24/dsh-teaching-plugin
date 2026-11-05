@@ -23,6 +23,7 @@ export type ActivityKind =
   | 'proof-task'
   | 'open-question'
   | 'experiment-note'
+  | 'visual'
 
 /** Safe plot series color token (renderer maps to concrete colors). */
 export type PlotColor = 'blue' | 'orange' | 'green' | 'purple' | 'red' | 'gray'
@@ -209,6 +210,54 @@ export interface ExperimentNotePayload {
   readonly limitations?: readonly string[]
 }
 
+/** Renderer used by a visual activity. `mermaid` source is stored even when a client cannot render it yet. */
+export type VisualRenderer = 'svg' | 'html' | 'mermaid'
+
+/** Pedagogical shape of a visual (subject-agnostic; used for labels and carrier choice). */
+export type VisualType =
+  | 'diagram'
+  | 'flow'
+  | 'timeline'
+  | 'tree'
+  | 'map'
+  | 'chart'
+  | 'animation'
+  | 'interactive'
+  | 'other'
+
+/**
+ * A self-contained visual teaching activity (HTML/SVG/Mermaid source).
+ *
+ * The source is untrusted model output: clients must render it inside a
+ * sandboxed iframe (no same-origin, no network) rather than injecting it into
+ * the plugin DOM. `formula`/`conditions` are optional so the same payload works
+ * for non-mathematical subjects.
+ */
+export interface VisualPayload {
+  readonly type: 'visual'
+  readonly renderer: VisualRenderer
+  /** Self-contained source: SVG markup, HTML fragment, or Mermaid source. */
+  readonly source: string
+  readonly title?: string
+  readonly visualType?: VisualType
+  /** One-sentence takeaway shown next to the visual. */
+  readonly caption?: string
+  /** "注意看……" observation prompt. */
+  readonly observe?: string
+  /** Optional LaTeX formula rendered by KaTeX outside the iframe. */
+  readonly formula?: string
+  /** Applicability conditions, boundaries or counterexamples. */
+  readonly conditions?: readonly string[]
+  /** Whether the HTML source expects scripts (sandbox policy differs). */
+  readonly interactive?: boolean
+  /** Suggested height in CSS pixels. */
+  readonly height?: number
+  /** Plain-text fallback when the renderer cannot display the visual. */
+  readonly fallbackText?: string
+  /** Accessible description. */
+  readonly alt?: string
+}
+
 /** Discriminated union of every activity payload. */
 export type ActivityPayload =
   | ExplanationPayload
@@ -221,6 +270,7 @@ export type ActivityPayload =
   | ProofTaskPayload
   | OpenQuestionPayload
   | ExperimentNotePayload
+  | VisualPayload
 
 /** Derivation activity wrapper. */
 export interface DerivationPayload {
