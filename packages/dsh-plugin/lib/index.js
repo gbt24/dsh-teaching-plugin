@@ -59100,6 +59100,25 @@ function renderActivity(document2, activity, state, lastRun, warnings) {
   const html = serializeInner(container);
   return { entry, html };
 }
+function isGraphicalActivity(activity) {
+  return activity.kind === "visual" || activity.kind === "interactive-graph" || activity.kind === "static-figure" || activity.kind === "animation";
+}
+function appendActivityInto(document2, container, activity, sessionData, warnings, entries, className) {
+  const state = sessionData.activityStates.get(activity.id);
+  const lastRun = sessionData.lastRunByActivity.get(activity.id);
+  const rendered = renderActivity(document2, activity, state, lastRun, warnings);
+  const holder = el(document2, "div", { className });
+  if (rendered === void 0) {
+    holder.appendChild(el(document2, "div", {
+      className: "tp-note",
+      text: `\u6D3B\u52A8\u300C${activity.title}\u300D\u65E0\u6CD5\u5728\u79BB\u7EBF\u9875\u9762\u4E2D\u6E32\u67D3\uFF0C\u89C1\u5BFC\u51FA\u6E05\u5355 limitations\u3002`
+    }));
+  } else {
+    asOfflineElement(holder).innerHTML = rendered.html;
+    entries.push(rendered.entry);
+  }
+  container.appendChild(holder);
+}
 var PAGE_CSS = String.raw`
 :root {
   --dsw-border: rgba(15, 23, 42, 0.16);
@@ -59175,6 +59194,8 @@ section.tp-session h2, section.tp-course h2, section.tp-learning h2 { margin: 0 
 .tp-evidence-external-web { color: #7c3aed; }
 .tp-activity { margin: 14px 0; }
 .tp-activity .teaching-activity { background: #ffffff; }
+.tp-inline-activity { margin: 10px 0; }
+.tp-inline-activity .teaching-visual-frame { width: 100%; }
 .tp-run-facts { margin-top: 8px; font-size: 12px; }
 .tp-run-facts pre { margin: 6px 0; padding: 8px; border-radius: 6px; background: rgba(15, 23, 42, 0.05); font-size: 12px; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow: auto; }
 .tp-run-stderr { color: #b91c1c; background: rgba(239, 68, 68, 0.08); }
@@ -59225,6 +59246,14 @@ function buildSessionSection(document2, sessionData, warnings, limitations, entr
     warnings.push(note);
     limitations.push(note);
   }
+  const activitiesById = new Map(sessionData.activities.map((activity) => [activity.id, activity]));
+  const linkedGraphicalIds = /* @__PURE__ */ new Set();
+  for (const message of messages) {
+    for (const activityId2 of message.activityIds ?? []) {
+      const activity = activitiesById.get(activityId2);
+      if (activity !== void 0 && isGraphicalActivity(activity)) linkedGraphicalIds.add(activity.id);
+    }
+  }
   for (const message of messages) {
     const article = el(document2, "article", {
       className: `tp-message tp-message-${message.role}`,
@@ -59253,33 +59282,27 @@ function buildSessionSection(document2, sessionData, warnings, limitations, entr
         text: `\u8FD9\u6761\u6D88\u606F\u8BB0\u5F55\u7684\u662F\u5931\u8D25\uFF1A${message.error.code} \xB7 ${message.error.message}`
       }));
     }
+    for (const activityId2 of message.activityIds ?? []) {
+      const activity = activitiesById.get(activityId2);
+      if (activity !== void 0 && isGraphicalActivity(activity)) {
+        appendActivityInto(document2, body, activity, sessionData, warnings, entries, "tp-activity tp-inline-activity");
+      }
+    }
     appendEvidenceRow(document2, body, message.evidenceRefs ?? []);
     article.appendChild(body);
     section.appendChild(article);
   }
-  if (sessionData.activities.length > 0) {
+  const panelActivities = sessionData.activities.filter((activity) => !isGraphicalActivity(activity) || !linkedGraphicalIds.has(activity.id));
+  if (panelActivities.length > 0) {
     section.appendChild(el(document2, "h3", { text: "\u6559\u5B66\u6D3B\u52A8" }));
-    const activities = sessionData.activities.slice(0, OFFLINE_LIMITS.maxActivitiesPerSession);
+    const activities = panelActivities.slice(0, OFFLINE_LIMITS.maxActivitiesPerSession);
     if (sessionData.activities.length > OFFLINE_LIMITS.maxActivitiesPerSession) {
       const note = `\u4F1A\u8BDD\u300C${session.title}\u300D\u6709 ${sessionData.activities.length} \u4E2A\u6D3B\u52A8\uFF0C\u5BFC\u51FA\u9875\u53EA\u5305\u542B\u524D ${OFFLINE_LIMITS.maxActivitiesPerSession} \u4E2A`;
       warnings.push(note);
       limitations.push(note);
     }
     for (const activity of activities) {
-      const state = sessionData.activityStates.get(activity.id);
-      const lastRun = sessionData.lastRunByActivity.get(activity.id);
-      const rendered = renderActivity(document2, activity, state, lastRun, warnings);
-      const holder = el(document2, "div", { className: "tp-activity" });
-      if (rendered === void 0) {
-        holder.appendChild(el(document2, "div", {
-          className: "tp-note",
-          text: `\u6D3B\u52A8\u300C${activity.title}\u300D\u65E0\u6CD5\u5728\u79BB\u7EBF\u9875\u9762\u4E2D\u6E32\u67D3\uFF0C\u89C1\u5BFC\u51FA\u6E05\u5355 limitations\u3002`
-        }));
-      } else {
-        asOfflineElement(holder).innerHTML = rendered.html;
-        entries.push(rendered.entry);
-      }
-      section.appendChild(holder);
+      appendActivityInto(document2, section, activity, sessionData, warnings, entries, "tp-activity");
     }
   }
   return section;
@@ -64063,7 +64086,9 @@ ${buildSummaryInput(selection.compacted)}
           const nextPosition = {
             stage: finalMeta?.stage ?? latest.position.stage,
             conceptId: finalMeta?.conceptIds?.[0] ?? latest.position.conceptId,
-            activityId: createdActivities.at(-1)?.id ?? latest.position.activityId,
+            // Graphical activities are rendered inline in the conversation; never
+            // make one the right-side "current activity" (other activities still are).
+            activityId: [...createdActivities].reverse().find((activity) => !CHAT_INLINE_ACTIVITY_KINDS.has(activity.kind))?.id ?? latest.position.activityId,
             updatedAt: nowIso()
           };
           await services.sessions.save({
@@ -64773,6 +64798,12 @@ async function validateAttempt(services, activity, input) {
   }
   return void 0;
 }
+var CHAT_INLINE_ACTIVITY_KINDS = /* @__PURE__ */ new Set([
+  "visual",
+  "interactive-graph",
+  "static-figure",
+  "animation"
+]);
 function wantsVisual(text2) {
   return /画(?:一|个|张|幅|出|图|下)|可视化|示意图|图表|动画|svg|mermaid|交互(?:式|图)|拖动|参数(?:滑杆|调节)/iu.test(text2);
 }

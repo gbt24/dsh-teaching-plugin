@@ -3,7 +3,7 @@
  */
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { extractChatVisualFences } from '../../src/client/chat-visuals.ts'
+import { extractChatVisualFences, looksInteractiveHtml } from '../../src/client/chat-visuals.ts'
 
 test('extracts svg, html and mermaid fences with their source', () => {
   const text = [
@@ -54,4 +54,15 @@ test('nested details/source text is preserved verbatim in the fence source', () 
   const source = '<div><p>line 1</p>\n<p>line 2</p></div>'
   const fences = extractChatVisualFences(`说明\n\`\`\`html\n${source}\n\`\`\`\n尾注`)
   assert.equal(fences[0]?.source.trim(), source)
+})
+
+
+test('interactive HTML inference checks scripts and inline handlers only', () => {
+  assert.equal(looksInteractiveHtml('<script>window.x=1</script>'), true)
+  assert.equal(looksInteractiveHtml('<button onclick="x()">点</button>'), true)
+  assert.equal(looksInteractiveHtml('<div onmouseover = "x()">悬停</div>'), true)
+  assert.equal(looksInteractiveHtml('<div class="static">静态</div>'), false)
+  assert.equal(looksInteractiveHtml('<svg><circle r="1"/></svg>'), false)
+  // Words starting with "on" but without an attribute assignment stay static.
+  assert.equal(looksInteractiveHtml('<p>one two three</p>'), false)
 })

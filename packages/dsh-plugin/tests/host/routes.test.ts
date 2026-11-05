@@ -721,7 +721,8 @@ describe('teaching host routes', () => {
     ).json)
     assert.equal(view.activities.length, 1)
     assert.equal(view.activities[0]?.payload.type, 'visual')
-    assert.equal(view.session.position.activityId, (activityEvent?.activity as { id?: string }).id)
+    // Graphical activities are inline in chat, not the right-side current activity.
+    assert.equal(view.session.position.activityId, undefined)
   })
 
   it('lists models, applies a plugin model override and resets to the host default', async () => {

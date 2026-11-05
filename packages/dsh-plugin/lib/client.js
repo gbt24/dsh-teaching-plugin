@@ -41,7 +41,7 @@ window.__ModuleLoader__.load({
       name: () => name
     });
     module.exports = __toCommonJS(index_exports);
-    var import_react12 = __toESM(require("react"), 1);
+    var import_react13 = __toESM(require("react"), 1);
 
     // node_modules/.pnpm/katex@0.16.47/node_modules/katex/dist/katex.min.css
     var katex_min_default = '@font-face{font-display:block;font-family:KaTeX_AMS;font-style:normal;font-weight:400;src:url(fonts/KaTeX_AMS-Regular.woff2) format("woff2"),url(fonts/KaTeX_AMS-Regular.woff) format("woff"),url(fonts/KaTeX_AMS-Regular.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Caligraphic;font-style:normal;font-weight:700;src:url(fonts/KaTeX_Caligraphic-Bold.woff2) format("woff2"),url(fonts/KaTeX_Caligraphic-Bold.woff) format("woff"),url(fonts/KaTeX_Caligraphic-Bold.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Caligraphic;font-style:normal;font-weight:400;src:url(fonts/KaTeX_Caligraphic-Regular.woff2) format("woff2"),url(fonts/KaTeX_Caligraphic-Regular.woff) format("woff"),url(fonts/KaTeX_Caligraphic-Regular.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Fraktur;font-style:normal;font-weight:700;src:url(fonts/KaTeX_Fraktur-Bold.woff2) format("woff2"),url(fonts/KaTeX_Fraktur-Bold.woff) format("woff"),url(fonts/KaTeX_Fraktur-Bold.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Fraktur;font-style:normal;font-weight:400;src:url(fonts/KaTeX_Fraktur-Regular.woff2) format("woff2"),url(fonts/KaTeX_Fraktur-Regular.woff) format("woff"),url(fonts/KaTeX_Fraktur-Regular.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Main;font-style:normal;font-weight:700;src:url(fonts/KaTeX_Main-Bold.woff2) format("woff2"),url(fonts/KaTeX_Main-Bold.woff) format("woff"),url(fonts/KaTeX_Main-Bold.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Main;font-style:italic;font-weight:700;src:url(fonts/KaTeX_Main-BoldItalic.woff2) format("woff2"),url(fonts/KaTeX_Main-BoldItalic.woff) format("woff"),url(fonts/KaTeX_Main-BoldItalic.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Main;font-style:italic;font-weight:400;src:url(fonts/KaTeX_Main-Italic.woff2) format("woff2"),url(fonts/KaTeX_Main-Italic.woff) format("woff"),url(fonts/KaTeX_Main-Italic.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Main;font-style:normal;font-weight:400;src:url(fonts/KaTeX_Main-Regular.woff2) format("woff2"),url(fonts/KaTeX_Main-Regular.woff) format("woff"),url(fonts/KaTeX_Main-Regular.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Math;font-style:italic;font-weight:700;src:url(fonts/KaTeX_Math-BoldItalic.woff2) format("woff2"),url(fonts/KaTeX_Math-BoldItalic.woff) format("woff"),url(fonts/KaTeX_Math-BoldItalic.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Math;font-style:italic;font-weight:400;src:url(fonts/KaTeX_Math-Italic.woff2) format("woff2"),url(fonts/KaTeX_Math-Italic.woff) format("woff"),url(fonts/KaTeX_Math-Italic.ttf) format("truetype")}@font-face{font-display:block;font-family:"KaTeX_SansSerif";font-style:normal;font-weight:700;src:url(fonts/KaTeX_SansSerif-Bold.woff2) format("woff2"),url(fonts/KaTeX_SansSerif-Bold.woff) format("woff"),url(fonts/KaTeX_SansSerif-Bold.ttf) format("truetype")}@font-face{font-display:block;font-family:"KaTeX_SansSerif";font-style:italic;font-weight:400;src:url(fonts/KaTeX_SansSerif-Italic.woff2) format("woff2"),url(fonts/KaTeX_SansSerif-Italic.woff) format("woff"),url(fonts/KaTeX_SansSerif-Italic.ttf) format("truetype")}@font-face{font-display:block;font-family:"KaTeX_SansSerif";font-style:normal;font-weight:400;src:url(fonts/KaTeX_SansSerif-Regular.woff2) format("woff2"),url(fonts/KaTeX_SansSerif-Regular.woff) format("woff"),url(fonts/KaTeX_SansSerif-Regular.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Script;font-style:normal;font-weight:400;src:url(fonts/KaTeX_Script-Regular.woff2) format("woff2"),url(fonts/KaTeX_Script-Regular.woff) format("woff"),url(fonts/KaTeX_Script-Regular.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Size1;font-style:normal;font-weight:400;src:url(fonts/KaTeX_Size1-Regular.woff2) format("woff2"),url(fonts/KaTeX_Size1-Regular.woff) format("woff"),url(fonts/KaTeX_Size1-Regular.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Size2;font-style:normal;font-weight:400;src:url(fonts/KaTeX_Size2-Regular.woff2) format("woff2"),url(fonts/KaTeX_Size2-Regular.woff) format("woff"),url(fonts/KaTeX_Size2-Regular.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Size3;font-style:normal;font-weight:400;src:url(fonts/KaTeX_Size3-Regular.woff2) format("woff2"),url(fonts/KaTeX_Size3-Regular.woff) format("woff"),url(fonts/KaTeX_Size3-Regular.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Size4;font-style:normal;font-weight:400;src:url(fonts/KaTeX_Size4-Regular.woff2) format("woff2"),url(fonts/KaTeX_Size4-Regular.woff) format("woff"),url(fonts/KaTeX_Size4-Regular.ttf) format("truetype")}@font-face{font-display:block;font-family:KaTeX_Typewriter;font-style:normal;font-weight:400;src:url(fonts/KaTeX_Typewriter-Regular.woff2) format("woff2"),url(fonts/KaTeX_Typewriter-Regular.woff) format("woff"),url(fonts/KaTeX_Typewriter-Regular.ttf) format("truetype")}.katex{font:normal 1.21em KaTeX_Main,Times New Roman,serif;line-height:1.2;position:relative;text-indent:0;text-rendering:auto}.katex *{-ms-high-contrast-adjust:none!important;border-color:currentColor}.katex .katex-version:after{content:"0.16.47"}.katex .katex-mathml{border:0;-webkit-clip-path:inset(50%);clip-path:inset(50%);height:1px;overflow:hidden;padding:0;position:absolute;width:1px}.katex .katex-html>.newline{display:block}.katex .base{position:relative;white-space:nowrap;width:-webkit-min-content;width:-moz-min-content;width:min-content}.katex .base,.katex .strut{display:inline-block}.katex .textbf{font-weight:700}.katex .textit{font-style:italic}.katex .textrm{font-family:KaTeX_Main}.katex .textsf{font-family:KaTeX_SansSerif}.katex .texttt{font-family:KaTeX_Typewriter}.katex .mathnormal{font-family:KaTeX_Math;font-style:italic}.katex .mathit{font-family:KaTeX_Main;font-style:italic}.katex .mathrm{font-style:normal}.katex .mathbf{font-family:KaTeX_Main;font-weight:700}.katex .boldsymbol{font-family:KaTeX_Math;font-style:italic;font-weight:700}.katex .amsrm,.katex .mathbb,.katex .textbb{font-family:KaTeX_AMS}.katex .mathcal{font-family:KaTeX_Caligraphic}.katex .mathfrak,.katex .textfrak{font-family:KaTeX_Fraktur}.katex .mathboldfrak,.katex .textboldfrak{font-family:KaTeX_Fraktur;font-weight:700}.katex .mathtt{font-family:KaTeX_Typewriter}.katex .mathscr,.katex .textscr{font-family:KaTeX_Script}.katex .mathsf,.katex .textsf{font-family:KaTeX_SansSerif}.katex .mathboldsf,.katex .textboldsf{font-family:KaTeX_SansSerif;font-weight:700}.katex .mathitsf,.katex .mathsfit,.katex .textitsf{font-family:KaTeX_SansSerif;font-style:italic}.katex .mainrm{font-family:KaTeX_Main;font-style:normal}.katex .vlist-t{border-collapse:collapse;display:inline-table;table-layout:fixed}.katex .vlist-r{display:table-row}.katex .vlist{display:table-cell;position:relative;vertical-align:bottom}.katex .vlist>span{display:block;height:0;position:relative}.katex .vlist>span>span{display:inline-block}.katex .vlist>span>.pstrut{overflow:hidden;width:0}.katex .vlist-t2{margin-right:-2px}.katex .vlist-s{display:table-cell;font-size:1px;min-width:2px;vertical-align:bottom;width:2px}.katex .vbox{align-items:baseline;display:inline-flex;flex-direction:column}.katex .hbox{width:100%}.katex .hbox,.katex .thinbox{display:inline-flex;flex-direction:row}.katex .thinbox{max-width:0;width:0}.katex .msupsub{text-align:left}.katex .mfrac>span>span{text-align:center}.katex .mfrac .frac-line{border-bottom-style:solid;display:inline-block;width:100%}.katex .hdashline,.katex .hline,.katex .mfrac .frac-line,.katex .overline .overline-line,.katex .rule,.katex .underline .underline-line{min-height:1px}.katex .mspace{display:inline-block}.katex .smash{display:inline;line-height:0}.katex .clap,.katex .llap,.katex .rlap{position:relative;width:0}.katex .clap>.inner,.katex .llap>.inner,.katex .rlap>.inner{position:absolute}.katex .clap>.fix,.katex .llap>.fix,.katex .rlap>.fix{display:inline-block}.katex .llap>.inner{right:0}.katex .clap>.inner,.katex .rlap>.inner{left:0}.katex .clap>.inner>span{margin-left:-50%;margin-right:50%}.katex .rule{border:0 solid;display:inline-block;position:relative}.katex .hline,.katex .overline .overline-line,.katex .underline .underline-line{border-bottom-style:solid;display:inline-block;width:100%}.katex .hdashline{border-bottom-style:dashed;display:inline-block;width:100%}.katex .sqrt>.root{margin-left:.2777777778em;margin-right:-.5555555556em}.katex .fontsize-ensurer.reset-size1.size1,.katex .sizing.reset-size1.size1{font-size:1em}.katex .fontsize-ensurer.reset-size1.size2,.katex .sizing.reset-size1.size2{font-size:1.2em}.katex .fontsize-ensurer.reset-size1.size3,.katex .sizing.reset-size1.size3{font-size:1.4em}.katex .fontsize-ensurer.reset-size1.size4,.katex .sizing.reset-size1.size4{font-size:1.6em}.katex .fontsize-ensurer.reset-size1.size5,.katex .sizing.reset-size1.size5{font-size:1.8em}.katex .fontsize-ensurer.reset-size1.size6,.katex .sizing.reset-size1.size6{font-size:2em}.katex .fontsize-ensurer.reset-size1.size7,.katex .sizing.reset-size1.size7{font-size:2.4em}.katex .fontsize-ensurer.reset-size1.size8,.katex .sizing.reset-size1.size8{font-size:2.88em}.katex .fontsize-ensurer.reset-size1.size9,.katex .sizing.reset-size1.size9{font-size:3.456em}.katex .fontsize-ensurer.reset-size1.size10,.katex .sizing.reset-size1.size10{font-size:4.148em}.katex .fontsize-ensurer.reset-size1.size11,.katex .sizing.reset-size1.size11{font-size:4.976em}.katex .fontsize-ensurer.reset-size2.size1,.katex .sizing.reset-size2.size1{font-size:.8333333333em}.katex .fontsize-ensurer.reset-size2.size2,.katex .sizing.reset-size2.size2{font-size:1em}.katex .fontsize-ensurer.reset-size2.size3,.katex .sizing.reset-size2.size3{font-size:1.1666666667em}.katex .fontsize-ensurer.reset-size2.size4,.katex .sizing.reset-size2.size4{font-size:1.3333333333em}.katex .fontsize-ensurer.reset-size2.size5,.katex .sizing.reset-size2.size5{font-size:1.5em}.katex .fontsize-ensurer.reset-size2.size6,.katex .sizing.reset-size2.size6{font-size:1.6666666667em}.katex .fontsize-ensurer.reset-size2.size7,.katex .sizing.reset-size2.size7{font-size:2em}.katex .fontsize-ensurer.reset-size2.size8,.katex .sizing.reset-size2.size8{font-size:2.4em}.katex .fontsize-ensurer.reset-size2.size9,.katex .sizing.reset-size2.size9{font-size:2.88em}.katex .fontsize-ensurer.reset-size2.size10,.katex .sizing.reset-size2.size10{font-size:3.4566666667em}.katex .fontsize-ensurer.reset-size2.size11,.katex .sizing.reset-size2.size11{font-size:4.1466666667em}.katex .fontsize-ensurer.reset-size3.size1,.katex .sizing.reset-size3.size1{font-size:.7142857143em}.katex .fontsize-ensurer.reset-size3.size2,.katex .sizing.reset-size3.size2{font-size:.8571428571em}.katex .fontsize-ensurer.reset-size3.size3,.katex .sizing.reset-size3.size3{font-size:1em}.katex .fontsize-ensurer.reset-size3.size4,.katex .sizing.reset-size3.size4{font-size:1.1428571429em}.katex .fontsize-ensurer.reset-size3.size5,.katex .sizing.reset-size3.size5{font-size:1.2857142857em}.katex .fontsize-ensurer.reset-size3.size6,.katex .sizing.reset-size3.size6{font-size:1.4285714286em}.katex .fontsize-ensurer.reset-size3.size7,.katex .sizing.reset-size3.size7{font-size:1.7142857143em}.katex .fontsize-ensurer.reset-size3.size8,.katex .sizing.reset-size3.size8{font-size:2.0571428571em}.katex .fontsize-ensurer.reset-size3.size9,.katex .sizing.reset-size3.size9{font-size:2.4685714286em}.katex .fontsize-ensurer.reset-size3.size10,.katex .sizing.reset-size3.size10{font-size:2.9628571429em}.katex .fontsize-ensurer.reset-size3.size11,.katex .sizing.reset-size3.size11{font-size:3.5542857143em}.katex .fontsize-ensurer.reset-size4.size1,.katex .sizing.reset-size4.size1{font-size:.625em}.katex .fontsize-ensurer.reset-size4.size2,.katex .sizing.reset-size4.size2{font-size:.75em}.katex .fontsize-ensurer.reset-size4.size3,.katex .sizing.reset-size4.size3{font-size:.875em}.katex .fontsize-ensurer.reset-size4.size4,.katex .sizing.reset-size4.size4{font-size:1em}.katex .fontsize-ensurer.reset-size4.size5,.katex .sizing.reset-size4.size5{font-size:1.125em}.katex .fontsize-ensurer.reset-size4.size6,.katex .sizing.reset-size4.size6{font-size:1.25em}.katex .fontsize-ensurer.reset-size4.size7,.katex .sizing.reset-size4.size7{font-size:1.5em}.katex .fontsize-ensurer.reset-size4.size8,.katex .sizing.reset-size4.size8{font-size:1.8em}.katex .fontsize-ensurer.reset-size4.size9,.katex .sizing.reset-size4.size9{font-size:2.16em}.katex .fontsize-ensurer.reset-size4.size10,.katex .sizing.reset-size4.size10{font-size:2.5925em}.katex .fontsize-ensurer.reset-size4.size11,.katex .sizing.reset-size4.size11{font-size:3.11em}.katex .fontsize-ensurer.reset-size5.size1,.katex .sizing.reset-size5.size1{font-size:.5555555556em}.katex .fontsize-ensurer.reset-size5.size2,.katex .sizing.reset-size5.size2{font-size:.6666666667em}.katex .fontsize-ensurer.reset-size5.size3,.katex .sizing.reset-size5.size3{font-size:.7777777778em}.katex .fontsize-ensurer.reset-size5.size4,.katex .sizing.reset-size5.size4{font-size:.8888888889em}.katex .fontsize-ensurer.reset-size5.size5,.katex .sizing.reset-size5.size5{font-size:1em}.katex .fontsize-ensurer.reset-size5.size6,.katex .sizing.reset-size5.size6{font-size:1.1111111111em}.katex .fontsize-ensurer.reset-size5.size7,.katex .sizing.reset-size5.size7{font-size:1.3333333333em}.katex .fontsize-ensurer.reset-size5.size8,.katex .sizing.reset-size5.size8{font-size:1.6em}.katex .fontsize-ensurer.reset-size5.size9,.katex .sizing.reset-size5.size9{font-size:1.92em}.katex .fontsize-ensurer.reset-size5.size10,.katex .sizing.reset-size5.size10{font-size:2.3044444444em}.katex .fontsize-ensurer.reset-size5.size11,.katex .sizing.reset-size5.size11{font-size:2.7644444444em}.katex .fontsize-ensurer.reset-size6.size1,.katex .sizing.reset-size6.size1{font-size:.5em}.katex .fontsize-ensurer.reset-size6.size2,.katex .sizing.reset-size6.size2{font-size:.6em}.katex .fontsize-ensurer.reset-size6.size3,.katex .sizing.reset-size6.size3{font-size:.7em}.katex .fontsize-ensurer.reset-size6.size4,.katex .sizing.reset-size6.size4{font-size:.8em}.katex .fontsize-ensurer.reset-size6.size5,.katex .sizing.reset-size6.size5{font-size:.9em}.katex .fontsize-ensurer.reset-size6.size6,.katex .sizing.reset-size6.size6{font-size:1em}.katex .fontsize-ensurer.reset-size6.size7,.katex .sizing.reset-size6.size7{font-size:1.2em}.katex .fontsize-ensurer.reset-size6.size8,.katex .sizing.reset-size6.size8{font-size:1.44em}.katex .fontsize-ensurer.reset-size6.size9,.katex .sizing.reset-size6.size9{font-size:1.728em}.katex .fontsize-ensurer.reset-size6.size10,.katex .sizing.reset-size6.size10{font-size:2.074em}.katex .fontsize-ensurer.reset-size6.size11,.katex .sizing.reset-size6.size11{font-size:2.488em}.katex .fontsize-ensurer.reset-size7.size1,.katex .sizing.reset-size7.size1{font-size:.4166666667em}.katex .fontsize-ensurer.reset-size7.size2,.katex .sizing.reset-size7.size2{font-size:.5em}.katex .fontsize-ensurer.reset-size7.size3,.katex .sizing.reset-size7.size3{font-size:.5833333333em}.katex .fontsize-ensurer.reset-size7.size4,.katex .sizing.reset-size7.size4{font-size:.6666666667em}.katex .fontsize-ensurer.reset-size7.size5,.katex .sizing.reset-size7.size5{font-size:.75em}.katex .fontsize-ensurer.reset-size7.size6,.katex .sizing.reset-size7.size6{font-size:.8333333333em}.katex .fontsize-ensurer.reset-size7.size7,.katex .sizing.reset-size7.size7{font-size:1em}.katex .fontsize-ensurer.reset-size7.size8,.katex .sizing.reset-size7.size8{font-size:1.2em}.katex .fontsize-ensurer.reset-size7.size9,.katex .sizing.reset-size7.size9{font-size:1.44em}.katex .fontsize-ensurer.reset-size7.size10,.katex .sizing.reset-size7.size10{font-size:1.7283333333em}.katex .fontsize-ensurer.reset-size7.size11,.katex .sizing.reset-size7.size11{font-size:2.0733333333em}.katex .fontsize-ensurer.reset-size8.size1,.katex .sizing.reset-size8.size1{font-size:.3472222222em}.katex .fontsize-ensurer.reset-size8.size2,.katex .sizing.reset-size8.size2{font-size:.4166666667em}.katex .fontsize-ensurer.reset-size8.size3,.katex .sizing.reset-size8.size3{font-size:.4861111111em}.katex .fontsize-ensurer.reset-size8.size4,.katex .sizing.reset-size8.size4{font-size:.5555555556em}.katex .fontsize-ensurer.reset-size8.size5,.katex .sizing.reset-size8.size5{font-size:.625em}.katex .fontsize-ensurer.reset-size8.size6,.katex .sizing.reset-size8.size6{font-size:.6944444444em}.katex .fontsize-ensurer.reset-size8.size7,.katex .sizing.reset-size8.size7{font-size:.8333333333em}.katex .fontsize-ensurer.reset-size8.size8,.katex .sizing.reset-size8.size8{font-size:1em}.katex .fontsize-ensurer.reset-size8.size9,.katex .sizing.reset-size8.size9{font-size:1.2em}.katex .fontsize-ensurer.reset-size8.size10,.katex .sizing.reset-size8.size10{font-size:1.4402777778em}.katex .fontsize-ensurer.reset-size8.size11,.katex .sizing.reset-size8.size11{font-size:1.7277777778em}.katex .fontsize-ensurer.reset-size9.size1,.katex .sizing.reset-size9.size1{font-size:.2893518519em}.katex .fontsize-ensurer.reset-size9.size2,.katex .sizing.reset-size9.size2{font-size:.3472222222em}.katex .fontsize-ensurer.reset-size9.size3,.katex .sizing.reset-size9.size3{font-size:.4050925926em}.katex .fontsize-ensurer.reset-size9.size4,.katex .sizing.reset-size9.size4{font-size:.462962963em}.katex .fontsize-ensurer.reset-size9.size5,.katex .sizing.reset-size9.size5{font-size:.5208333333em}.katex .fontsize-ensurer.reset-size9.size6,.katex .sizing.reset-size9.size6{font-size:.5787037037em}.katex .fontsize-ensurer.reset-size9.size7,.katex .sizing.reset-size9.size7{font-size:.6944444444em}.katex .fontsize-ensurer.reset-size9.size8,.katex .sizing.reset-size9.size8{font-size:.8333333333em}.katex .fontsize-ensurer.reset-size9.size9,.katex .sizing.reset-size9.size9{font-size:1em}.katex .fontsize-ensurer.reset-size9.size10,.katex .sizing.reset-size9.size10{font-size:1.2002314815em}.katex .fontsize-ensurer.reset-size9.size11,.katex .sizing.reset-size9.size11{font-size:1.4398148148em}.katex .fontsize-ensurer.reset-size10.size1,.katex .sizing.reset-size10.size1{font-size:.2410800386em}.katex .fontsize-ensurer.reset-size10.size2,.katex .sizing.reset-size10.size2{font-size:.2892960463em}.katex .fontsize-ensurer.reset-size10.size3,.katex .sizing.reset-size10.size3{font-size:.337512054em}.katex .fontsize-ensurer.reset-size10.size4,.katex .sizing.reset-size10.size4{font-size:.3857280617em}.katex .fontsize-ensurer.reset-size10.size5,.katex .sizing.reset-size10.size5{font-size:.4339440694em}.katex .fontsize-ensurer.reset-size10.size6,.katex .sizing.reset-size10.size6{font-size:.4821600771em}.katex .fontsize-ensurer.reset-size10.size7,.katex .sizing.reset-size10.size7{font-size:.5785920926em}.katex .fontsize-ensurer.reset-size10.size8,.katex .sizing.reset-size10.size8{font-size:.6943105111em}.katex .fontsize-ensurer.reset-size10.size9,.katex .sizing.reset-size10.size9{font-size:.8331726133em}.katex .fontsize-ensurer.reset-size10.size10,.katex .sizing.reset-size10.size10{font-size:1em}.katex .fontsize-ensurer.reset-size10.size11,.katex .sizing.reset-size10.size11{font-size:1.1996142719em}.katex .fontsize-ensurer.reset-size11.size1,.katex .sizing.reset-size11.size1{font-size:.2009646302em}.katex .fontsize-ensurer.reset-size11.size2,.katex .sizing.reset-size11.size2{font-size:.2411575563em}.katex .fontsize-ensurer.reset-size11.size3,.katex .sizing.reset-size11.size3{font-size:.2813504823em}.katex .fontsize-ensurer.reset-size11.size4,.katex .sizing.reset-size11.size4{font-size:.3215434084em}.katex .fontsize-ensurer.reset-size11.size5,.katex .sizing.reset-size11.size5{font-size:.3617363344em}.katex .fontsize-ensurer.reset-size11.size6,.katex .sizing.reset-size11.size6{font-size:.4019292605em}.katex .fontsize-ensurer.reset-size11.size7,.katex .sizing.reset-size11.size7{font-size:.4823151125em}.katex .fontsize-ensurer.reset-size11.size8,.katex .sizing.reset-size11.size8{font-size:.578778135em}.katex .fontsize-ensurer.reset-size11.size9,.katex .sizing.reset-size11.size9{font-size:.6945337621em}.katex .fontsize-ensurer.reset-size11.size10,.katex .sizing.reset-size11.size10{font-size:.8336012862em}.katex .fontsize-ensurer.reset-size11.size11,.katex .sizing.reset-size11.size11{font-size:1em}.katex .delimsizing.size1{font-family:KaTeX_Size1}.katex .delimsizing.size2{font-family:KaTeX_Size2}.katex .delimsizing.size3{font-family:KaTeX_Size3}.katex .delimsizing.size4{font-family:KaTeX_Size4}.katex .delimsizing.mult .delim-size1>span{font-family:KaTeX_Size1}.katex .delimsizing.mult .delim-size4>span{font-family:KaTeX_Size4}.katex .nulldelimiter{display:inline-block;width:.12em}.katex .delimcenter,.katex .op-symbol{position:relative}.katex .op-symbol.small-op{font-family:KaTeX_Size1}.katex .op-symbol.large-op{font-family:KaTeX_Size2}.katex .accent>.vlist-t,.katex .op-limits>.vlist-t{text-align:center}.katex .accent .accent-body{position:relative}.katex .accent .accent-body:not(.accent-full){width:0}.katex .overlay{display:block}.katex .mtable .vertical-separator{display:inline-block;min-width:1px}.katex .mtable .arraycolsep{display:inline-block}.katex .mtable .col-align-c>.vlist-t{text-align:center}.katex .mtable .col-align-l>.vlist-t{text-align:left}.katex .mtable .col-align-r>.vlist-t{text-align:right}.katex .svg-align{text-align:left}.katex svg{fill:currentColor;stroke:currentColor;display:block;height:inherit;position:absolute;width:100%}.katex svg path{stroke:none}.katex svg{fill-rule:nonzero;fill-opacity:1;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1}.katex img{border-style:none;max-height:none;max-width:none;min-height:0;min-width:0}.katex .stretchy{display:block;overflow:hidden;position:relative;width:100%}.katex .stretchy:after,.katex .stretchy:before{content:""}.katex .hide-tail{overflow:hidden;position:relative;width:100%}.katex .halfarrow-left{left:0;overflow:hidden;position:absolute;width:50.2%}.katex .halfarrow-right{overflow:hidden;position:absolute;right:0;width:50.2%}.katex .brace-left{left:0;overflow:hidden;position:absolute;width:25.1%}.katex .brace-center{left:25%;overflow:hidden;position:absolute;width:50%}.katex .brace-right{overflow:hidden;position:absolute;right:0;width:25.1%}.katex .x-arrow-pad{padding:0 .5em}.katex .cd-arrow-pad{padding:0 .55556em 0 .27778em}.katex .mover,.katex .munder,.katex .x-arrow{text-align:center}.katex .boxpad{padding:0 .3em}.katex .fbox,.katex .fcolorbox{border:.04em solid;box-sizing:border-box}.katex .cancel-pad{padding:0 .2em}.katex .cancel-lap{margin-left:-.2em;margin-right:-.2em}.katex .sout{border-bottom-style:solid;border-bottom-width:.08em}.katex .angl{border-right:.049em solid;border-top:.049em solid;box-sizing:border-box;margin-right:.03889em}.katex .anglpad{padding:0 .03889em}.katex .eqn-num:before{content:"(" counter(katexEqnNo) ")";counter-increment:katexEqnNo}.katex .mml-eqn-num:before{content:"(" counter(mmlEqnNo) ")";counter-increment:mmlEqnNo}.katex .mtr-glue{width:50%}.katex .cd-vert-arrow{display:inline-block;position:relative}.katex .cd-label-left{display:inline-block;position:absolute;right:calc(50% + .3em);text-align:left}.katex .cd-label-right{display:inline-block;left:calc(50% + .3em);position:absolute;text-align:right}.katex-display{display:block;margin:1em 0;text-align:center}.katex-display>.katex{display:block;text-align:center;white-space:nowrap}.katex-display>.katex>.katex-html{display:block;position:relative}.katex-display>.katex>.katex-html>.tag{position:absolute;right:0}.katex-display.leqno>.katex>.katex-html>.tag{left:0;right:auto}.katex-display.fleqn>.katex{padding-left:2em;text-align:left}body{counter-reset:katexEqnNo mmlEqnNo}\n';
@@ -426,6 +426,49 @@ window.__ModuleLoader__.load({
     .ai-chat-visual-source pre { margin: 4px 0 0; padding: 6px; border-radius: 6px; max-height: 240px;
       overflow: auto; white-space: pre-wrap; word-break: break-word;
       background: var(--dsw-alias-markdown-code-block, rgba(127,127,127,0.1)); font-size: 11px; }
+    .ai-inline-activities { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+    .ai-inline-activity { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3));
+      border-radius: 10px; padding: 8px 10px; background: var(--dsw-alias-bg-base, transparent);
+      min-width: 0; overflow: hidden; }
+    .ai-inline-toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+    .ai-inline-title { font-weight: 600; font-size: 13px; }
+    .ai-inline-kind { opacity: 0.75; }
+    .ai-inline-interactive { color: var(--dsw-alias-state-business-primary, #2563eb); border-color: currentColor; }
+    .ai-inline-toolbar-spacer { flex: 1; }
+    .ai-inline-host { width: 100%; min-width: 0; }
+    .ai-inline-host .teaching-activity { border: 0; padding: 0; background: transparent; }
+    .ai-inline-host .teaching-activity-title { display: none; }
+    .ai-inline-activity iframe { height: 520px !important; width: 100% !important; max-width: 100%; }
+    .ai-inline-activity canvas { max-width: 100%; }
+    .ai-inline-source { margin-top: 6px; font-size: 11px; }
+    .ai-inline-source > summary { cursor: pointer; opacity: 0.75; }
+    .ai-inline-source pre { margin: 4px 0 0; padding: 6px; border-radius: 6px; max-height: 260px;
+      overflow: auto; white-space: pre-wrap; word-break: break-word;
+      background: var(--dsw-alias-markdown-code-block, rgba(127,127,127,0.1)); }
+    .ai-fullscreen-overlay { position: fixed; inset: 0; z-index: 120; display: flex; align-items: center;
+      justify-content: center; padding: 16px; background: rgba(0,0,0,0.55); }
+    .ai-fullscreen-panel { display: flex; flex-direction: column; width: 96vw; height: 94vh; max-width: 1500px;
+      border-radius: 12px; border: 1px solid var(--dsw-alias-border-l2, rgba(255,255,255,0.2));
+      background: var(--dsw-alias-bg-base, #fff); color: var(--dsw-alias-label-primary, inherit);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.45); overflow: hidden; }
+    .ai-fullscreen-head { display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+      border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25)); }
+    .ai-fullscreen-title { font-weight: 600; font-size: 14px; }
+    .ai-fullscreen-head .ai-muted { margin-left: 4px; }
+    .ai-fullscreen-head .ai-small-button { margin-left: auto; }
+    .ai-fullscreen-body { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px; }
+    .ai-fullscreen-body .ai-inline-activity { height: 100%; overflow: auto; }
+    .ai-fullscreen-body .ai-inline-activity iframe,
+    .ai-fullscreen-body .ai-inline-activity canvas { height: calc(100vh - 140px) !important; width: 100% !important; }
+    .ai-fullscreen-body .ai-inline-activity svg { width: 100% !important; height: auto !important;
+      max-height: calc(100vh - 280px); }
+    .ai-graphical-moved-note { border-radius: 8px; }
+    @media (max-width: 720px) {
+      .ai-fullscreen-overlay { padding: 0; }
+      .ai-fullscreen-panel { width: 100vw; height: 100vh; border-radius: 0; }
+      .ai-inline-activity iframe { height: 380px !important; }
+      .ai-fullscreen-body .ai-inline-activity iframe { height: calc(100vh - 120px) !important; }
+    }
     .ai-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:60}
     .ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
     .ai-modal h3{margin:0 0 8px;font-size:15px}
@@ -433,7 +476,7 @@ window.__ModuleLoader__.load({
     `;
 
     // packages/dsh-plugin/src/client/components/Workspace.tsx
-    var import_react11 = __toESM(require("react"), 1);
+    var import_react12 = __toESM(require("react"), 1);
 
     // packages/dsh-plugin/src/client/api.ts
     var API_PREFIX = "/api/teaching";
@@ -1018,22 +1061,6 @@ window.__ModuleLoader__.load({
     function isChatBusy(state) {
       return state.chat.status === "streaming" || state.chat.status === "stopping";
     }
-    var VISUAL_ACTIVITY_KINDS = /* @__PURE__ */ new Set([
-      "visual",
-      "interactive-graph",
-      "static-figure",
-      "animation"
-    ]);
-    function freshVisualActivityIds(activities, seenVisualIds) {
-      return activities.filter((activity) => VISUAL_ACTIVITY_KINDS.has(activity.kind)).map((activity) => activity.id).filter((id) => !seenVisualIds.has(id));
-    }
-    function visualAutoExpand(input) {
-      const fresh = freshVisualActivityIds(input.activities, input.seenVisualIds);
-      if (fresh.length === 0) return { expand: false, seenVisualIds: input.seenVisualIds };
-      const next = new Set(input.seenVisualIds);
-      for (const id of fresh) next.add(id);
-      return { expand: input.rightCollapsed, seenVisualIds: next };
-    }
     function selectedActivity(state) {
       return state.activities.find((activity) => activity.id === state.selectedActivityId);
     }
@@ -1160,7 +1187,7 @@ window.__ModuleLoader__.load({
     }
 
     // packages/dsh-plugin/src/client/components/ChatPanel.tsx
-    var import_react4 = __toESM(require("react"), 1);
+    var import_react5 = __toESM(require("react"), 1);
 
     // packages/dsh-plugin/src/client/components/Markdown.tsx
     var import_react2 = require("react");
@@ -18767,6 +18794,39 @@ window.__ModuleLoader__.load({
       }
       return fences;
     }
+    function looksInteractiveHtml(source) {
+      return /<script\b/iu.test(source) || /\son[a-z]{3,}\s*=/iu.test(source);
+    }
+
+    // packages/dsh-plugin/src/client/activity-kinds.ts
+    var GRAPHICAL_ACTIVITY_KINDS = ["visual", "interactive-graph", "static-figure", "animation"];
+    function isGraphicalActivityKind(kind) {
+      return GRAPHICAL_ACTIVITY_KINDS.includes(kind);
+    }
+    function splitGraphicalActivities(activities) {
+      const graphical = [];
+      const other = [];
+      for (const activity of activities) {
+        if (isGraphicalActivityKind(activity.kind)) graphical.push(activity);
+        else other.push(activity);
+      }
+      return { graphical, other };
+    }
+    function linkedActivitiesForMessage(message, activities) {
+      const byId = new Map(activities.map((activity) => [activity.id, activity]));
+      const linked = [];
+      for (const id of message.activityIds ?? []) {
+        const activity = byId.get(id);
+        if (activity !== void 0) linked.push(activity);
+      }
+      return linked;
+    }
+    function messageGraphicalActivities(message, activities) {
+      return splitGraphicalActivities(linkedActivitiesForMessage(message, activities)).graphical;
+    }
+    function messageHasGraphicalActivity(message, activities) {
+      return messageGraphicalActivities(message, activities).length > 0;
+    }
 
     // packages/dsh-plugin/src/client/components/ChatVisualPreview.tsx
     var import_react3 = require("react");
@@ -18779,11 +18839,12 @@ window.__ModuleLoader__.load({
         if (element === null) return;
         element.textContent = "";
         setError(void 0);
+        const interactive = fence.renderer === "html" && looksInteractiveHtml(fence.source);
         const payload = {
           type: "visual",
           renderer: fence.renderer,
           source: fence.source,
-          interactive: false,
+          interactive,
           height: fence.renderer === "mermaid" ? 220 : 360,
           caption: "\u6A21\u578B\u751F\u6210\u7684\u56FE\u8868\uFF08\u5B89\u5168\u9884\u89C8\uFF09",
           alt: "\u6A21\u578B\u751F\u6210\u7684\u56FE\u8868\uFF08\u5B89\u5168\u9884\u89C8\uFF09"
@@ -18803,7 +18864,8 @@ window.__ModuleLoader__.load({
         /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "ai-chat-visual-caption", children: [
           "\u6A21\u578B\u751F\u6210\u7684\u56FE\u8868\uFF08\u5B89\u5168\u9884\u89C8\uFF09\xB7 ",
           fence.renderer.toUpperCase(),
-          " \xB7 \u5728\u6C99\u7BB1\u4E2D\u663E\u793A\uFF0C\u4E0D\u6267\u884C\u63D2\u4EF6\u9875\u9762\u4EE3\u7801"
+          " \xB7 \u5728\u6C99\u7BB1\u4E2D\u663E\u793A\uFF0C\u4E0D\u6267\u884C\u63D2\u4EF6\u9875\u9762\u4EE3\u7801",
+          fence.renderer === "html" && looksInteractiveHtml(fence.source) && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "ai-badge ai-inline-interactive", children: "\u4EA4\u4E92\u6F14\u793A \xB7 \u6C99\u7BB1\u8FD0\u884C" })
         ] }),
         error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "ai-chat-visual-error", role: "alert", children: error }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { ref: host }),
@@ -18814,8 +18876,125 @@ window.__ModuleLoader__.load({
       ] });
     }
 
-    // packages/dsh-plugin/src/client/components/ChatPanel.tsx
+    // packages/dsh-plugin/src/client/components/InlineActivity.tsx
+    var import_react4 = require("react");
     var import_jsx_runtime4 = require("react/jsx-runtime");
+    function InlineActivity(props) {
+      const host = (0, import_react4.useRef)(null);
+      const callbacksRef = (0, import_react4.useRef)({ onStateChange: props.onStateChange });
+      callbacksRef.current = { onStateChange: props.onStateChange };
+      const [error, setError] = (0, import_react4.useState)(void 0);
+      const [reloadKey, setReloadKey] = (0, import_react4.useState)(0);
+      const [showSource, setShowSource] = (0, import_react4.useState)(false);
+      const { activity } = props;
+      (0, import_react4.useEffect)(() => {
+        const element = host.current;
+        if (element === null) return;
+        element.textContent = "";
+        setError(void 0);
+        const validation = validateActivityPayload(activity.payload);
+        if (!validation.ok) {
+          setError(`\u6D3B\u52A8\u6570\u636E\u65E0\u6CD5\u6E32\u67D3\uFF1A${validation.error.message}`);
+          return;
+        }
+        const noop = () => {
+        };
+        const runUnsupported = () => Promise.reject(new Error("\u56FE\u5F62\u7C7B\u6D3B\u52A8\u4E0D\u652F\u6301\u4EE3\u7801\u8FD0\u884C"));
+        const mounted = mountActivity(element, {
+          payload: validation.value,
+          id: activity.id,
+          revision: activity.revision,
+          title: activity.title,
+          goal: activity.goal,
+          sourceRefs: activity.sourceRefs,
+          verification: activity.verification
+        }, {
+          ...props.state !== void 0 ? { state: props.state } : {},
+          callbacks: {
+            onStateChange: (patch) => callbacksRef.current.onStateChange?.(activity, patch),
+            onRunCode: runUnsupported,
+            onCancelRun: noop,
+            onQuizSubmit: noop,
+            onAnswerSubmit: noop,
+            onHelpExposure: noop,
+            onAnchorClick: noop
+          }
+        });
+        return () => {
+          mounted.dispose();
+          element.textContent = "";
+        };
+      }, [activity.id, activity.revision, reloadKey]);
+      const payload = activity.payload;
+      const visualSource = payload.type === "visual" ? payload.source : void 0;
+      const interactive = payload.type === "visual" && payload.interactive === true;
+      const graphicalKind = payload.type;
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+        "div",
+        {
+          className: `ai-inline-activity${props.variant === "fullscreen" ? " ai-inline-activity-fullscreen" : ""}`,
+          "data-kind": graphicalKind,
+          "data-activity-id": activity.id,
+          children: [
+            props.variant !== "fullscreen" && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-inline-toolbar", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-inline-title", children: activity.title }),
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-badge ai-inline-kind", children: GRAPHICAL_KIND_LABELS[graphicalKind] ?? graphicalKind }),
+              interactive && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-badge ai-inline-interactive", children: "\u4EA4\u4E92\u6F14\u793A \xB7 \u6C99\u7BB1\u8FD0\u884C" }),
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-inline-toolbar-spacer" }),
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: "ai-small-button",
+                  onClick: () => setReloadKey((value) => value + 1),
+                  "aria-label": `\u91CD\u65B0\u52A0\u8F7D\u6D3B\u52A8 ${activity.title}`,
+                  title: "\u91CD\u65B0\u52A0\u8F7D",
+                  children: "\u27F3 \u91CD\u65B0\u52A0\u8F7D"
+                }
+              ),
+              props.onFullscreen !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: "ai-small-button",
+                  onClick: props.onFullscreen,
+                  "aria-label": `\u5168\u5C4F\u653E\u5927\u6D3B\u52A8 ${activity.title}`,
+                  title: "\u5168\u5C4F\u653E\u5927",
+                  children: "\u26F6 \u5168\u5C4F"
+                }
+              ),
+              visualSource !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: "ai-small-button",
+                  "aria-expanded": showSource,
+                  onClick: () => setShowSource((value) => !value),
+                  "aria-label": `\u67E5\u770B\u6D3B\u52A8\u6E90\u7801 ${activity.title}`,
+                  title: "\u67E5\u770B\u6E90\u7801",
+                  children: "</> \u6E90\u7801"
+                }
+              )
+            ] }),
+            error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: error }) }),
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { ref: host, className: "ai-inline-host" }),
+            showSource && visualSource !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("details", { className: "ai-inline-source", open: true, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("summary", { children: "\u53EF\u89C6\u5316\u6E90\u7801\uFF08\u53EA\u5728\u6C99\u7BB1 iframe \u4E2D\u8FD0\u884C\uFF09" }),
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("pre", { children: visualSource })
+            ] })
+          ]
+        }
+      );
+    }
+    var GRAPHICAL_KIND_LABELS = {
+      visual: "\u53EF\u89C6\u5316",
+      "interactive-graph": "\u4EA4\u4E92\u56FE",
+      "static-figure": "\u9759\u6001\u56FE",
+      animation: "\u52A8\u753B"
+    };
+
+    // packages/dsh-plugin/src/client/components/ChatPanel.tsx
+    var import_jsx_runtime5 = require("react/jsx-runtime");
     var QUICK_ACTION_LABELS = {
       skip: "\u8DF3\u8FC7\u7EC3\u4E60",
       hint: "\u7ED9\u63D0\u793A",
@@ -18829,12 +19008,12 @@ window.__ModuleLoader__.load({
       restyle: "\u8BF7\u6362\u4E00\u79CD\u8BB2\u6CD5\u91CD\u65B0\u89E3\u91CA\u521A\u624D\u7684\u5185\u5BB9\u3002"
     };
     function EvidenceChips(props) {
-      const [expanded, setExpanded] = (0, import_react4.useState)(void 0);
+      const [expanded, setExpanded] = (0, import_react5.useState)(void 0);
       if (props.refs.length === 0) return null;
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-evidence-row", children: props.refs.map((reference, index) => {
+      return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-evidence-row", children: props.refs.map((reference, index) => {
         const label = reference.label ?? reference.anchor?.label ?? EVIDENCE_KIND_LABELS[reference.kind];
-        return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_react4.default.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+        return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_react5.default.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
             "button",
             {
               type: "button",
@@ -18850,37 +19029,37 @@ window.__ModuleLoader__.load({
               ]
             }
           ),
-          expanded === index && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-evidence-detail", children: [
-            reference.anchor !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { children: [
+          expanded === index && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-evidence-detail", children: [
+            reference.anchor !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { children: [
                 "\u539F\u6587\u4F4D\u7F6E\uFF1A",
                 reference.anchor.label,
                 formatPage(reference.anchor.locator)
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { children: [
                 "\u539F\u6587\u7247\u6BB5\uFF1A",
                 truncate(reference.anchor.excerpt, 800)
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-muted", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-muted", children: [
                 "\u62BD\u53D6\u7F6E\u4FE1\u5EA6\uFF1A",
                 reference.anchor.confidence
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-link-button", onClick: () => props.onEvidenceClick(reference), children: "\u5728\u201C\u6765\u6E90\u201D\u4E2D\u67E5\u770B\u539F\u6587" })
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("button", { type: "button", className: "ai-link-button", onClick: () => props.onEvidenceClick(reference), children: "\u5728\u201C\u6765\u6E90\u201D\u4E2D\u67E5\u770B\u539F\u6587" })
             ] }),
-            reference.url !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { children: [
+            reference.url !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { children: [
               "\u5916\u90E8\u6765\u6E90\uFF1A",
-              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("a", { href: reference.url, target: "_blank", rel: "noopener noreferrer", children: truncate(reference.url, 80) }),
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("a", { href: reference.url, target: "_blank", rel: "noopener noreferrer", children: truncate(reference.url, 80) }),
               reference.accessedAt !== void 0 ? `\uFF08\u8BBF\u95EE\u4E8E ${reference.accessedAt}\uFF09` : ""
             ] }),
-            reference.note !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { children: [
+            reference.note !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { children: [
               "\u8BF4\u660E\uFF1A",
               reference.note
             ] }),
-            reference.premises !== void 0 && reference.premises.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { children: [
+            reference.premises !== void 0 && reference.premises.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { children: [
               "\u524D\u63D0\uFF1A",
               reference.premises.join("\uFF1B")
             ] }),
-            reference.confidence !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-muted", children: [
+            reference.confidence !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-muted", children: [
               "\u5185\u5BB9\u7F6E\u4FE1\u5EA6\uFF1A",
               reference.confidence
             ] })
@@ -18897,40 +19076,61 @@ window.__ModuleLoader__.load({
     function MessageBubble(props) {
       const { message } = props;
       const roleClass = message.role === "student" ? "ai-msg-student" : message.role === "system" ? "ai-msg-system" : "ai-msg-teacher";
-      const visualFences = message.role === "teacher" ? extractChatVisualFences(message.text) : [];
-      const linkedActivities = (message.activityIds ?? []).map((id) => props.activities.find((activity) => activity.id === id)).filter((activity) => activity !== void 0);
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("article", { className: `ai-msg ${roleClass}`, "data-role": message.role, children: [
-        message.role === "teacher" && message.kind !== "teacher-explanation" && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted", style: { marginBottom: 2 }, children: TEACHER_KIND_LABELS[message.kind] ?? "" }),
-        message.markdown === true ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(RenderedMarkdown, { source: message.text }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: { whiteSpace: "pre-wrap" }, children: message.text }),
-        visualFences.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-chat-visuals", children: visualFences.map((fence) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ChatVisualPreview, { fence }, `${fence.renderer}-${fence.index}`)) }),
-        linkedActivities.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-evidence-row", children: linkedActivities.map((activity) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
-          "button",
-          {
-            type: "button",
-            className: "ai-evidence-chip",
-            onClick: () => props.onActivityClick(activity.id),
-            "aria-label": `\u6253\u5F00\u6D3B\u52A8 ${activity.title}`,
-            children: [
-              "\u6D3B\u52A8 \xB7 ",
-              truncate(activity.title, 30)
-            ]
-          },
-          activity.id
-        )) }),
-        message.evidenceRefs !== void 0 && message.evidenceRefs.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(EvidenceChips, { refs: message.evidenceRefs, onEvidenceClick: props.onEvidenceClick }),
-        message.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-muted", style: { color: "var(--dsw-alias-state-error-primary, #b91c1c)" }, children: [
-          "\u5931\u8D25\uFF1A",
-          message.error.message
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-msg-meta", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: formatTime(message.createdAt) }),
-          message.usage !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { title: message.usage.usageUnknown === true ? "\u6A21\u578B\u672A\u62A5\u544A\u7528\u91CF" : void 0, children: [
-            message.usage.model,
-            message.usage.durationMs >= 0 ? ` \xB7 ${Math.round(message.usage.durationMs / 100) / 10}s` : "",
-            message.usage.usageUnknown === true ? " \xB7 \u7528\u91CF\u672A\u77E5" : ""
-          ] })
-        ] })
-      ] });
+      const linked = linkedActivitiesForMessage(message, props.activities);
+      const { graphical, other } = splitGraphicalActivities(linked);
+      const visualFences = message.role === "teacher" && graphical.length === 0 ? extractChatVisualFences(message.text) : [];
+      const hasGraphical = graphical.length > 0;
+      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+        "article",
+        {
+          className: `ai-msg ${roleClass}`,
+          "data-role": message.role,
+          "data-message-id": message.id,
+          "data-graphical": hasGraphical,
+          children: [
+            message.role === "teacher" && message.kind !== "teacher-explanation" && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-muted", style: { marginBottom: 2 }, children: TEACHER_KIND_LABELS[message.kind] ?? "" }),
+            message.markdown === true ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(RenderedMarkdown, { source: message.text }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { whiteSpace: "pre-wrap" }, children: message.text }),
+            hasGraphical && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-inline-activities", children: graphical.map((activity) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+              InlineActivity,
+              {
+                activity,
+                ...props.activityStates?.[activity.id] !== void 0 ? { state: props.activityStates[activity.id] } : {},
+                ...props.onActivityStateChange !== void 0 ? { onStateChange: props.onActivityStateChange } : {},
+                onFullscreen: () => props.onFullscreen(activity)
+              },
+              activity.id
+            )) }),
+            visualFences.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-chat-visuals", children: visualFences.map((fence) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(ChatVisualPreview, { fence }, `${fence.renderer}-${fence.index}`)) }),
+            other.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-evidence-row", children: other.map((activity) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
+              "button",
+              {
+                type: "button",
+                className: "ai-evidence-chip",
+                onClick: () => props.onActivityClick(activity.id),
+                "aria-label": `\u6253\u5F00\u6D3B\u52A8 ${activity.title}`,
+                children: [
+                  "\u6D3B\u52A8 \xB7 ",
+                  truncate(activity.title, 30)
+                ]
+              },
+              activity.id
+            )) }),
+            message.evidenceRefs !== void 0 && message.evidenceRefs.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(EvidenceChips, { refs: message.evidenceRefs, onEvidenceClick: props.onEvidenceClick }),
+            message.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-muted", style: { color: "var(--dsw-alias-state-error-primary, #b91c1c)" }, children: [
+              "\u5931\u8D25\uFF1A",
+              message.error.message
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-msg-meta", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { children: formatTime(message.createdAt) }),
+              message.usage !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { title: message.usage.usageUnknown === true ? "\u6A21\u578B\u672A\u62A5\u544A\u7528\u91CF" : void 0, children: [
+                message.usage.model,
+                message.usage.durationMs >= 0 ? ` \xB7 ${Math.round(message.usage.durationMs / 100) / 10}s` : "",
+                message.usage.usageUnknown === true ? " \xB7 \u7528\u91CF\u672A\u77E5" : ""
+              ] })
+            ] })
+          ]
+        }
+      );
     }
     var TEACHER_KIND_LABELS = {
       "teacher-diagnosis": "\u8BCA\u65AD",
@@ -18939,15 +19139,43 @@ window.__ModuleLoader__.load({
       "teacher-question": "\u63D0\u95EE"
     };
     function ChatPanel(props) {
-      const [draft, setDraft] = (0, import_react4.useState)("");
-      const scrollRef = (0, import_react4.useRef)(null);
-      const scrollToBottom = (0, import_react4.useCallback)(() => {
+      const [draft, setDraft] = (0, import_react5.useState)("");
+      const [fullscreenActivity, setFullscreenActivity] = (0, import_react5.useState)(void 0);
+      const scrollRef = (0, import_react5.useRef)(null);
+      const scrollToBottom = (0, import_react5.useCallback)(() => {
         const element = scrollRef.current;
         if (element !== null) element.scrollTop = element.scrollHeight;
       }, []);
-      (0, import_react4.useEffect)(() => {
+      (0, import_react5.useEffect)(() => {
+        const newest = props.messages[props.messages.length - 1];
+        if (newest !== void 0 && messageHasGraphicalActivity(newest, props.activities)) {
+          const article = scrollRef.current?.querySelector(
+            `[data-message-id="${newest.id}"][data-graphical="true"]`
+          );
+          const inline = article?.querySelector(".ai-inline-activity");
+          if (inline instanceof HTMLElement) {
+            inline.scrollIntoView({ block: "start", behavior: "smooth" });
+            return;
+          }
+        }
         scrollToBottom();
-      }, [props.messages.length, props.chat.text, scrollToBottom]);
+      }, [props.messages.length, props.chat.text, props.activities.length, scrollToBottom]);
+      (0, import_react5.useEffect)(() => {
+        if (fullscreenActivity === void 0) return;
+        const onKeyDown = (event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            setFullscreenActivity(void 0);
+          }
+        };
+        window.addEventListener("keydown", onKeyDown);
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+          window.removeEventListener("keydown", onKeyDown);
+          document.body.style.overflow = previousOverflow;
+        };
+      }, [fullscreenActivity]);
       const send = () => {
         const text2 = draft.trim();
         if (text2 === "" || props.busy) return;
@@ -18960,60 +19188,63 @@ window.__ModuleLoader__.load({
       const compactedIds = compactedMessageIds(context);
       const compactedMessages = props.messages.filter((message) => compactedIds.has(message.id));
       const visibleMessages = props.messages.filter((message) => !compactedIds.has(message.id));
-      const renderMessage = (message) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+      const renderMessage = (message) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
         MessageBubble,
         {
           message,
           activities: props.activities,
+          ...props.activityStates !== void 0 ? { activityStates: props.activityStates } : {},
+          ...props.onActivityStateChange !== void 0 ? { onActivityStateChange: props.onActivityStateChange } : {},
           onActivityClick: props.onActivityClick,
+          onFullscreen: (activity) => setFullscreenActivity(activity),
           onEvidenceClick: props.onEvidenceClick
         },
         message.id
       );
-      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "ai-chat-panel", "aria-label": "\u6559\u5B66\u5BF9\u8BDD", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-chat-scroll", ref: scrollRef, children: [
-          session === void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-empty", children: "\u9009\u62E9\u5DE6\u4FA7\u8BFE\u7A0B\u4E0E\u4F1A\u8BDD\uFF0C\u6216\u65B0\u5EFA\u4E00\u4E2A\u5B66\u4E60\u4F1A\u8BDD\u5F00\u59CB\u3002" }),
-          compactionBanner !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-compaction-banner", role: "status", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: compactionBanner }),
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-muted", children: "\u538B\u7F29\u53EA\u5F71\u54CD\u6A21\u578B\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u5220\u9664\u672C\u673A\u8BB0\u5F55\u3002" })
+      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("section", { className: "ai-chat-panel", "aria-label": "\u6559\u5B66\u5BF9\u8BDD", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-chat-scroll", ref: scrollRef, children: [
+          session === void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-empty", children: "\u9009\u62E9\u5DE6\u4FA7\u8BFE\u7A0B\u4E0E\u4F1A\u8BDD\uFF0C\u6216\u65B0\u5EFA\u4E00\u4E2A\u5B66\u4E60\u4F1A\u8BDD\u5F00\u59CB\u3002" }),
+          compactionBanner !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-compaction-banner", role: "status", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { children: compactionBanner }),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-muted", children: "\u538B\u7F29\u53EA\u5F71\u54CD\u6A21\u578B\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u5220\u9664\u672C\u673A\u8BB0\u5F55\u3002" })
           ] }),
-          compactedMessages.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("details", { className: "ai-compacted-block", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("summary", { children: [
+          compactedMessages.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("details", { className: "ai-compacted-block", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("summary", { children: [
               "\u5DF2\u538B\u7F29\u7684\u8F83\u65E9\u6D88\u606F\uFF08",
               compactedMessages.length,
               " \u6761\uFF0C\u539F\u6587\u4ECD\u4FDD\u7559\uFF09"
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-compacted-messages", children: compactedMessages.map(renderMessage) })
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-compacted-messages", children: compactedMessages.map(renderMessage) })
           ] }),
           visibleMessages.map(renderMessage),
-          props.chat.text !== "" && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("article", { className: "ai-msg ai-msg-teacher", "data-streaming": "true", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(RenderedMarkdown, { source: props.chat.text }),
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-msg-meta", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-spinner", "aria-label": "\u6B63\u5728\u751F\u6210" }) })
+          props.chat.text !== "" && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("article", { className: "ai-msg ai-msg-teacher", "data-streaming": "true", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(RenderedMarkdown, { source: props.chat.text }),
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-msg-meta", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-spinner", "aria-label": "\u6B63\u5728\u751F\u6210" }) })
           ] }),
-          props.chat.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          props.chat.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
             Banner,
             {
               kind: props.chat.error.retryable === true ? "warning" : "error",
               message: props.chat.error.code === "cancelled" ? "\u5DF2\u505C\u6B62\u751F\u6210\u3002" : `\u672C\u8F6E\u751F\u6210\u5931\u8D25\uFF1A${props.chat.error.message}`,
               details: props.chat.error.code,
               onDismiss: props.onDismissError,
-              actions: props.chat.error.retryable === true ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-small-button", onClick: props.onRetry, children: "\u91CD\u8BD5\u4E0A\u4E00\u6761" }) : void 0
+              actions: props.chat.error.retryable === true ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("button", { type: "button", className: "ai-small-button", onClick: props.onRetry, children: "\u91CD\u8BD5\u4E0A\u4E00\u6761" }) : void 0
             }
           ),
-          props.session !== void 0 && props.session.activities.length === 0 && props.messages.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-empty", children: "\u5728\u4E0B\u65B9\u8F93\u5165\u4F60\u7684\u5B66\u4E60\u76EE\u6807\u6216\u95EE\u9898\u5F00\u59CB\uFF1B\u4E5F\u53EF\u4EE5\u76F4\u63A5\u8BF4\u201C\u4ECE\u73B0\u5728\u5F00\u59CB\u7CFB\u7EDF\u5B66\u4E60\u201D\u3002" })
+          props.session !== void 0 && props.session.activities.length === 0 && props.messages.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-empty", children: "\u5728\u4E0B\u65B9\u8F93\u5165\u4F60\u7684\u5B66\u4E60\u76EE\u6807\u6216\u95EE\u9898\u5F00\u59CB\uFF1B\u4E5F\u53EF\u4EE5\u76F4\u63A5\u8BF4\u201C\u4ECE\u73B0\u5728\u5F00\u59CB\u7CFB\u7EDF\u5B66\u4E60\u201D\u3002" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-progress-line", children: [
-          props.busy ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "ai-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-spinner" }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-progress-line", children: [
+          props.busy ? /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "ai-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-spinner" }),
             props.chat.progressLabel ?? (props.chat.status === "stopping" ? "\u6B63\u5728\u505C\u6B62\u2026" : "\u6B63\u5728\u751F\u6210\u56DE\u7B54\u2026")
-          ] }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-muted", children: props.session !== void 0 ? `\u9636\u6BB5\uFF1A${STAGE_LABELS[props.session.session.position.stage]}` : "" }),
-          props.chat.evidence.length > 0 && props.chat.text === "" && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "ai-muted", children: [
+          ] }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-muted", children: props.session !== void 0 ? `\u9636\u6BB5\uFF1A${STAGE_LABELS[props.session.session.position.stage]}` : "" }),
+          props.chat.evidence.length > 0 && props.chat.text === "" && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "ai-muted", children: [
             "\u5DF2\u6536\u96C6 ",
             props.chat.evidence.length,
             " \u6761\u6765\u6E90"
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-quick-actions", children: Object.keys(QUICK_ACTION_PROMPTS).map((action) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-quick-actions", children: Object.keys(QUICK_ACTION_PROMPTS).map((action) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           "button",
           {
             type: "button",
@@ -19025,8 +19256,45 @@ window.__ModuleLoader__.load({
           },
           action
         )) }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-composer", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+        fullscreenActivity !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+          "div",
+          {
+            className: "ai-fullscreen-overlay",
+            role: "dialog",
+            "aria-modal": "true",
+            "aria-label": `\u5168\u5C4F\u6D3B\u52A8\uFF1A${fullscreenActivity.title}`,
+            onClick: (event) => {
+              if (event.target === event.currentTarget) setFullscreenActivity(void 0);
+            },
+            children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-fullscreen-panel", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-fullscreen-head", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-fullscreen-title", children: fullscreenActivity.title }),
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-muted", children: "\u9875\u9762\u5185\u5168\u5C4F \xB7 \u6309 Esc \u6216\u70B9\u51FB\u80CC\u666F\u5173\u95ED" }),
+                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "ai-small-button",
+                    onClick: () => setFullscreenActivity(void 0),
+                    "aria-label": "\u5173\u95ED\u5168\u5C4F\u6D3B\u52A8",
+                    children: "\u5173\u95ED"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-fullscreen-body", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+                InlineActivity,
+                {
+                  activity: fullscreenActivity,
+                  variant: "fullscreen",
+                  ...props.activityStates?.[fullscreenActivity.id] !== void 0 ? { state: props.activityStates[fullscreenActivity.id] } : {},
+                  ...props.onActivityStateChange !== void 0 ? { onStateChange: props.onActivityStateChange } : {}
+                }
+              ) })
+            ] })
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-composer", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
             "textarea",
             {
               value: draft,
@@ -19041,16 +19309,16 @@ window.__ModuleLoader__.load({
               }
             }
           ),
-          props.busy ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-danger-button", onClick: props.onStop, "aria-label": "\u505C\u6B62\u751F\u6210", children: "\u505C\u6B62" }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-primary-button", onClick: send, disabled: draft.trim() === "" || props.offline, "aria-label": "\u53D1\u9001", children: "\u53D1\u9001" })
+          props.busy ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("button", { type: "button", className: "ai-danger-button", onClick: props.onStop, "aria-label": "\u505C\u6B62\u751F\u6210", children: "\u505C\u6B62" }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("button", { type: "button", className: "ai-primary-button", onClick: send, disabled: draft.trim() === "" || props.offline, "aria-label": "\u53D1\u9001", children: "\u53D1\u9001" })
         ] })
       ] });
     }
 
     // packages/dsh-plugin/src/client/components/Onboarding.tsx
-    var import_react6 = require("react");
+    var import_react7 = require("react");
 
     // packages/dsh-plugin/src/client/components/DraftReview.tsx
-    var import_react5 = require("react");
+    var import_react6 = require("react");
 
     // packages/dsh-plugin/src/client/draft-edits.ts
     function addedConceptsForPayload(state) {
@@ -19262,7 +19530,7 @@ window.__ModuleLoader__.load({
     }
 
     // packages/dsh-plugin/src/client/components/DraftReview.tsx
-    var import_jsx_runtime5 = require("react/jsx-runtime");
+    var import_jsx_runtime6 = require("react/jsx-runtime");
     var ORIGIN_LABELS = {
       "kb-structure": "\u7ED3\u6784\u6765\u6E90\uFF1A\u77E5\u8BC6\u5E93\uFF08\u76F4\u63A5\u8BFB\u53D6\uFF0C\u672A\u91CD\u65B0\u751F\u6210\uFF09",
       "llm-wiki": "\u7ED3\u6784\u6765\u6E90\uFF1A\u6309 LLM-wiki \u89C4\u5219\u751F\u6210",
@@ -19275,26 +19543,26 @@ window.__ModuleLoader__.load({
     };
     function ConceptItem(props) {
       const { concept } = props;
-      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("li", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("strong", { children: concept.title }),
+      return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("li", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("strong", { children: concept.title }),
         concept.summary !== "" ? ` \u2014 ${concept.summary}` : "",
         concept.sourceAnchors.length === 0 ? "\uFF08\u4EC5\u6A21\u578B\u77E5\u8BC6\uFF0C\u65E0\u8D44\u6599\u4F9D\u636E\uFF09" : ""
       ] });
     }
     function ChapterHead(props) {
       const { chapter } = props;
-      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-chapter-head", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-row", style: { alignItems: "baseline", gap: 8 }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-chapter-title", children: chapter.title }),
-          chapter.role !== void 0 && chapter.role !== "chapter" && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-badge", "data-chapter-role": chapter.role, children: CHAPTER_ROLE_LABELS[chapter.role] }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "ai-muted", children: [
+      return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-chapter-head", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-row", style: { alignItems: "baseline", gap: 8 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-chapter-title", children: chapter.title }),
+          chapter.role !== void 0 && chapter.role !== "chapter" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-badge", "data-chapter-role": chapter.role, children: CHAPTER_ROLE_LABELS[chapter.role] }),
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "ai-muted", children: [
             "\u6982\u5FF5 ",
             props.conceptCount,
             " \u4E2A"
           ] })
         ] }),
-        chapter.summary !== void 0 && chapter.summary !== "" && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-chapter-summary", children: chapter.summary }),
-        chapter.sourceAnchors !== void 0 && chapter.sourceAnchors.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-muted ai-chapter-anchors", children: [
+        chapter.summary !== void 0 && chapter.summary !== "" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-chapter-summary", children: chapter.summary }),
+        chapter.sourceAnchors !== void 0 && chapter.sourceAnchors.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-muted ai-chapter-anchors", children: [
           "\u7AE0\u8282\u6765\u6E90\uFF1A",
           chapter.sourceAnchors.slice(0, 4).map((anchor) => anchor.label).join("\uFF1B"),
           chapter.sourceAnchors.length > 4 ? ` \u7B49 ${chapter.sourceAnchors.length} \u5904` : ""
@@ -19303,9 +19571,9 @@ window.__ModuleLoader__.load({
     }
     function ChapterEditHead(props) {
       const { chapter } = props;
-      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-chapter-head", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-row", style: { alignItems: "center", gap: 8 }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-chapter-head", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-row", style: { alignItems: "center", gap: 8 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "input",
             {
               className: "ai-edit-title ai-edit-chapter-title",
@@ -19315,14 +19583,14 @@ window.__ModuleLoader__.load({
               onChange: (event) => props.onChangeTitle(event.target.value)
             }
           ),
-          chapter.role !== void 0 && chapter.role !== "chapter" && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-badge", "data-chapter-role": chapter.role, children: CHAPTER_ROLE_LABELS[chapter.role] }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "ai-muted", children: [
+          chapter.role !== void 0 && chapter.role !== "chapter" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-badge", "data-chapter-role": chapter.role, children: CHAPTER_ROLE_LABELS[chapter.role] }),
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "ai-muted", children: [
             "\u6982\u5FF5 ",
             props.conceptCount,
             " \u4E2A"
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
           "input",
           {
             className: "ai-edit-title ai-edit-chapter-summary",
@@ -19333,7 +19601,7 @@ window.__ModuleLoader__.load({
             onChange: (event) => props.onChangeSummary(event.target.value)
           }
         ),
-        chapter.sourceAnchors !== void 0 && chapter.sourceAnchors.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-muted ai-chapter-anchors", children: [
+        chapter.sourceAnchors !== void 0 && chapter.sourceAnchors.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-muted ai-chapter-anchors", children: [
           "\u7AE0\u8282\u6765\u6E90\uFF1A",
           chapter.sourceAnchors.slice(0, 4).map((anchor) => anchor.label).join("\uFF1B"),
           chapter.sourceAnchors.length > 4 ? ` \u7B49 ${chapter.sourceAnchors.length} \u5904` : ""
@@ -19344,9 +19612,9 @@ window.__ModuleLoader__.load({
       const { concept, revision, state } = props;
       const id = concept.id;
       const currentTitle = state.titles[id] ?? concept.title;
-      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-edit-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-edit-main", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-edit-row", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-edit-main", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "input",
             {
               className: "ai-edit-title",
@@ -19356,10 +19624,10 @@ window.__ModuleLoader__.load({
               onChange: (event) => props.onChangeTitle(id, event.target.value)
             }
           ),
-          concept.summary !== "" && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-muted ai-edit-summary", children: concept.summary })
+          concept.summary !== "" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-muted ai-edit-summary", children: concept.summary })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-row", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-row", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "button",
             {
               type: "button",
@@ -19371,7 +19639,7 @@ window.__ModuleLoader__.load({
               children: "\u2191"
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "button",
             {
               type: "button",
@@ -19383,7 +19651,7 @@ window.__ModuleLoader__.load({
               children: "\u2193"
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "button",
             {
               type: "button",
@@ -19400,11 +19668,11 @@ window.__ModuleLoader__.load({
     }
     function AddedConceptRow(props) {
       const { added } = props;
-      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-edit-row ai-edit-row-added", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-edit-main", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-row", style: { alignItems: "center", gap: 6 }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-badge", "data-added": "true", children: "\u65B0\u589E" }),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-edit-row ai-edit-row-added", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-edit-main", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-row", style: { alignItems: "center", gap: 6 }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-badge", "data-added": "true", children: "\u65B0\u589E" }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
               "input",
               {
                 className: "ai-edit-title",
@@ -19416,7 +19684,7 @@ window.__ModuleLoader__.load({
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "input",
             {
               className: "ai-edit-title ai-edit-optional",
@@ -19427,9 +19695,9 @@ window.__ModuleLoader__.load({
               onChange: (event) => props.onChangeSummary(added.key, event.target.value)
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-muted ai-edit-hint", children: "\u65B0\u589E\u6982\u5FF5\u6682\u65E0\u8D44\u6599\u951A\u70B9\uFF1B\u6559\u5B66\u65F6\u4F1A\u6807\u6CE8\u4E3A\u6A21\u578B\u77E5\u8BC6\u8865\u5145\u3002" })
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-muted ai-edit-hint", children: "\u65B0\u589E\u6982\u5FF5\u6682\u65E0\u8D44\u6599\u951A\u70B9\uFF1B\u6559\u5B66\u65F6\u4F1A\u6807\u6CE8\u4E3A\u6A21\u578B\u77E5\u8BC6\u8865\u5145\u3002" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-row", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-row", children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
           "button",
           {
             type: "button",
@@ -19459,16 +19727,16 @@ window.__ModuleLoader__.load({
       const conceptCount = revision.concepts.length;
       const origin = draft.origin;
       const structureNotes = draft.structureNotes ?? [];
-      const [editing, setEditing] = (0, import_react5.useState)(false);
-      const [order, setOrder] = (0, import_react5.useState)(() => orderedConceptIds(revision));
-      const [titles, setTitles] = (0, import_react5.useState)({});
-      const [removed, setRemoved] = (0, import_react5.useState)([]);
-      const [chapterTitles, setChapterTitles] = (0, import_react5.useState)({});
-      const [chapterSummaries, setChapterSummaries] = (0, import_react5.useState)({});
-      const [addedConcepts, setAddedConcepts] = (0, import_react5.useState)([]);
-      const [pendingDiscard, setPendingDiscard] = (0, import_react5.useState)(void 0);
-      const nextAddedKey = (0, import_react5.useRef)(1);
-      (0, import_react5.useEffect)(() => {
+      const [editing, setEditing] = (0, import_react6.useState)(false);
+      const [order, setOrder] = (0, import_react6.useState)(() => orderedConceptIds(revision));
+      const [titles, setTitles] = (0, import_react6.useState)({});
+      const [removed, setRemoved] = (0, import_react6.useState)([]);
+      const [chapterTitles, setChapterTitles] = (0, import_react6.useState)({});
+      const [chapterSummaries, setChapterSummaries] = (0, import_react6.useState)({});
+      const [addedConcepts, setAddedConcepts] = (0, import_react6.useState)([]);
+      const [pendingDiscard, setPendingDiscard] = (0, import_react6.useState)(void 0);
+      const nextAddedKey = (0, import_react6.useRef)(1);
+      (0, import_react6.useEffect)(() => {
         setEditing(false);
         setOrder(orderedConceptIds(revision));
         setTitles({});
@@ -19562,7 +19830,7 @@ window.__ModuleLoader__.load({
       const confirm = () => {
         void props.onConfirm(editing ? buildDraftEdits(revision, editState) : void 0);
       };
-      (0, import_react5.useEffect)(() => {
+      (0, import_react6.useEffect)(() => {
         if (!editing || !dirty) return;
         if (typeof window === "undefined" || typeof window.addEventListener !== "function") return;
         const handler = (event) => {
@@ -19574,8 +19842,8 @@ window.__ModuleLoader__.load({
       }, [editing, dirty]);
       const sectionConcepts = (ids) => order.filter((id) => ids.includes(id) && kept.includes(id)).map((id) => conceptById.get(id)).filter((concept) => concept !== void 0);
       const conceptById = new Map(revision.concepts.map((concept) => [concept.id, concept]));
-      const renderEditableSection = (conceptIds, added, chapterId) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-edit-rows", children: [
-        sectionConcepts(conceptIds).map((concept) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+      const renderEditableSection = (conceptIds, added, chapterId) => /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-edit-rows", children: [
+        sectionConcepts(conceptIds).map((concept) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
           ConceptEditRow,
           {
             revision,
@@ -19588,7 +19856,7 @@ window.__ModuleLoader__.load({
           },
           concept.id
         )),
-        added.map((item) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        added.map((item) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
           AddedConceptRow,
           {
             added: item,
@@ -19599,7 +19867,7 @@ window.__ModuleLoader__.load({
           },
           item.key
         )),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
           "button",
           {
             type: "button",
@@ -19611,18 +19879,18 @@ window.__ModuleLoader__.load({
           }
         )
       ] });
-      return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-draft-review", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("h3", { style: { margin: "0 0 6px", fontSize: 14 }, children: [
+      return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-draft-review", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("h3", { style: { margin: "0 0 6px", fontSize: 14 }, children: [
           "\u8BFE\u7A0B\u7ED3\u6784\u8349\u6848\uFF08v",
           revision.version,
           "\uFF09",
           editing ? " \xB7 \u7F16\u8F91\u4E2D" : ""
         ] }),
-        (origin !== void 0 || structureNotes.length > 0) && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-draft-origin", children: [
-          origin !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-badge", "data-origin": origin, "aria-label": ORIGIN_LABELS[origin], children: ORIGIN_LABELS[origin] }),
-          structureNotes.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("ul", { className: "ai-structure-notes", children: structureNotes.map((note) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("li", { children: note }, note)) })
+        (origin !== void 0 || structureNotes.length > 0) && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-draft-origin", children: [
+          origin !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-badge", "data-origin": origin, "aria-label": ORIGIN_LABELS[origin], children: ORIGIN_LABELS[origin] }),
+          structureNotes.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("ul", { className: "ai-structure-notes", children: structureNotes.map((note) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("li", { children: note }, note)) })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-muted", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-muted", children: [
           "\u6765\u6E90\u8986\u76D6\uFF1A",
           draft.coverage.length,
           " \u4EFD\u8D44\u6599 \xB7 \u6982\u5FF5 ",
@@ -19634,8 +19902,8 @@ window.__ModuleLoader__.load({
           editing && addedCount > 0 ? ` \xB7 \u65B0\u589E ${addedCount} \u4E2A` : "",
           editing && removed.length > 0 ? ` \xB7 \u5DF2\u79FB\u9664 ${removed.length} \u4E2A` : ""
         ] }),
-        !editing && conceptCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-row", style: { margin: "6px 0 2px" }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        !editing && conceptCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-row", style: { margin: "6px 0 2px" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "button",
             {
               type: "button",
@@ -19646,11 +19914,11 @@ window.__ModuleLoader__.load({
               children: "\u7F16\u8F91\u7ED3\u6784"
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-muted", children: "\u53EF\u6539\u540D\u3001\u5220\u9664\u3001\u8C03\u6574\u987A\u5E8F\u3001\u6539\u7AE0\u8282\u6807\u9898/\u6458\u8981\u6216\u6DFB\u52A0\u6982\u5FF5\uFF1B\u786E\u8BA4\u65F6\u4E00\u5E76\u5E94\u7528\u3002" })
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-muted", children: "\u53EF\u6539\u540D\u3001\u5220\u9664\u3001\u8C03\u6574\u987A\u5E8F\u3001\u6539\u7AE0\u8282\u6807\u9898/\u6458\u8981\u6216\u6DFB\u52A0\u6982\u5FF5\uFF1B\u786E\u8BA4\u65F6\u4E00\u5E76\u5E94\u7528\u3002" })
         ] }),
-        editing && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-row", style: { margin: "6px 0 2px" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        editing && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-row", style: { margin: "6px 0 2px" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
               "button",
               {
                 type: "button",
@@ -19660,26 +19928,26 @@ window.__ModuleLoader__.load({
                 children: "\u53D6\u6D88\u7F16\u8F91"
               }
             ),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: resetChanges, children: "\u91CD\u7F6E\u4FEE\u6539" }),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-muted", children: "\u4FEE\u6539\u5728\u70B9\u51FB\u300C\u786E\u8BA4\u7ED3\u6784\u5E76\u5F00\u59CB\u5B66\u4E60\u300D\u65F6\u63D0\u4EA4\uFF1B\u4E0D\u4F1A\u6539\u52A8\u539F\u59CB\u8D44\u6599\u3002" })
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: resetChanges, children: "\u91CD\u7F6E\u4FEE\u6539" }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-muted", children: "\u4FEE\u6539\u5728\u70B9\u51FB\u300C\u786E\u8BA4\u7ED3\u6784\u5E76\u5F00\u59CB\u5B66\u4E60\u300D\u65F6\u63D0\u4EA4\uFF1B\u4E0D\u4F1A\u6539\u52A8\u539F\u59CB\u8D44\u6599\u3002" })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-muted ai-edit-hint", style: { margin: "2px 0 0" }, children: "\u65B0\u589E\u6982\u5FF5\u6682\u65E0\u8D44\u6599\u951A\u70B9\uFF0C\u6559\u5B66\u65F6\u4F1A\u6807\u6CE8\u4E3A\u6A21\u578B\u77E5\u8BC6\u8865\u5145\u3002" })
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-muted ai-edit-hint", style: { margin: "2px 0 0" }, children: "\u65B0\u589E\u6982\u5FF5\u6682\u65E0\u8D44\u6599\u951A\u70B9\uFF0C\u6559\u5B66\u65F6\u4F1A\u6807\u6CE8\u4E3A\u6A21\u578B\u77E5\u8BC6\u8865\u5145\u3002" })
         ] }),
-        pendingDiscard !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-banner ai-unsaved-guard", "data-kind": "warning", role: "alert", style: { margin: "8px 0", borderRadius: 8 }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { children: [
+        pendingDiscard !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-banner ai-unsaved-guard", "data-kind": "warning", role: "alert", style: { margin: "8px 0", borderRadius: 8 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { children: [
             "\u6709\u672A\u4FDD\u5B58\u7684\u7ED3\u6784\u4FEE\u6539\uFF1A",
             pendingDiscard.label,
             "\u5C06\u4E22\u5F03\u8FD9\u4E9B\u4FEE\u6539\u3002"
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "ai-row", style: { marginLeft: "auto" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: discardAndContinue, children: "\u653E\u5F03\u4FEE\u6539\u5E76\u7EE7\u7EED" }),
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: () => setPendingDiscard(void 0), children: "\u7EE7\u7EED\u7F16\u8F91" })
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "ai-row", style: { marginLeft: "auto" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: discardAndContinue, children: "\u653E\u5F03\u4FEE\u6539\u5E76\u7EE7\u7EED" }),
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: () => setPendingDiscard(void 0), children: "\u7EE7\u7EED\u7F16\u8F91" })
           ] })
         ] }),
-        draft.warnings.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("ul", { className: "ai-warning-list", children: draft.warnings.map((warning) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("li", { children: warning }, warning)) }),
-        chapters.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-chapter-list", children: [
-          preview.chapters.map((group) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("section", { className: "ai-chapter", "aria-label": `\u7AE0\u8282 ${group.chapter.title}`, children: [
-            editing ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        draft.warnings.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("ul", { className: "ai-warning-list", children: draft.warnings.map((warning) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("li", { children: warning }, warning)) }),
+        chapters.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-chapter-list", children: [
+          preview.chapters.map((group) => /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("section", { className: "ai-chapter", "aria-label": `\u7AE0\u8282 ${group.chapter.title}`, children: [
+            editing ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
               ChapterEditHead,
               {
                 chapter: group.chapter,
@@ -19690,44 +19958,44 @@ window.__ModuleLoader__.load({
                 onChangeTitle: (title) => changeChapterTitle(group.chapter.id, title),
                 onChangeSummary: (summary) => changeChapterSummary(group.chapter.id, summary)
               }
-            ) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(ChapterHead, { chapter: group.chapter, conceptCount: group.concepts.length }),
+            ) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ChapterHead, { chapter: group.chapter, conceptCount: group.concepts.length }),
             editing ? renderEditableSection(
               group.chapter.conceptIds.map((id) => id),
               group.added,
               group.chapter.id
-            ) : group.concepts.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-muted", children: "\uFF08\u8BE5\u7AE0\u8282\u6682\u65F6\u6CA1\u6709\u53EF\u5C55\u793A\u7684\u6982\u5FF5\uFF09" }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: group.concepts.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(ConceptItem, { concept }, concept.id)) })
+            ) : group.concepts.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-muted", children: "\uFF08\u8BE5\u7AE0\u8282\u6682\u65F6\u6CA1\u6709\u53EF\u5C55\u793A\u7684\u6982\u5FF5\uFF09" }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: group.concepts.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ConceptItem, { concept }, concept.id)) })
           ] }, group.chapter.id)),
-          (editing || preview.ungroupedConcepts.length + preview.ungroupedAdded.length > 0) && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("section", { className: "ai-chapter", "aria-label": "\u672A\u5206\u7EC4\u6982\u5FF5", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-chapter-head", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-row", style: { alignItems: "baseline", gap: 8 }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-chapter-title", children: "\u672A\u5206\u7EC4\u6982\u5FF5" }),
-                /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("span", { className: "ai-muted", children: [
+          (editing || preview.ungroupedConcepts.length + preview.ungroupedAdded.length > 0) && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("section", { className: "ai-chapter", "aria-label": "\u672A\u5206\u7EC4\u6982\u5FF5", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-chapter-head", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-row", style: { alignItems: "baseline", gap: 8 }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-chapter-title", children: "\u672A\u5206\u7EC4\u6982\u5FF5" }),
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: "ai-muted", children: [
                   "\u6982\u5FF5 ",
                   preview.ungroupedConcepts.length + preview.ungroupedAdded.length,
                   " \u4E2A"
                 ] })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-chapter-summary", children: editing ? "\u8FD9\u4E9B\u6982\u5FF5\u4E0D\u5F52\u5C5E\u4EFB\u4F55\u7AE0\u8282\uFF08\u65B0\u589E\u4E0D\u9009\u7AE0\u8282\u65F6\u4E5F\u653E\u5728\u8FD9\u91CC\uFF09\u3002" : "\u8FD9\u4E9B\u6982\u5FF5\u672A\u5F52\u5165\u4EFB\u4F55\u7AE0\u8282\uFF0C\u4ECD\u4F1A\u6309\u5B66\u4E60\u987A\u5E8F\u51FA\u73B0\u3002" })
+              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-chapter-summary", children: editing ? "\u8FD9\u4E9B\u6982\u5FF5\u4E0D\u5F52\u5C5E\u4EFB\u4F55\u7AE0\u8282\uFF08\u65B0\u589E\u4E0D\u9009\u7AE0\u8282\u65F6\u4E5F\u653E\u5728\u8FD9\u91CC\uFF09\u3002" : "\u8FD9\u4E9B\u6982\u5FF5\u672A\u5F52\u5165\u4EFB\u4F55\u7AE0\u8282\uFF0C\u4ECD\u4F1A\u6309\u5B66\u4E60\u987A\u5E8F\u51FA\u73B0\u3002" })
             ] }),
             editing ? renderEditableSection(
               preview.ungroupedConcepts.map((concept) => concept.id),
               preview.ungroupedAdded,
               void 0
-            ) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: preview.ungroupedConcepts.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(ConceptItem, { concept }, concept.id)) })
+            ) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: preview.ungroupedConcepts.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ConceptItem, { concept }, concept.id)) })
           ] })
-        ] }) : editing ? renderEditableSection(preview.ungroupedConcepts.map((concept) => concept.id), preview.ungroupedAdded, void 0) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("ol", { className: "ai-checklist", children: revision.sequence.map((conceptId) => {
+        ] }) : editing ? renderEditableSection(preview.ungroupedConcepts.map((concept) => concept.id), preview.ungroupedAdded, void 0) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("ol", { className: "ai-checklist", children: revision.sequence.map((conceptId) => {
           const concept = revision.concepts.find((item) => item.id === conceptId);
-          return concept === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(ConceptItem, { concept }, concept.id);
+          return concept === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(ConceptItem, { concept }, concept.id);
         }) }),
-        draft.coverage.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-muted", style: { marginTop: 6 }, children: [
+        draft.coverage.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-muted", style: { marginTop: 6 }, children: [
           "\u8D44\u6599\uFF1A",
           draft.coverage.map((item) => `${item.title}\uFF08${item.status}\uFF0C${item.usedUnits} \u5355\u5143${item.issues > 0 ? `\uFF0C${item.issues} \u4E2A\u95EE\u9898` : ""}\uFF09`).join("\uFF1B")
         ] }),
-        editing && totalCount === 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-banner", "data-kind": "warning", role: "status", style: { margin: "8px 0", borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { children: "\u81F3\u5C11\u4FDD\u7559\u6216\u65B0\u589E\u4E00\u4E2A\u6982\u5FF5\u624D\u80FD\u786E\u8BA4\u7ED3\u6784\u3002\u8BF7\u300C\u53D6\u6D88\u7F16\u8F91\u300D\u300C\u91CD\u7F6E\u4FEE\u6539\u300D\uFF0C\u6216\u76F4\u63A5\u91CD\u65B0\u751F\u6210\u8349\u6848\u3002" }) }),
-        props.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { margin: "8px 0", borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { children: props.error }) }),
-        props.busy && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { marginTop: 6 }, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Spinner, { label: "\u6B63\u5728\u5904\u7406\u2026" }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: "ai-row", style: { marginTop: 10 }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+        editing && totalCount === 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-banner", "data-kind": "warning", role: "status", style: { margin: "8px 0", borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { children: "\u81F3\u5C11\u4FDD\u7559\u6216\u65B0\u589E\u4E00\u4E2A\u6982\u5FF5\u624D\u80FD\u786E\u8BA4\u7ED3\u6784\u3002\u8BF7\u300C\u53D6\u6D88\u7F16\u8F91\u300D\u300C\u91CD\u7F6E\u4FEE\u6539\u300D\uFF0C\u6216\u76F4\u63A5\u91CD\u65B0\u751F\u6210\u8349\u6848\u3002" }) }),
+        props.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { margin: "8px 0", borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { children: props.error }) }),
+        props.busy && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { marginTop: 6 }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Spinner, { label: "\u6B63\u5728\u5904\u7406\u2026" }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-row", style: { marginTop: 10 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "button",
             {
               type: "button",
@@ -19738,7 +20006,7 @@ window.__ModuleLoader__.load({
               children: "\u786E\u8BA4\u7ED3\u6784\u5E76\u5F00\u59CB\u5B66\u4E60"
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "button",
             {
               type: "button",
@@ -19748,7 +20016,7 @@ window.__ModuleLoader__.load({
               children: "\u91CD\u65B0\u751F\u6210\u8349\u6848"
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "button",
             {
               type: "button",
@@ -19758,7 +20026,7 @@ window.__ModuleLoader__.load({
               children: "\u5148\u968F\u4FBF\u95EE\u95EE\uFF08\u968F\u95EE\u968F\u5B66\uFF09"
             }
           ),
-          props.onBack !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+          props.onBack !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "button",
             {
               type: "button",
@@ -19769,30 +20037,30 @@ window.__ModuleLoader__.load({
             }
           )
         ] }),
-        conceptCount === 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-muted", style: { marginTop: 6 }, children: "\u8349\u6848\u8FD8\u6CA1\u6709\u6982\u5FF5\uFF1A\u8BF7\u5148\u5BFC\u5165\u53EF\u8BFB\u8D44\u6599\u540E\u91CD\u65B0\u751F\u6210\uFF0C\u6216\u76F4\u63A5\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7528\u6700\u5C0F\u7ED3\u6784\u5F00\u59CB\u3002" })
+        conceptCount === 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-muted", style: { marginTop: 6 }, children: "\u8349\u6848\u8FD8\u6CA1\u6709\u6982\u5FF5\uFF1A\u8BF7\u5148\u5BFC\u5165\u53EF\u8BFB\u8D44\u6599\u540E\u91CD\u65B0\u751F\u6210\uFF0C\u6216\u76F4\u63A5\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7528\u6700\u5C0F\u7ED3\u6784\u5F00\u59CB\u3002" })
       ] });
     }
 
     // packages/dsh-plugin/src/client/components/Onboarding.tsx
-    var import_jsx_runtime6 = require("react/jsx-runtime");
+    var import_jsx_runtime7 = require("react/jsx-runtime");
     var STEP_LABELS = {
       course: "1. \u5EFA\u7ACB\u8BFE\u7A0B",
       import: "2. \u5BFC\u5165\u672C\u5730\u8D44\u6599",
       draft: "3. \u786E\u8BA4\u8BFE\u7A0B\u7ED3\u6784"
     };
     function Onboarding(props) {
-      const [step, setStep] = (0, import_react6.useState)("course");
-      const [picking, setPicking] = (0, import_react6.useState)(false);
-      const [title, setTitle] = (0, import_react6.useState)("");
-      const [description, setDescription] = (0, import_react6.useState)("");
-      const [goals, setGoals] = (0, import_react6.useState)("");
-      const [language, setLanguage] = (0, import_react6.useState)("zh");
-      const [pathsText, setPathsText] = (0, import_react6.useState)("");
-      const [localError, setLocalError] = (0, import_react6.useState)(void 0);
-      const [courseId, setCourseId] = (0, import_react6.useState)(props.courseId);
-      const [draftPhase, setDraftPhase] = (0, import_react6.useState)("idle");
-      const [draftError, setDraftError] = (0, import_react6.useState)(void 0);
-      const [actionBusy, setActionBusy] = (0, import_react6.useState)(void 0);
+      const [step, setStep] = (0, import_react7.useState)("course");
+      const [picking, setPicking] = (0, import_react7.useState)(false);
+      const [title, setTitle] = (0, import_react7.useState)("");
+      const [description, setDescription] = (0, import_react7.useState)("");
+      const [goals, setGoals] = (0, import_react7.useState)("");
+      const [language, setLanguage] = (0, import_react7.useState)("zh");
+      const [pathsText, setPathsText] = (0, import_react7.useState)("");
+      const [localError, setLocalError] = (0, import_react7.useState)(void 0);
+      const [courseId, setCourseId] = (0, import_react7.useState)(props.courseId);
+      const [draftPhase, setDraftPhase] = (0, import_react7.useState)("idle");
+      const [draftError, setDraftError] = (0, import_react7.useState)(void 0);
+      const [actionBusy, setActionBusy] = (0, import_react7.useState)(void 0);
       const paths = pathsText.split("\n").map((line) => line.trim()).filter((line) => line !== "");
       const importTasks = props.tasks.filter((task) => task.kind.includes("import") || task.kind.includes("source"));
       const draftTasks = props.tasks.filter((task) => task.kind.includes("draft") || task.kind.includes("course"));
@@ -19878,22 +20146,22 @@ window.__ModuleLoader__.load({
         setActionBusy(void 0);
         if (!result.ok) setDraftError(result.error ?? "\u968F\u95EE\u968F\u5B66\u4F1A\u8BDD\u521B\u5EFA\u5931\u8D25");
       };
-      return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-onboarding", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-onboarding-heading", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("h2", { style: { margin: 0 }, children: props.canCancel === true ? "\u6DFB\u52A0\u65B0\u8BFE\u7A0B" : "\u5F00\u59CB\u4F60\u7684\u5B66\u4E60" }),
-          props.canCancel === true && props.onCancel !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "ai-small-button", onClick: () => props.onCancel?.(), "aria-label": "\u8FD4\u56DE\u5DE5\u4F5C\u533A", children: "\u8FD4\u56DE\u5DE5\u4F5C\u533A" })
+      return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-onboarding", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-onboarding-heading", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h2", { style: { margin: 0 }, children: props.canCancel === true ? "\u6DFB\u52A0\u65B0\u8BFE\u7A0B" : "\u5F00\u59CB\u4F60\u7684\u5B66\u4E60" }),
+          props.canCancel === true && props.onCancel !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-small-button", onClick: () => props.onCancel?.(), "aria-label": "\u8FD4\u56DE\u5DE5\u4F5C\u533A", children: "\u8FD4\u56DE\u5DE5\u4F5C\u533A" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { children: "\u8D44\u6599\u53EA\u4FDD\u5B58\u5728\u672C\u673A\u3002\u6559\u5B66\u4EE5\u4F60\u7684\u8BFE\u7A0B\u8D44\u6599\u4E3A\u4F9D\u636E\uFF1B\u6A21\u578B\u8865\u5145\u3001\u5916\u90E8\u7F51\u9875\u4E0E\u5B9E\u9A8C\u8F93\u51FA\u4F1A\u5206\u522B\u6807\u6CE8\u6765\u6E90\u3002 \u9996\u6B21\u4F7F\u7528\u9700\u8981\u786E\u8BA4\u8BFE\u7A0B\u7ED3\u6784\uFF0C\u4E4B\u540E\u53EF\u4EE5\u968F\u65F6\u63D0\u95EE\u6216\u7EE7\u7EED\u7CFB\u7EDF\u5B66\u4E60\u3002" }),
-        props.bootstrap !== void 0 && props.bootstrap.features.imageOcr === false && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Banner, { kind: "warning", message: "\u5F53\u524D\u672A\u542F\u7528\u56FE\u7247/\u626B\u63CF\u8D44\u6599\u8BC6\u522B\u80FD\u529B\uFF1A\u626B\u63CF\u4EF6\u4E0E\u56FE\u7247\u4E2D\u7684\u516C\u5F0F\u56FE\u8868\u65E0\u6CD5\u4FDD\u8BC1\u88AB\u8BFB\u53D6\uFF0C\u53EF\u5728\u540E\u7EED\u7248\u672C\u63A5\u5165\u3002" }),
-        props.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Banner, { kind: "error", message: props.error.message, details: props.error.code, onDismiss: props.onDismissError }),
-        localError !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Banner, { kind: "error", message: localError, onDismiss: () => setLocalError(void 0) }),
-        busy && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { marginBottom: 10 }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Spinner, { label: actionBusy ?? props.busy ?? "\u5904\u7406\u4E2D\u2026" }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(TaskProgressBar, { tasks: props.tasks, onCancel: props.onCancelTask }),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-row", style: { margin: "12px 0 6px" }, children: Object.keys(STEP_LABELS).map((key) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-badge", style: { opacity: step === key ? 1 : 0.55 }, children: STEP_LABELS[key] }, key)) }),
-        step === "course" && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-onboarding-card", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-field", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("label", { htmlFor: "ai-course-title", children: "\u8BFE\u7A0B\u540D\u79F0" }),
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { children: "\u8D44\u6599\u53EA\u4FDD\u5B58\u5728\u672C\u673A\u3002\u6559\u5B66\u4EE5\u4F60\u7684\u8BFE\u7A0B\u8D44\u6599\u4E3A\u4F9D\u636E\uFF1B\u6A21\u578B\u8865\u5145\u3001\u5916\u90E8\u7F51\u9875\u4E0E\u5B9E\u9A8C\u8F93\u51FA\u4F1A\u5206\u522B\u6807\u6CE8\u6765\u6E90\u3002 \u9996\u6B21\u4F7F\u7528\u9700\u8981\u786E\u8BA4\u8BFE\u7A0B\u7ED3\u6784\uFF0C\u4E4B\u540E\u53EF\u4EE5\u968F\u65F6\u63D0\u95EE\u6216\u7EE7\u7EED\u7CFB\u7EDF\u5B66\u4E60\u3002" }),
+        props.bootstrap !== void 0 && props.bootstrap.features.imageOcr === false && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Banner, { kind: "warning", message: "\u5F53\u524D\u672A\u542F\u7528\u56FE\u7247/\u626B\u63CF\u8D44\u6599\u8BC6\u522B\u80FD\u529B\uFF1A\u626B\u63CF\u4EF6\u4E0E\u56FE\u7247\u4E2D\u7684\u516C\u5F0F\u56FE\u8868\u65E0\u6CD5\u4FDD\u8BC1\u88AB\u8BFB\u53D6\uFF0C\u53EF\u5728\u540E\u7EED\u7248\u672C\u63A5\u5165\u3002" }),
+        props.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Banner, { kind: "error", message: props.error.message, details: props.error.code, onDismiss: props.onDismissError }),
+        localError !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Banner, { kind: "error", message: localError, onDismiss: () => setLocalError(void 0) }),
+        busy && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { marginBottom: 10 }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Spinner, { label: actionBusy ?? props.busy ?? "\u5904\u7406\u4E2D\u2026" }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(TaskProgressBar, { tasks: props.tasks, onCancel: props.onCancelTask }),
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-row", style: { margin: "12px 0 6px" }, children: Object.keys(STEP_LABELS).map((key) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-badge", style: { opacity: step === key ? 1 : 0.55 }, children: STEP_LABELS[key] }, key)) }),
+        step === "course" && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-onboarding-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-field", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("label", { htmlFor: "ai-course-title", children: "\u8BFE\u7A0B\u540D\u79F0" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
               "input",
               {
                 id: "ai-course-title",
@@ -19903,9 +20171,9 @@ window.__ModuleLoader__.load({
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-field", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("label", { htmlFor: "ai-course-goals", children: "\u5B66\u4E60\u76EE\u6807\uFF08\u7528\u5206\u53F7\u5206\u9694\uFF09" }),
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-field", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("label", { htmlFor: "ai-course-goals", children: "\u5B66\u4E60\u76EE\u6807\uFF08\u7528\u5206\u53F7\u5206\u9694\uFF09" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
               "input",
               {
                 id: "ai-course-goals",
@@ -19914,26 +20182,26 @@ window.__ModuleLoader__.load({
                 placeholder: "\u4F8B\u5982\uFF1A\u7406\u89E3\u9012\u5F52\u4E0E\u9AD8\u9636\u51FD\u6570\uFF1B\u80FD\u72EC\u7ACB\u5206\u6790\u672A\u89C1\u7A0B\u5E8F"
               }
             ),
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-field-hint", children: "\u76EE\u6807\u4F1A\u7528\u4E8E\u8BFE\u7A0B\u7ED3\u6784\u8349\u6848\uFF1B\u4E4B\u540E\u4E5F\u53EF\u4EE5\u8865\u5145\u3002" })
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-field-hint", children: "\u76EE\u6807\u4F1A\u7528\u4E8E\u8BFE\u7A0B\u7ED3\u6784\u8349\u6848\uFF1B\u4E4B\u540E\u4E5F\u53EF\u4EE5\u8865\u5145\u3002" })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-field", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("label", { htmlFor: "ai-course-desc", children: "\u8BFE\u7A0B\u8BF4\u660E\uFF08\u53EF\u9009\uFF09" }),
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("textarea", { id: "ai-course-desc", rows: 2, value: description, onChange: (event) => setDescription(event.target.value) })
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-field", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("label", { htmlFor: "ai-course-desc", children: "\u8BFE\u7A0B\u8BF4\u660E\uFF08\u53EF\u9009\uFF09" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("textarea", { id: "ai-course-desc", rows: 2, value: description, onChange: (event) => setDescription(event.target.value) })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-field", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("label", { htmlFor: "ai-course-language", children: "\u9ED8\u8BA4\u8BB2\u89E3\u8BED\u8A00" }),
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("select", { id: "ai-course-language", value: language, onChange: (event) => setLanguage(event.target.value), children: [
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: "zh", children: "\u4E2D\u6587\uFF08\u4FDD\u7559\u82F1\u6587\u672F\u8BED\uFF09" }),
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: "bilingual", children: "\u4E2D\u82F1\u53CC\u8BED" }),
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: "en", children: "English" })
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-field", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("label", { htmlFor: "ai-course-language", children: "\u9ED8\u8BA4\u8BB2\u89E3\u8BED\u8A00" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("select", { id: "ai-course-language", value: language, onChange: (event) => setLanguage(event.target.value), children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("option", { value: "zh", children: "\u4E2D\u6587\uFF08\u4FDD\u7559\u82F1\u6587\u672F\u8BED\uFF09" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("option", { value: "bilingual", children: "\u4E2D\u82F1\u53CC\u8BED" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("option", { value: "en", children: "English" })
             ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => void createCourse(), disabled: busy, children: "\u5EFA\u7ACB\u8BFE\u7A0B\u5E76\u7EE7\u7EED" })
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => void createCourse(), disabled: busy, children: "\u5EFA\u7ACB\u8BFE\u7A0B\u5E76\u7EE7\u7EED" })
         ] }),
-        step === "import" && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-onboarding-card", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-field", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("label", { htmlFor: "ai-source-paths", children: "\u672C\u5730\u8D44\u6599\u8DEF\u5F84\uFF08\u6BCF\u884C\u4E00\u4E2A\u6587\u4EF6\u6216\u76EE\u5F55\uFF09" }),
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        step === "import" && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-onboarding-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-field", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("label", { htmlFor: "ai-source-paths", children: "\u672C\u5730\u8D44\u6599\u8DEF\u5F84\uFF08\u6BCF\u884C\u4E00\u4E2A\u6587\u4EF6\u6216\u76EE\u5F55\uFF09" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
               "textarea",
               {
                 id: "ai-source-paths",
@@ -19943,8 +20211,8 @@ window.__ModuleLoader__.load({
                 placeholder: "/Users/you/Documents/SICP.pdf\n/Users/you/Documents/\u8BFE\u7A0B\u7B14\u8BB0.md\n/Users/you/Documents/\u4EE3\u7801\u5B9E\u9A8C"
               }
             ),
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-row", style: { marginTop: 6 }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-row", style: { marginTop: 6 }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                 "button",
                 {
                   type: "button",
@@ -19956,12 +20224,12 @@ window.__ModuleLoader__.load({
                   children: picking ? "\u6B63\u5728\u6253\u5F00\u9009\u62E9\u5668\u2026" : "\u{1F4C2} \u9009\u62E9\u8D44\u6599\u6587\u4EF6\u5939\u2026"
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-field-hint", children: "\u53EF\u9009\u62E9\u6587\u4EF6\u5939\uFF08\u4F1A\u81EA\u52A8\u6536\u96C6\u5176\u4E2D\u7684 Markdown/\u6587\u672C/PDF/\u56FE\u7247/Word/PPT/\u4EE3\u7801/Notebook\uFF09\uFF0C\u4E5F\u53EF\u76F4\u63A5\u8F93\u5165\u591A\u4E2A\u6587\u4EF6\u8DEF\u5F84\u3002" })
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-field-hint", children: "\u53EF\u9009\u62E9\u6587\u4EF6\u5939\uFF08\u4F1A\u81EA\u52A8\u6536\u96C6\u5176\u4E2D\u7684 Markdown/\u6587\u672C/PDF/\u56FE\u7247/Word/PPT/\u4EE3\u7801/Notebook\uFF09\uFF0C\u4E5F\u53EF\u76F4\u63A5\u8F93\u5165\u591A\u4E2A\u6587\u4EF6\u8DEF\u5F84\u3002" })
             ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => void importSources(), disabled: busy || importRunning, children: importRunning ? "\u5BFC\u5165\u4E2D\u2026" : "\u5BFC\u5165\u8D44\u6599" }),
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => void importSources(), disabled: busy || importRunning, children: importRunning ? "\u5BFC\u5165\u4E2D\u2026" : "\u5BFC\u5165\u8D44\u6599" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
               "button",
               {
                 type: "button",
@@ -19971,19 +20239,19 @@ window.__ModuleLoader__.load({
                 children: draftRunning ? "\u6B63\u5728\u751F\u6210\u8BFE\u7A0B\u8349\u6848\u2026" : "\u751F\u6210\u8BFE\u7A0B\u8349\u6848"
               }
             ),
-            importRunning && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-muted", children: "\u6B63\u5728\u5BFC\u5165\uFF1B\u5B8C\u6210\u540E\u53EF\u751F\u6210\u8BFE\u7A0B\u8349\u6848\u3002" })
+            importRunning && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-muted", children: "\u6B63\u5728\u5BFC\u5165\uFF1B\u5B8C\u6210\u540E\u53EF\u751F\u6210\u8BFE\u7A0B\u8349\u6848\u3002" })
           ] }),
-          importTasks.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { style: { marginTop: 8 }, children: importTasks.map((task) => /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-muted", children: [
+          importTasks.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { style: { marginTop: 8 }, children: importTasks.map((task) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-muted", children: [
             task.label,
             "\uFF1A",
             task.status,
             formatPercent(task.progress) !== "" ? ` ${formatPercent(task.progress)}` : "",
             task.error !== void 0 ? `\uFF08${task.error.message}\uFF09` : ""
           ] }, task.id)) }),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-muted", style: { marginTop: 8 }, children: "\u60F3\u5148\u5F00\u59CB\u63D0\u95EE\uFF1F\u751F\u6210\u4EFB\u52A1\u5931\u8D25\u6216\u8D44\u6599\u8FD8\u6CA1\u51C6\u5907\u597D\u65F6\uFF0C\u53EF\u4EE5\u5728\u4E0B\u4E00\u6B65\u9009\u62E9\u300C\u5148\u968F\u4FBF\u95EE\u95EE\uFF08\u968F\u95EE\u968F\u5B66\uFF09\u300D\u3002" })
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-muted", style: { marginTop: 8 }, children: "\u60F3\u5148\u5F00\u59CB\u63D0\u95EE\uFF1F\u751F\u6210\u4EFB\u52A1\u5931\u8D25\u6216\u8D44\u6599\u8FD8\u6CA1\u51C6\u5907\u597D\u65F6\uFF0C\u53EF\u4EE5\u5728\u4E0B\u4E00\u6B65\u9009\u62E9\u300C\u5148\u968F\u4FBF\u95EE\u95EE\uFF08\u968F\u95EE\u968F\u5B66\uFF09\u300D\u3002" })
         ] }),
-        step === "draft" && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-onboarding-card", children: [
-          props.draft !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        step === "draft" && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-onboarding-card", children: [
+          props.draft !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
             DraftReview,
             {
               draft: props.draft,
@@ -19995,22 +20263,22 @@ window.__ModuleLoader__.load({
               onBack: () => setStep("import")
             }
           ),
-          props.draft === void 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-row", style: { alignItems: "baseline" }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("h3", { style: { margin: "0 0 4px", fontSize: 14 }, children: "\u8BFE\u7A0B\u7ED3\u6784\u8349\u6848" }),
-              draftPhase === "running" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-badge", children: "\u751F\u6210\u4E2D" }),
-              draftPhase === "error" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: "ai-badge", style: { color: "var(--dsw-alias-state-error-primary, #b91c1c)" }, children: "\u751F\u6210\u5931\u8D25" })
+          props.draft === void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-row", style: { alignItems: "baseline" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h3", { style: { margin: "0 0 4px", fontSize: 14 }, children: "\u8BFE\u7A0B\u7ED3\u6784\u8349\u6848" }),
+              draftPhase === "running" && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-badge", children: "\u751F\u6210\u4E2D" }),
+              draftPhase === "error" && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-badge", style: { color: "var(--dsw-alias-state-error-primary, #b91c1c)" }, children: "\u751F\u6210\u5931\u8D25" })
             ] }),
-            draftPhase === "running" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Spinner, { label: "\u6B63\u5728\u8BFB\u53D6/\u751F\u6210\u8BFE\u7A0B\u7ED3\u6784\u2026\uFF08\u7ED3\u6784\u76F4\u8BFB\u8F83\u5FEB\uFF1BLLM-wiki \u751F\u6210\u53EF\u80FD\u9700\u8981\u51E0\u5341\u79D2\uFF09" }),
-            draftPhase === "error" && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { margin: "8px 0", borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { children: draftError ?? "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5931\u8D25" }) }),
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-muted", children: "\u53EF\u4EE5\u91CD\u8BD5\u751F\u6210\u3001\u8FD4\u56DE\u8865\u5145\u8D44\u6599\uFF0C\u6216\u76F4\u63A5\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7528\u6700\u5C0F\u7ED3\u6784\u5F00\u59CB\u5B66\u4E60\uFF08\u4E4B\u540E\u4ECD\u53EF\u518D\u751F\u6210\u5B8C\u6574\u8349\u6848\uFF09\u3002" })
+            draftPhase === "running" && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Spinner, { label: "\u6B63\u5728\u8BFB\u53D6/\u751F\u6210\u8BFE\u7A0B\u7ED3\u6784\u2026\uFF08\u7ED3\u6784\u76F4\u8BFB\u8F83\u5FEB\uFF1BLLM-wiki \u751F\u6210\u53EF\u80FD\u9700\u8981\u51E0\u5341\u79D2\uFF09" }),
+            draftPhase === "error" && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { margin: "8px 0", borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: draftError ?? "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5931\u8D25" }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-muted", children: "\u53EF\u4EE5\u91CD\u8BD5\u751F\u6210\u3001\u8FD4\u56DE\u8865\u5145\u8D44\u6599\uFF0C\u6216\u76F4\u63A5\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7528\u6700\u5C0F\u7ED3\u6784\u5F00\u59CB\u5B66\u4E60\uFF08\u4E4B\u540E\u4ECD\u53EF\u518D\u751F\u6210\u5B8C\u6574\u8349\u6848\uFF09\u3002" })
             ] }),
-            draftPhase === "idle" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-muted", children: "\u8349\u6848\u8FD8\u6CA1\u6709\u751F\u6210\uFF1A\u70B9\u51FB\u4E0B\u65B9\u6309\u94AE\u5F00\u59CB\u5206\u6790\u8D44\u6599\u3002" }),
-            /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "ai-row", style: { marginTop: 10 }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => void generateDraft(), disabled: busy, children: draftPhase === "error" ? "\u91CD\u8BD5\u751F\u6210\u8349\u6848" : "\u751F\u6210\u8BFE\u7A0B\u8349\u6848" }),
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "ai-small-button", onClick: () => void startAdhoc(), disabled: busy, children: "\u5148\u968F\u4FBF\u95EE\u95EE\uFF08\u968F\u95EE\u968F\u5B66\uFF09" }),
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: "ai-link-button", onClick: () => setStep("import"), disabled: busy, children: "\u8FD4\u56DE\u8865\u5145\u8D44\u6599" })
+            draftPhase === "idle" && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-muted", children: "\u8349\u6848\u8FD8\u6CA1\u6709\u751F\u6210\uFF1A\u70B9\u51FB\u4E0B\u65B9\u6309\u94AE\u5F00\u59CB\u5206\u6790\u8D44\u6599\u3002" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-row", style: { marginTop: 10 }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => void generateDraft(), disabled: busy, children: draftPhase === "error" ? "\u91CD\u8BD5\u751F\u6210\u8349\u6848" : "\u751F\u6210\u8BFE\u7A0B\u8349\u6848" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-small-button", onClick: () => void startAdhoc(), disabled: busy, children: "\u5148\u968F\u4FBF\u95EE\u95EE\uFF08\u968F\u95EE\u968F\u5B66\uFF09" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-link-button", onClick: () => setStep("import"), disabled: busy, children: "\u8FD4\u56DE\u8865\u5145\u8D44\u6599" })
             ] })
           ] })
         ] })
@@ -20018,25 +20286,25 @@ window.__ModuleLoader__.load({
     }
 
     // packages/dsh-plugin/src/client/components/CourseSetupCard.tsx
-    var import_react7 = require("react");
-    var import_jsx_runtime7 = require("react/jsx-runtime");
+    var import_react8 = require("react");
+    var import_jsx_runtime8 = require("react/jsx-runtime");
     function CourseSetupCard(props) {
       const { detail } = props;
       const goals = detail.activeRevision?.goals ?? detail.draftRevision?.goals ?? [];
       const busy = props.busy || props.phase === "loading";
-      return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-course-setup", role: "region", "aria-label": "\u8BFE\u7A0B\u7ED3\u6784\u5F85\u786E\u8BA4", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-course-setup-card", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-row", style: { alignItems: "baseline", gap: 10 }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h2", { style: { margin: 0, fontSize: 16 }, children: detail.course.title }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-badge", children: "\u8BFE\u7A0B\u7ED3\u6784\u5F85\u786E\u8BA4" })
+      return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-course-setup", role: "region", "aria-label": "\u8BFE\u7A0B\u7ED3\u6784\u5F85\u786E\u8BA4", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-course-setup-card", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-row", style: { alignItems: "baseline", gap: 10 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h2", { style: { margin: 0, fontSize: 16 }, children: detail.course.title }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-badge", children: "\u8BFE\u7A0B\u7ED3\u6784\u5F85\u786E\u8BA4" })
         ] }),
-        goals.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-muted", style: { marginTop: 4 }, children: [
+        goals.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-muted", style: { marginTop: 4 }, children: [
           "\u5B66\u4E60\u76EE\u6807\uFF1A",
           goals.join("\uFF1B")
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "ai-muted", style: { margin: "8px 0 10px" }, children: "\u8FD9\u95E8\u8BFE\u7A0B\u8FD8\u6CA1\u6709\u786E\u8BA4\u7684\u8BFE\u7A0B\u7ED3\u6784\uFF0C\u7CFB\u7EDF\u5B66\u4E60\u4E0E\u7EC3\u4E60\u9700\u8981\u5148\u786E\u8BA4\u6982\u5FF5\u4E0E\u5B66\u4E60\u987A\u5E8F\uFF1B \u4E5F\u53EF\u4EE5\u76F4\u63A5\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7528\u6700\u5C0F\u7ED3\u6784\u5F00\u59CB\uFF0C\u4E4B\u540E\u518D\u8865\u5168\u3002" }),
-        props.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { marginBottom: 10, borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: props.error }) }),
-        props.phase === "loading" && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Spinner, { label: "\u6B63\u5728\u751F\u6210/\u8BFB\u53D6\u8BFE\u7A0B\u7ED3\u6784\u2026\uFF08\u77E5\u8BC6\u5E93\u7ED3\u6784\u76F4\u8BFB\u8F83\u5FEB\uFF1BLLM-wiki \u751F\u6210\u53EF\u80FD\u9700\u8981\u51E0\u5341\u79D2\uFF09" }),
-        props.phase === "draft" && props.draft !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "ai-muted", style: { margin: "8px 0 10px" }, children: "\u8FD9\u95E8\u8BFE\u7A0B\u8FD8\u6CA1\u6709\u786E\u8BA4\u7684\u8BFE\u7A0B\u7ED3\u6784\uFF0C\u7CFB\u7EDF\u5B66\u4E60\u4E0E\u7EC3\u4E60\u9700\u8981\u5148\u786E\u8BA4\u6982\u5FF5\u4E0E\u5B66\u4E60\u987A\u5E8F\uFF1B \u4E5F\u53EF\u4EE5\u76F4\u63A5\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7528\u6700\u5C0F\u7ED3\u6784\u5F00\u59CB\uFF0C\u4E4B\u540E\u518D\u8865\u5168\u3002" }),
+        props.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { marginBottom: 10, borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: props.error }) }),
+        props.phase === "loading" && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Spinner, { label: "\u6B63\u5728\u751F\u6210/\u8BFB\u53D6\u8BFE\u7A0B\u7ED3\u6784\u2026\uFF08\u77E5\u8BC6\u5E93\u7ED3\u6784\u76F4\u8BFB\u8F83\u5FEB\uFF1BLLM-wiki \u751F\u6210\u53EF\u80FD\u9700\u8981\u51E0\u5341\u79D2\uFF09" }),
+        props.phase === "draft" && props.draft !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
           DraftReview,
           {
             draft: props.draft,
@@ -20047,17 +20315,17 @@ window.__ModuleLoader__.load({
             onAdhoc: props.onAdhoc
           }
         ),
-        props.phase !== "draft" && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-          props.phase !== "loading" && props.hasDraftConcepts && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-row", style: { marginBottom: 8 }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-primary-button", disabled: busy, onClick: props.onLoadDraft, children: "\u67E5\u770B\u5E76\u786E\u8BA4\u8349\u6848" }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-small-button", disabled: busy, onClick: props.onGenerate, children: "\u91CD\u65B0\u751F\u6210\u8349\u6848" })
+        props.phase !== "draft" && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+          props.phase !== "loading" && props.hasDraftConcepts && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-row", style: { marginBottom: 8 }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "ai-primary-button", disabled: busy, onClick: props.onLoadDraft, children: "\u67E5\u770B\u5E76\u786E\u8BA4\u8349\u6848" }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "ai-small-button", disabled: busy, onClick: props.onGenerate, children: "\u91CD\u65B0\u751F\u6210\u8349\u6848" })
           ] }),
-          props.phase !== "loading" && !props.hasDraftConcepts && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-row", style: { marginBottom: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-primary-button", disabled: busy, onClick: props.onGenerate, children: "\u751F\u6210\u8BFE\u7A0B\u8349\u6848" }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-small-button", disabled: busy, onClick: props.onAdhoc, children: "\u5148\u968F\u4FBF\u95EE\u95EE\uFF08\u968F\u95EE\u968F\u5B66\uFF09" }),
-            props.phase === "error" && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-small-button", disabled: busy, onClick: props.onLoadDraft, children: "\u91CD\u8BD5\u8BFB\u53D6\u8349\u6848" })
+          props.phase !== "loading" && !props.hasDraftConcepts && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-row", style: { marginBottom: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "ai-primary-button", disabled: busy, onClick: props.onGenerate, children: "\u751F\u6210\u8BFE\u7A0B\u8349\u6848" }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "ai-small-button", disabled: busy, onClick: props.onAdhoc, children: "\u5148\u968F\u4FBF\u95EE\u95EE\uFF08\u968F\u95EE\u968F\u5B66\uFF09" }),
+            props.phase === "error" && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "ai-small-button", disabled: busy, onClick: props.onLoadDraft, children: "\u91CD\u8BD5\u8BFB\u53D6\u8349\u6848" })
           ] }),
-          props.phase === "error" && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-muted", style: { marginTop: 6 }, children: "\u8349\u6848\u751F\u6210/\u8BFB\u53D6\u5931\u8D25\u65F6\u4F1A\u663E\u793A\u4E0A\u65B9\u9519\u8BEF\u539F\u56E0\uFF1B\u53EF\u91CD\u8BD5\uFF0C\u6216\u76F4\u63A5\u5148\u7528\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7EE7\u7EED\u3002" })
+          props.phase === "error" && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", style: { marginTop: 6 }, children: "\u8349\u6848\u751F\u6210/\u8BFB\u53D6\u5931\u8D25\u65F6\u4F1A\u663E\u793A\u4E0A\u65B9\u9519\u8BEF\u539F\u56E0\uFF1B\u53EF\u91CD\u8BD5\uFF0C\u6216\u76F4\u63A5\u5148\u7528\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7EE7\u7EED\u3002" })
         ] })
       ] }) });
     }
@@ -20107,8 +20375,8 @@ window.__ModuleLoader__.load({
     }
 
     // packages/dsh-plugin/src/client/components/Sidebar.tsx
-    var import_react8 = require("react");
-    var import_jsx_runtime8 = require("react/jsx-runtime");
+    var import_react9 = require("react");
+    var import_jsx_runtime9 = require("react/jsx-runtime");
     function orderedConcepts(detail) {
       const revision = detail?.activeRevision ?? detail?.draftRevision;
       if (revision === void 0) return [];
@@ -20142,8 +20410,8 @@ window.__ModuleLoader__.load({
       for (const record of props.mastery) {
         if (record.level !== "unseen") seenConceptIds.add(record.conceptId);
       }
-      const [openChapterIds, setOpenChapterIds] = (0, import_react8.useState)(/* @__PURE__ */ new Set());
-      (0, import_react8.useEffect)(() => {
+      const [openChapterIds, setOpenChapterIds] = (0, import_react9.useState)(/* @__PURE__ */ new Set());
+      (0, import_react9.useEffect)(() => {
         if (!hasChapters || revision === void 0) {
           setOpenChapterIds(/* @__PURE__ */ new Set());
           return;
@@ -20158,7 +20426,7 @@ window.__ModuleLoader__.load({
         const record = masteryByConcept.get(concept.id);
         const level = record?.level ?? "unseen";
         const current = concept.id === currentConceptId;
-        return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+        return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
           "button",
           {
             type: "button",
@@ -20169,18 +20437,18 @@ window.__ModuleLoader__.load({
             "aria-label": `\u5B66\u4E60\u6982\u5FF5 ${concept.title}`,
             disabled: props.busy,
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-grow", style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: concept.title }),
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-badge", "data-level": level, children: MASTERY_LABELS[level] })
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-grow", style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: concept.title }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", "data-level": level, children: MASTERY_LABELS[level] })
             ]
           },
           concept.id
         );
       };
-      return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("nav", { className: "ai-teaching-sidebar", "aria-label": "\u8BFE\u7A0B\u5BFC\u822A", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-sidebar-section", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-sidebar-heading-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h3", { className: "ai-sidebar-heading", children: "\u8BFE\u7A0B" }),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("nav", { className: "ai-teaching-sidebar", "aria-label": "\u8BFE\u7A0B\u5BFC\u822A", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-sidebar-section", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-sidebar-heading-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h3", { className: "ai-sidebar-heading", children: "\u8BFE\u7A0B" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
               "button",
               {
                 type: "button",
@@ -20193,9 +20461,9 @@ window.__ModuleLoader__.load({
               }
             )
           ] }),
-          props.courses.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", children: "\u8FD8\u6CA1\u6709\u8BFE\u7A0B" }),
-          props.courses.map((summary) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-course-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+          props.courses.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: "\u8FD8\u6CA1\u6709\u8BFE\u7A0B" }),
+          props.courses.map((summary) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-course-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
               "button",
               {
                 type: "button",
@@ -20204,19 +20472,19 @@ window.__ModuleLoader__.load({
                 onClick: () => props.onSelectCourse(summary.course.id),
                 "aria-label": `\u5207\u6362\u5230\u8BFE\u7A0B ${summary.course.title}`,
                 children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-course-title", children: summary.course.title }),
-                  /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "ai-course-meta", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-course-title", children: summary.course.title }),
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "ai-course-meta", children: [
                     summary.sourceCount,
                     " \u4EFD\u8D44\u6599 \xB7 ",
                     summary.conceptCount,
                     " \u4E2A\u6982\u5FF5",
                     summary.lastSessionAt !== void 0 ? ` \xB7 ${formatDay(summary.lastSessionAt)}` : ""
                   ] }),
-                  summary.course.id === activeCourseId && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-progress", "aria-label": `\u5B66\u4E60\u8FDB\u5EA6 ${props.progress.percent}%`, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { style: { width: `${props.progress.percent}%` } }) })
+                  summary.course.id === activeCourseId && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-progress", "aria-label": `\u5B66\u4E60\u8FDB\u5EA6 ${props.progress.percent}%`, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { style: { width: `${props.progress.percent}%` } }) })
                 ]
               }
             ),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
               "button",
               {
                 type: "button",
@@ -20229,10 +20497,10 @@ window.__ModuleLoader__.load({
               }
             )
           ] }, summary.course.id)),
-          detail !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-muted", style: { marginTop: 4 }, children: [
+          detail !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-muted", style: { marginTop: 4 }, children: [
             language === "en" ? "English" : language === "bilingual" ? "\u4E2D\u82F1\u53CC\u8BED" : "\u4E2D\u6587",
             goal !== void 0 ? ` \xB7 \u76EE\u6807\uFF1A${truncate(goal, 24)}` : "",
-            props.onEditGoals !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+            props.onEditGoals !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
               "button",
               {
                 type: "button",
@@ -20246,17 +20514,17 @@ window.__ModuleLoader__.load({
             )
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-sidebar-section", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-sidebar-heading-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("h3", { className: "ai-sidebar-heading", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-sidebar-section", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-sidebar-heading-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("h3", { className: "ai-sidebar-heading", children: [
               "\u6982\u5FF5\u8FDB\u5EA6\uFF08",
               props.progress.covered,
               "/",
               props.progress.total,
               "\uFF09"
             ] }),
-            hasChapters && structure !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "ai-row", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+            hasChapters && structure !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "ai-row", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
                 "button",
                 {
                   type: "button",
@@ -20265,17 +20533,17 @@ window.__ModuleLoader__.load({
                   children: "\u5C55\u5F00\u5168\u90E8"
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "ai-link-button", onClick: () => setOpenChapterIds(/* @__PURE__ */ new Set()), children: "\u6536\u8D77\u5168\u90E8" })
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "ai-link-button", onClick: () => setOpenChapterIds(/* @__PURE__ */ new Set()), children: "\u6536\u8D77\u5168\u90E8" })
             ] })
           ] }),
-          concepts.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", children: detail === void 0 ? "\u5C1A\u672A\u9009\u62E9\u8BFE\u7A0B" : "\u8BFE\u7A0B\u7ED3\u6784\u5C1A\u672A\u786E\u8BA4\uFF0C\u786E\u8BA4\u540E\u663E\u793A\u6982\u5FF5" }),
-          hasChapters && structure !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-sidebar-chapters", children: [
+          concepts.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: detail === void 0 ? "\u5C1A\u672A\u9009\u62E9\u8BFE\u7A0B" : "\u8BFE\u7A0B\u7ED3\u6784\u5C1A\u672A\u786E\u8BA4\uFF0C\u786E\u8BA4\u540E\u663E\u793A\u6982\u5FF5" }),
+          hasChapters && structure !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-sidebar-chapters", children: [
             structure.chapters.map((group) => {
               const open2 = openChapterIds.has(group.chapter.id);
               const coverage = chapterCoverage(group.concepts, seenConceptIds);
               const showRole = group.chapter.role !== void 0 && group.chapter.role !== "chapter";
-              return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-chapter-group", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+              return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-chapter-group", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
                   "button",
                   {
                     type: "button",
@@ -20289,10 +20557,10 @@ window.__ModuleLoader__.load({
                       return next;
                     }),
                     children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-collapsible-arrow", "aria-hidden": "true", children: open2 ? "\u25BE" : "\u25B8" }),
-                      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-chapter-title", children: group.chapter.title }),
-                      showRole && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-badge", "data-chapter-role": group.chapter.role, children: SIDEBAR_CHAPTER_ROLE_LABELS[group.chapter.role] }),
-                      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "ai-chapter-progress", children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-collapsible-arrow", "aria-hidden": "true", children: open2 ? "\u25BE" : "\u25B8" }),
+                      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-chapter-title", children: group.chapter.title }),
+                      showRole && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", "data-chapter-role": group.chapter.role, children: SIDEBAR_CHAPTER_ROLE_LABELS[group.chapter.role] }),
+                      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "ai-chapter-progress", children: [
                         "\u5DF2\u63A5\u89E6 ",
                         coverage.covered,
                         "/",
@@ -20301,31 +20569,31 @@ window.__ModuleLoader__.load({
                     ]
                   }
                 ),
-                open2 && (group.concepts.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted ai-chapter-empty", children: "\uFF08\u672C\u7AE0\u6682\u65E0\u6982\u5FF5\uFF09" }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-chapter-concept-rows", children: group.concepts.map((concept) => renderConceptRow(concept)) }))
+                open2 && (group.concepts.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted ai-chapter-empty", children: "\uFF08\u672C\u7AE0\u6682\u65E0\u6982\u5FF5\uFF09" }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-chapter-concept-rows", children: group.concepts.map((concept) => renderConceptRow(concept)) }))
               ] }, group.chapter.id);
             }),
-            structure.ungrouped.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-chapter-group", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-chapter-toggle ai-chapter-toggle-static", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-collapsible-arrow", "aria-hidden": "true", children: "\xB7" }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-chapter-title", children: "\u672A\u5206\u7EC4\u6982\u5FF5" }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "ai-chapter-progress", children: [
+            structure.ungrouped.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-chapter-group", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-chapter-toggle ai-chapter-toggle-static", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-collapsible-arrow", "aria-hidden": "true", children: "\xB7" }),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-chapter-title", children: "\u672A\u5206\u7EC4\u6982\u5FF5" }),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "ai-chapter-progress", children: [
                   structure.ungrouped.length,
                   " \u4E2A \xB7 \u5DF2\u63A5\u89E6 ",
                   chapterCoverage(structure.ungrouped, seenConceptIds).covered
                 ] })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-chapter-concept-rows", children: structure.ungrouped.map((concept) => renderConceptRow(concept)) })
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-chapter-concept-rows", children: structure.ungrouped.map((concept) => renderConceptRow(concept)) })
             ] })
           ] }) : concepts.map((concept) => renderConceptRow(concept)),
-          props.session !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-muted", style: { marginTop: 4 }, children: [
+          props.session !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-muted", style: { marginTop: 4 }, children: [
             "\u5F53\u524D\u9636\u6BB5\uFF1A",
             STAGE_LABELS[props.session.session.position.stage]
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-sidebar-section", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h3", { className: "ai-sidebar-heading", children: "\u5B66\u4E60\u4F1A\u8BDD" }),
-          props.sessions.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", children: "\u65B0\u5EFA\u4F1A\u8BDD\u5F00\u59CB\u5B66\u4E60" }),
-          props.sessions.slice(0, 8).map((summary) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-sidebar-section", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h3", { className: "ai-sidebar-heading", children: "\u5B66\u4E60\u4F1A\u8BDD" }),
+          props.sessions.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: "\u65B0\u5EFA\u4F1A\u8BDD\u5F00\u59CB\u5B66\u4E60" }),
+          props.sessions.slice(0, 8).map((summary) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
             "button",
             {
               type: "button",
@@ -20334,30 +20602,30 @@ window.__ModuleLoader__.load({
               onClick: () => props.onSelectSession(summary.id),
               "aria-label": `\u6253\u5F00\u4F1A\u8BDD ${summary.title}`,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-session-title", children: summary.title }),
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-badge", children: STAGE_LABELS[summary.stage] })
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-session-title", children: summary.title }),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", children: STAGE_LABELS[summary.stage] })
               ]
             },
             summary.id
           )),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "ai-link-button", onClick: props.onNewSession, disabled: props.busy, children: "+ \u65B0\u5EFA\u5B66\u4E60\u4F1A\u8BDD" })
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "ai-link-button", onClick: props.onNewSession, disabled: props.busy, children: "+ \u65B0\u5EFA\u5B66\u4E60\u4F1A\u8BDD" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-sidebar-section", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h3", { className: "ai-sidebar-heading", children: "\u590D\u4E60\u5EFA\u8BAE" }),
-          props.review.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", children: "\u6682\u65E0\u5230\u671F\u590D\u4E60" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-sidebar-section", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h3", { className: "ai-sidebar-heading", children: "\u590D\u4E60\u5EFA\u8BAE" }),
+          props.review.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: "\u6682\u65E0\u5230\u671F\u590D\u4E60" }),
           props.review.slice(0, 5).map((item) => {
             const concept = concepts.find((candidate) => candidate.id === item.conceptId);
             const mastery = masteryByConcept.get(item.conceptId);
-            return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-review-item", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { children: concept?.title ?? "\u6982\u5FF5" }),
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-review-reason", children: [
+            return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-review-item", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { children: concept?.title ?? "\u6982\u5FF5" }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-review-reason", children: [
                 REVIEW_REASON_LABELS[item.reason],
                 " \xB7 \u95F4\u9694 ",
                 item.intervalDays,
                 " \u5929",
                 mastery !== void 0 ? ` \xB7 ${MASTERY_LABELS[mastery.level]}` : ""
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
                 "button",
                 {
                   type: "button",
@@ -20370,10 +20638,10 @@ window.__ModuleLoader__.load({
             ] }, item.conceptId);
           })
         ] }),
-        detail !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-sidebar-section", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h3", { className: "ai-sidebar-heading", children: "\u8D44\u6599" }),
-          detail.sources.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", children: "\u5C1A\u672A\u5BFC\u5165\u8D44\u6599" }),
-          detail.sources.slice(0, 6).map((source) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+        detail !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-sidebar-section", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h3", { className: "ai-sidebar-heading", children: "\u8D44\u6599" }),
+          detail.sources.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: "\u5C1A\u672A\u5BFC\u5165\u8D44\u6599" }),
+          detail.sources.slice(0, 6).map((source) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
             "button",
             {
               type: "button",
@@ -20393,8 +20661,8 @@ window.__ModuleLoader__.load({
     }
 
     // packages/dsh-plugin/src/client/components/TeachingArea.tsx
-    var import_react9 = require("react");
-    var import_jsx_runtime9 = require("react/jsx-runtime");
+    var import_react10 = require("react");
+    var import_jsx_runtime10 = require("react/jsx-runtime");
     var KIND_LABELS = {
       explanation: "\u8BB2\u89E3",
       "static-figure": "\u56FE",
@@ -20421,9 +20689,9 @@ window.__ModuleLoader__.load({
       return `${formatDay(iso)} ${formatTime(iso)}`;
     }
     function CollapsibleSection(props) {
-      const [open2, setOpen] = (0, import_react9.useState)(props.defaultOpen === true);
-      return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-collapsible", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+      const [open2, setOpen] = (0, import_react10.useState)(props.defaultOpen === true);
+      return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-collapsible", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
           "button",
           {
             type: "button",
@@ -20432,8 +20700,8 @@ window.__ModuleLoader__.load({
             "aria-label": `${props.title}\uFF08${props.count}\uFF09`,
             onClick: () => setOpen(!open2),
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-collapsible-arrow", "aria-hidden": "true", children: open2 ? "\u25BE" : "\u25B8" }),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-collapsible-arrow", "aria-hidden": "true", children: open2 ? "\u25BE" : "\u25B8" }),
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { children: [
                 props.title,
                 "\uFF08",
                 props.count,
@@ -20442,42 +20710,42 @@ window.__ModuleLoader__.load({
             ]
           }
         ),
-        open2 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-collapsible-body", children: props.children })
+        open2 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-collapsible-body", children: props.children })
       ] });
     }
     function RunSummary(props) {
       const run = props.run;
       if (run === void 0) {
-        return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: props.emptyText ?? "\u5C1A\u672A\u8FD0\u884C\u3002" });
+        return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-muted", children: props.emptyText ?? "\u5C1A\u672A\u8FD0\u884C\u3002" });
       }
-      return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-run-summary", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-row", style: { gap: 8, flexWrap: "wrap" }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", "data-run-status": run.status, children: RUN_STATUS_LABELS[run.status] }),
-          run.exitCode !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "ai-muted", children: [
+      return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-run-summary", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-row", style: { gap: 8, flexWrap: "wrap" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-badge", "data-run-status": run.status, children: RUN_STATUS_LABELS[run.status] }),
+          run.exitCode !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "ai-muted", children: [
             "\u9000\u51FA\u7801 ",
             run.exitCode
           ] }) : null,
-          run.durationMs !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "ai-muted", children: [
+          run.durationMs !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "ai-muted", children: [
             run.durationMs,
             "ms"
           ] }) : null,
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "ai-muted", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "ai-muted", children: [
             "\u6821\u9A8C\uFF1A",
             run.verification
           ] }),
-          props.onToggle !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "ai-link-button", "aria-expanded": props.expanded, onClick: props.onToggle, children: props.expanded ? "\u6536\u8D77\u8F93\u51FA" : "\u5C55\u5F00\u8F93\u51FA" })
+          props.onToggle !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-link-button", "aria-expanded": props.expanded, onClick: props.onToggle, children: props.expanded ? "\u6536\u8D77\u8F93\u51FA" : "\u5C55\u5F00\u8F93\u51FA" })
         ] }),
-        props.expanded && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { style: { marginTop: 4 }, children: [
-          run.stdout !== "" && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: "stdout" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("pre", { className: "ai-run-output", children: run.stdout })
+        props.expanded && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { style: { marginTop: 4 }, children: [
+          run.stdout !== "" && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-muted", children: "stdout" }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("pre", { className: "ai-run-output", children: run.stdout })
           ] }),
-          run.stderr !== "" && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: "stderr" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("pre", { className: "ai-run-output ai-run-output-error", children: run.stderr })
+          run.stderr !== "" && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-muted", children: "stderr" }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("pre", { className: "ai-run-output ai-run-output-error", children: run.stderr })
           ] }),
-          run.stdout === "" && run.stderr === "" && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: "\uFF08\u6CA1\u6709\u8F93\u51FA\uFF09" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-muted", children: [
+          run.stdout === "" && run.stderr === "" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-muted", children: "\uFF08\u6CA1\u6709\u8F93\u51FA\uFF09" }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-muted", children: [
             "\u8FD0\u884C ",
             run.id,
             " \xB7 ",
@@ -20487,13 +20755,13 @@ window.__ModuleLoader__.load({
       ] });
     }
     function ActivityView(props) {
-      const host = (0, import_react9.useRef)(null);
-      const callbacksRef = (0, import_react9.useRef)(props.callbacks);
+      const host = (0, import_react10.useRef)(null);
+      const callbacksRef = (0, import_react10.useRef)(props.callbacks);
       callbacksRef.current = props.callbacks;
-      const stateRef = (0, import_react9.useRef)(props.state);
+      const stateRef = (0, import_react10.useRef)(props.state);
       stateRef.current = props.state;
       const { activity } = props;
-      (0, import_react9.useEffect)(() => {
+      (0, import_react10.useEffect)(() => {
         const element = host.current;
         if (element === null) return;
         element.textContent = "";
@@ -20531,39 +20799,46 @@ window.__ModuleLoader__.load({
           element.textContent = "";
         };
       }, [activity.id, activity.revision]);
-      return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { ref: host });
+      return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { ref: host });
     }
     function ActivityHistoryRow(props) {
       const { activity } = props;
-      return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-history-row", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-history-main", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-history-title", children: activity.title }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-history-meta", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", children: KIND_LABELS[activity.kind] ?? activity.kind }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: createdLabel(activity.createdAt) }),
-            activity.payload.type === "code-run" && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { children: [
+      return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-history-row", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-history-main", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-history-title", children: activity.title }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-history-meta", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-badge", children: KIND_LABELS[activity.kind] ?? activity.kind }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: createdLabel(activity.createdAt) }),
+            activity.payload.type === "code-run" && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { children: [
               "\u6700\u8FD1\u8FD0\u884C\uFF1A",
               props.run === void 0 ? "\u5C1A\u672A\u8FD0\u884C" : RUN_STATUS_LABELS[props.run.status]
             ] })
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-row", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: props.onRestore, children: "\u6062\u590D\u4E3A\u5F53\u524D" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "ai-danger-button", disabled: props.busy, onClick: props.onDelete, children: "\u5220\u9664" })
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-row", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: props.onRestore, children: "\u6062\u590D\u4E3A\u5F53\u524D" }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-danger-button", disabled: props.busy, onClick: props.onDelete, children: "\u5220\u9664" })
         ] })
       ] });
     }
     function ActivityTab(props) {
-      const [showAll, setShowAll] = (0, import_react9.useState)(false);
-      const current = props.activities.find((activity) => activity.id === props.currentActivityId);
-      const history = props.activities.filter((activity) => activity.id !== current?.id).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      const [showAll, setShowAll] = (0, import_react10.useState)(false);
+      const graphical = props.activities.filter((activity) => isGraphicalActivityKind(activity.kind));
+      const panelActivities = props.activities.filter((activity) => !isGraphicalActivityKind(activity.kind));
+      const current = panelActivities.find((activity) => activity.id === props.currentActivityId);
+      const history = panelActivities.filter((activity) => activity.id !== current?.id).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       const visibleHistory = showAll ? history : history.slice(0, 10);
-      return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
-        current === void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-empty", children: "\u5F53\u524D\u6CA1\u6709\u8FDB\u884C\u4E2D\u7684\u6D3B\u52A8\u3002\u53EF\u4EE5\u5728\u4E0B\u65B9\u300C\u5386\u53F2\u6D3B\u52A8\u300D\u4E2D\u6062\u590D\u4E00\u4E2A\u7EE7\u7EED\u64CD\u4F5C\uFF0C\u6216\u7EE7\u7EED\u5BF9\u8BDD\u8BA9\u6559\u5E08\u521B\u5EFA\u65B0\u7684\u6D3B\u52A8\u3002" }),
-        current !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-current-activity", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-current-head", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-current-title", children: current.title }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { children: [
+        graphical.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-banner ai-graphical-moved-note", "data-kind": "info", role: "status", style: { marginBottom: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { children: [
+          "\u56FE\u5F62\u7C7B\u6D3B\u52A8\u5DF2\u663E\u793A\u5728\u5BF9\u8BDD\u4E2D\uFF08",
+          graphical.length,
+          " \u4E2A\uFF09\uFF1B\u6B64\u9762\u677F\u53EA\u4FDD\u7559\u6587\u5B57\u3001\u4EE3\u7801\u4E0E\u7EC3\u4E60\u7C7B\u6D3B\u52A8\u3002"
+        ] }) }),
+        current === void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-empty", children: graphical.length > 0 ? "\u5F53\u524D\u56FE\u5F62\u7C7B\u6D3B\u52A8\u5DF2\u663E\u793A\u5728\u5BF9\u8BDD\u4E2D\uFF1B\u6B64\u9762\u677F\u53EF\u5728\u4E0B\u65B9\u300C\u5386\u53F2\u6D3B\u52A8\u300D\u6062\u590D\u5176\u5B83\u6D3B\u52A8\uFF0C\u6216\u7EE7\u7EED\u5BF9\u8BDD\u3002" : "\u5F53\u524D\u6CA1\u6709\u8FDB\u884C\u4E2D\u7684\u6D3B\u52A8\u3002\u53EF\u4EE5\u5728\u4E0B\u65B9\u300C\u5386\u53F2\u6D3B\u52A8\u300D\u4E2D\u6062\u590D\u4E00\u4E2A\u7EE7\u7EED\u64CD\u4F5C\uFF0C\u6216\u7EE7\u7EED\u5BF9\u8BDD\u8BA9\u6559\u5E08\u521B\u5EFA\u65B0\u7684\u6D3B\u52A8\u3002" }),
+        current !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-current-activity", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-current-head", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-current-title", children: current.title }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
               "button",
               {
                 type: "button",
@@ -20575,7 +20850,7 @@ window.__ModuleLoader__.load({
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
             ActivityView,
             {
               activity: current,
@@ -20584,7 +20859,7 @@ window.__ModuleLoader__.load({
             },
             `${current.id}:${current.revision}`
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-muted", style: { marginTop: 6 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-muted", style: { marginTop: 6 }, children: [
             "\u4FEE\u8BA2 v",
             current.revision,
             " \xB7 \u66F4\u65B0\u4E8E ",
@@ -20593,9 +20868,9 @@ window.__ModuleLoader__.load({
             current.revisionHistory !== void 0 && current.revisionHistory.length > 0 ? ` \xB7 \u5386\u53F2 ${current.revisionHistory.length} \u4E2A\u4FEE\u8BA2` : ""
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { style: { marginTop: 12 }, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(CollapsibleSection, { title: "\u5386\u53F2\u6D3B\u52A8", count: history.length, children: [
-          history.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: "\u8FD8\u6CA1\u6709\u5386\u53F2\u6D3B\u52A8\u3002" }),
-          visibleHistory.map((activity) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: { marginTop: 12 }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(CollapsibleSection, { title: "\u5386\u53F2\u6D3B\u52A8", count: history.length, children: [
+          history.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-muted", children: "\u8FD8\u6CA1\u6709\u5386\u53F2\u6D3B\u52A8\u3002" }),
+          visibleHistory.map((activity) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
             ActivityHistoryRow,
             {
               activity,
@@ -20606,7 +20881,7 @@ window.__ModuleLoader__.load({
             },
             activity.id
           )),
-          !showAll && history.length > 10 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("button", { type: "button", className: "ai-link-button", onClick: () => setShowAll(true), children: [
+          !showAll && history.length > 10 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("button", { type: "button", className: "ai-link-button", onClick: () => setShowAll(true), children: [
             "\u663E\u793A\u5168\u90E8\uFF08",
             history.length,
             "\uFF09"
@@ -20615,11 +20890,11 @@ window.__ModuleLoader__.load({
       ] });
     }
     function SourcesTab(props) {
-      const [view, setView] = (0, import_react9.useState)(void 0);
-      const [loading, setLoading] = (0, import_react9.useState)(false);
-      const [error, setError] = (0, import_react9.useState)(void 0);
+      const [view, setView] = (0, import_react10.useState)(void 0);
+      const [loading, setLoading] = (0, import_react10.useState)(false);
+      const [error, setError] = (0, import_react10.useState)(void 0);
       const documentId = props.selectedDocumentId;
-      (0, import_react9.useEffect)(() => {
+      (0, import_react10.useEffect)(() => {
         if (documentId === void 0) {
           setView(void 0);
           return;
@@ -20639,45 +20914,45 @@ window.__ModuleLoader__.load({
         };
       }, [documentId, props.loadSource]);
       const sources = props.courseDetail?.sources ?? [];
-      return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
-        sources.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-empty", children: "\u8FD8\u6CA1\u6709\u5BFC\u5165\u8D44\u6599\u3002\u9996\u6B21\u4F7F\u7528\u5411\u5BFC\u6216\u8BFE\u7A0B\u8BBE\u7F6E\u4E2D\u53EF\u4EE5\u5BFC\u5165\u672C\u5730\u8D44\u6599\u3002" }),
-        sources.map((source) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-source-card", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-source-title", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { children: [
+      return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { children: [
+        sources.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-empty", children: "\u8FD8\u6CA1\u6709\u5BFC\u5165\u8D44\u6599\u3002\u9996\u6B21\u4F7F\u7528\u5411\u5BFC\u6216\u8BFE\u7A0B\u8BBE\u7F6E\u4E2D\u53EF\u4EE5\u5BFC\u5165\u672C\u5730\u8D44\u6599\u3002" }),
+        sources.map((source) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-source-card", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-source-title", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { children: [
               source.missing === true ? "\u26A0 " : "",
               source.title
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", children: source.format }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", children: source.status })
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-badge", children: source.format }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-badge", children: source.status })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-source-meta", title: source.originalPath, children: truncate(source.originalPath, 70) }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-row", style: { marginTop: 4 }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "ai-link-button", onClick: () => props.onOpenSource(source.id), children: "\u8BFB\u53D6\u5185\u5BB9" }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "ai-link-button", onClick: () => props.onRefreshSource(source.id), children: "\u68C0\u67E5\u539F\u6587\u4EF6\u53D8\u5316" })
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-source-meta", title: source.originalPath, children: truncate(source.originalPath, 70) }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-row", style: { marginTop: 4 }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-link-button", onClick: () => props.onOpenSource(source.id), children: "\u8BFB\u53D6\u5185\u5BB9" }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-link-button", onClick: () => props.onRefreshSource(source.id), children: "\u68C0\u67E5\u539F\u6587\u4EF6\u53D8\u5316" })
           ] })
         ] }, source.id)),
-        loading && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Spinner, { label: "\u8BFB\u53D6\u8D44\u6599\u2026" }),
-        error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-banner", "data-kind": "error", role: "alert", children: [
+        loading && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Spinner, { label: "\u8BFB\u53D6\u8D44\u6599\u2026" }),
+        error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-banner", "data-kind": "error", role: "alert", children: [
           "\u8BFB\u53D6\u5931\u8D25\uFF1A",
           error
         ] }),
-        view !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { style: { marginTop: 8 }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { children: view.document.title }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "ai-muted", children: [
+        view !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { style: { marginTop: 8 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("strong", { children: view.document.title }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "ai-muted", children: [
               "\u5171 ",
               view.totalUnits,
               " \u4E2A\u5355\u5143"
             ] })
           ] }),
-          view.issues.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("ul", { className: "ai-warning-list", children: view.issues.slice(0, 6).map((issue, index) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("li", { className: "ai-source-issue", children: [
+          view.issues.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("ul", { className: "ai-warning-list", children: view.issues.slice(0, 6).map((issue, index) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("li", { className: "ai-source-issue", children: [
             "[",
             issue.severity,
             "] ",
             issue.message
           ] }, index)) }),
-          view.revision?.units.slice(0, 40).map((unit) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-source-unit", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-muted", children: [
+          view.revision?.units.slice(0, 40).map((unit) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-source-unit", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-muted", children: [
               unit.kind,
               " \xB7 ",
               unit.locator.page !== void 0 ? `\u7B2C ${unit.locator.page} \u9875` : unit.locator.lines !== void 0 ? `\u7B2C ${unit.locator.lines[0]}\u2013${unit.locator.lines[1]} \u884C` : "",
@@ -20685,15 +20960,15 @@ window.__ModuleLoader__.load({
               unit.confidence
             ] }),
             unit.text.length > 1200 ? `${unit.text.slice(0, 1200)}\u2026` : unit.text,
-            unit.notes !== void 0 && unit.notes.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-source-issue", children: unit.notes.join("\uFF1B") })
+            unit.notes !== void 0 && unit.notes.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-source-issue", children: unit.notes.join("\uFF1B") })
           ] }, unit.id)),
-          view.revision === void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-empty", children: "\u8BE5\u8D44\u6599\u8FD8\u6CA1\u6709\u53EF\u8BFB\u4FEE\u8BA2\uFF08\u53EF\u80FD\u4ECD\u5728\u5904\u7406\u6216\u62BD\u53D6\u5931\u8D25\uFF09\u3002" })
+          view.revision === void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-empty", children: "\u8BE5\u8D44\u6599\u8FD8\u6CA1\u6709\u53EF\u8BFB\u4FEE\u8BA2\uFF08\u53EF\u80FD\u4ECD\u5728\u5904\u7406\u6216\u62BD\u53D6\u5931\u8D25\uFF09\u3002" })
         ] })
       ] });
     }
     function ExperimentsTab(props) {
-      const [showAll, setShowAll] = (0, import_react9.useState)(false);
-      const [expanded, setExpanded] = (0, import_react9.useState)(/* @__PURE__ */ new Set());
+      const [showAll, setShowAll] = (0, import_react10.useState)(false);
+      const [expanded, setExpanded] = (0, import_react10.useState)(/* @__PURE__ */ new Set());
       const toggleExpanded = (id) => {
         setExpanded((previous) => {
           const next = new Set(previous);
@@ -20707,28 +20982,28 @@ window.__ModuleLoader__.load({
       const currentExperiment = current !== void 0 && isCode(current) ? current : void 0;
       const history = props.activities.filter((activity) => isCode(activity) && activity.id !== currentExperiment?.id).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       const visibleHistory = showAll ? history : history.slice(0, 5);
-      return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-row", style: { marginBottom: 6 }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { children: "\u5B9E\u9A8C\u73AF\u5883" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "ai-small-button", onClick: props.onLoadEnvironments, children: "\u5237\u65B0\u73AF\u5883\u72B6\u6001" })
+      return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-row", style: { marginBottom: 6 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("strong", { children: "\u5B9E\u9A8C\u73AF\u5883" }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-small-button", onClick: props.onLoadEnvironments, children: "\u5237\u65B0\u73AF\u5883\u72B6\u6001" })
         ] }),
-        props.environments === void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-empty", children: "\u5C1A\u672A\u52A0\u8F7D\u73AF\u5883\u6E05\u5355\u3002\u70B9\u51FB\u201C\u5237\u65B0\u73AF\u5883\u72B6\u6001\u201D\u4ECE Host \u8BFB\u53D6\u771F\u5B9E\u89E3\u91CA\u5668\u7248\u672C\u4E0E\u9694\u79BB\u65B9\u5F0F\u3002" }),
-        props.environments !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
-          props.environments.supportedLanguages.map((row) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-env-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", children: row.status }),
+        props.environments === void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-empty", children: "\u5C1A\u672A\u52A0\u8F7D\u73AF\u5883\u6E05\u5355\u3002\u70B9\u51FB\u201C\u5237\u65B0\u73AF\u5883\u72B6\u6001\u201D\u4ECE Host \u8BFB\u53D6\u771F\u5B9E\u89E3\u91CA\u5668\u7248\u672C\u4E0E\u9694\u79BB\u65B9\u5F0F\u3002" }),
+        props.environments !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+          props.environments.supportedLanguages.map((row) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-env-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-badge", children: row.status }),
             " ",
             row.label,
             row.note !== void 0 ? ` \xB7 ${row.note}` : ""
           ] }, row.language)),
-          props.environments.environments.map((record) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-env-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", children: record.status }),
+          props.environments.environments.map((record) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-env-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-badge", children: record.status }),
               " ",
               record.language,
               record.dialect !== void 0 ? `\uFF08${record.dialect}\uFF09` : "",
               record.version !== void 0 ? ` \xB7 ${record.version}` : ""
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-muted", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-muted", children: [
               "\u4F9D\u8D56\uFF1A",
               record.isolation.dependencies,
               record.isolation.path !== void 0 ? ` \xB7 ${record.isolation.path}` : "",
@@ -20742,7 +21017,7 @@ window.__ModuleLoader__.load({
               "ms",
               record.execution.network !== void 0 ? ` \xB7 \u7F51\u7EDC\uFF1A${record.execution.network}` : ""
             ] }),
-            record.failure !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-source-issue", children: [
+            record.failure !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-source-issue", children: [
               "\u51C6\u5907\u5931\u8D25\uFF1A",
               record.failure.message,
               "\uFF08\u6E05\u7406\uFF1A",
@@ -20750,17 +21025,17 @@ window.__ModuleLoader__.load({
               "\uFF09"
             ] })
           ] }, record.id)),
-          props.environments.gaps.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("ul", { className: "ai-warning-list", children: props.environments.gaps.map((gap) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("li", { children: gap }, gap)) })
+          props.environments.gaps.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("ul", { className: "ai-warning-list", children: props.environments.gaps.map((gap) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("li", { children: gap }, gap)) })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-row", style: { margin: "14px 0 6px" }, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { children: "\u5F53\u524D\u5B9E\u9A8C" }) }),
-        currentExperiment === void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-empty", children: "\u5F53\u524D\u6D3B\u52A8\u4E0D\u662F\u4EE3\u7801\u5B9E\u9A8C\u3002\u53EF\u5728\u300C\u5386\u53F2\u5B9E\u9A8C\u300D\u4E2D\u6062\u590D\u4E00\u4E2A\u4EE3\u7801\u5B9E\u9A8C\uFF0C\u6216\u5728\u5BF9\u8BDD/\u5F53\u524D\u6D3B\u52A8\u4E2D\u8FD0\u884C\u4EE3\u7801\u3002" }),
-        currentExperiment !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-current-experiment", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-history-title", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-row", style: { margin: "14px 0 6px" }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("strong", { children: "\u5F53\u524D\u5B9E\u9A8C" }) }),
+        currentExperiment === void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-empty", children: "\u5F53\u524D\u6D3B\u52A8\u4E0D\u662F\u4EE3\u7801\u5B9E\u9A8C\u3002\u53EF\u5728\u300C\u5386\u53F2\u5B9E\u9A8C\u300D\u4E2D\u6062\u590D\u4E00\u4E2A\u4EE3\u7801\u5B9E\u9A8C\uFF0C\u6216\u5728\u5BF9\u8BDD/\u5F53\u524D\u6D3B\u52A8\u4E2D\u8FD0\u884C\u4EE3\u7801\u3002" }),
+        currentExperiment !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-current-experiment", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-history-title", children: [
             currentExperiment.title,
             " ",
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", children: currentExperiment.payload.language })
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-badge", children: currentExperiment.payload.language })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
             RunSummary,
             {
               run: props.latestRuns[currentExperiment.id],
@@ -20770,17 +21045,17 @@ window.__ModuleLoader__.load({
             }
           )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { style: { marginTop: 12 }, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(CollapsibleSection, { title: "\u5386\u53F2\u5B9E\u9A8C", count: history.length, children: [
-          history.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: "\u8FD8\u6CA1\u6709\u5176\u4ED6\u4EE3\u7801\u5B9E\u9A8C\u3002" }),
-          visibleHistory.map((activity) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-history-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-history-main", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-history-title", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: { marginTop: 12 }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(CollapsibleSection, { title: "\u5386\u53F2\u5B9E\u9A8C", count: history.length, children: [
+          history.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-muted", children: "\u8FD8\u6CA1\u6709\u5176\u4ED6\u4EE3\u7801\u5B9E\u9A8C\u3002" }),
+          visibleHistory.map((activity) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-history-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-history-main", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-history-title", children: [
                 activity.title,
                 " ",
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", children: activity.payload.language })
+                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-badge", children: activity.payload.language })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-history-meta", children: createdLabel(activity.createdAt) }),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-history-meta", children: createdLabel(activity.createdAt) }),
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                 RunSummary,
                 {
                   run: props.latestRuns[activity.id],
@@ -20789,8 +21064,8 @@ window.__ModuleLoader__.load({
                 }
               )
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-row", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-row", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                 "button",
                 {
                   type: "button",
@@ -20800,7 +21075,7 @@ window.__ModuleLoader__.load({
                   children: "\u6062\u590D\u4E3A\u5F53\u524D"
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
                 "button",
                 {
                   type: "button",
@@ -20812,7 +21087,7 @@ window.__ModuleLoader__.load({
               )
             ] })
           ] }, activity.id)),
-          !showAll && history.length > 5 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("button", { type: "button", className: "ai-link-button", onClick: () => setShowAll(true), children: [
+          !showAll && history.length > 5 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("button", { type: "button", className: "ai-link-button", onClick: () => setShowAll(true), children: [
             "\u663E\u793A\u5168\u90E8\uFF08",
             history.length,
             "\uFF09"
@@ -20823,9 +21098,9 @@ window.__ModuleLoader__.load({
     function NotesTab(props) {
       const selected = props.activities.find((activity) => activity.id === props.currentActivityId);
       const stored = props.courseDetail?.learning.notes ?? [];
-      return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-notes-area", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", style: { marginBottom: 4 }, children: selected !== void 0 ? `\u7B14\u8BB0\u7ED1\u5B9A\u5230\u5F53\u524D\u6D3B\u52A8\u300C${selected.title}\u300D\uFF0C\u968F\u6D3B\u52A8\u72B6\u6001\u4FDD\u5B58\u5230 Host\u3002` : "\u5F53\u524D\u6CA1\u6709\u8FDB\u884C\u4E2D\u7684\u6D3B\u52A8\uFF1B\u53EF\u5148\u5728\u5386\u53F2\u6D3B\u52A8\u4E2D\u6062\u590D\u4E00\u4E2A\u6D3B\u52A8\u518D\u8BB0\u5F55\u7B14\u8BB0\u3002" }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-notes-area", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-muted", style: { marginBottom: 4 }, children: selected !== void 0 ? `\u7B14\u8BB0\u7ED1\u5B9A\u5230\u5F53\u524D\u6D3B\u52A8\u300C${selected.title}\u300D\uFF0C\u968F\u6D3B\u52A8\u72B6\u6001\u4FDD\u5B58\u5230 Host\u3002` : "\u5F53\u524D\u6CA1\u6709\u8FDB\u884C\u4E2D\u7684\u6D3B\u52A8\uFF1B\u53EF\u5148\u5728\u5386\u53F2\u6D3B\u52A8\u4E2D\u6062\u590D\u4E00\u4E2A\u6D3B\u52A8\u518D\u8BB0\u5F55\u7B14\u8BB0\u3002" }),
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
           "textarea",
           {
             value: props.notes,
@@ -20834,8 +21109,8 @@ window.__ModuleLoader__.load({
             onChange: (event) => props.onNotesChange(event.target.value)
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-row", style: { marginTop: 6 }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-row", style: { marginTop: 6 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
             "button",
             {
               type: "button",
@@ -20845,17 +21120,17 @@ window.__ModuleLoader__.load({
               children: "\u4FDD\u5B58\u7B14\u8BB0"
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-muted", children: "\u7B14\u8BB0\u53EA\u4FDD\u5B58\u5728\u672C\u673A Host \u6570\u636E\u76EE\u5F55\u3002" })
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-muted", children: "\u7B14\u8BB0\u53EA\u4FDD\u5B58\u5728\u672C\u673A Host \u6570\u636E\u76EE\u5F55\u3002" })
         ] }),
-        stored.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { style: { marginTop: 12 }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-sidebar-heading", children: [
+        stored.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { style: { marginTop: 12 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-sidebar-heading", children: [
             "\u8BFE\u7A0B\u7B14\u8BB0\u5386\u53F2\uFF08",
             stored.length,
             "\uFF09"
           ] }),
-          stored.slice(0, 10).map((note) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-source-card", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("pre", { style: { whiteSpace: "pre-wrap", margin: 0, fontFamily: "inherit" }, children: note.markdown }),
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: note.updatedAt.slice(0, 16).replace("T", " ") })
+          stored.slice(0, 10).map((note) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-source-card", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("pre", { style: { whiteSpace: "pre-wrap", margin: 0, fontFamily: "inherit" }, children: note.markdown }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-muted", children: note.updatedAt.slice(0, 16).replace("T", " ") })
           ] }, note.id))
         ] })
       ] });
@@ -20871,13 +21146,13 @@ window.__ModuleLoader__.load({
         onHelpExposure: props.onHelpExposure,
         onAnchorClick: props.onAnchorClick
       };
-      return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("section", { className: "ai-teaching-area", "aria-label": "\u6301\u7EED\u6559\u5B66\u533A\u57DF", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-tabs", role: "tablist", children: [
+      return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("section", { className: "ai-teaching-area", "aria-label": "\u6301\u7EED\u6559\u5B66\u533A\u57DF", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-tabs", role: "tablist", children: [
           ["activity", "\u5F53\u524D\u6D3B\u52A8"],
           ["sources", "\u6765\u6E90"],
           ["experiments", "\u5B9E\u9A8C/\u8FD0\u884C\u7ED3\u679C"],
           ["notes", "\u7B14\u8BB0"]
-        ].map(([key, label]) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        ].map(([key, label]) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
           "button",
           {
             type: "button",
@@ -20890,8 +21165,8 @@ window.__ModuleLoader__.load({
           },
           key
         )) }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-tab-body", children: [
-          tab === "activity" && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-tab-body", children: [
+          tab === "activity" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
             ActivityTab,
             {
               activities: props.activities,
@@ -20905,7 +21180,7 @@ window.__ModuleLoader__.load({
               onRequestDeleteActivity: props.onRequestDeleteActivity
             }
           ),
-          tab === "sources" && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+          tab === "sources" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
             SourcesTab,
             {
               ...props.courseDetail !== void 0 ? { courseDetail: props.courseDetail } : {},
@@ -20915,7 +21190,7 @@ window.__ModuleLoader__.load({
               onRefreshSource: props.onRefreshSource
             }
           ),
-          tab === "experiments" && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+          tab === "experiments" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
             ExperimentsTab,
             {
               ...props.environments !== void 0 ? { environments: props.environments } : {},
@@ -20928,7 +21203,7 @@ window.__ModuleLoader__.load({
               onRequestDeleteActivity: props.onRequestDeleteActivity
             }
           ),
-          tab === "notes" && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+          tab === "notes" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
             NotesTab,
             {
               activities: props.activities,
@@ -20945,7 +21220,7 @@ window.__ModuleLoader__.load({
     }
 
     // packages/dsh-plugin/src/client/components/TopBar.tsx
-    var import_react10 = require("react");
+    var import_react11 = require("react");
 
     // packages/dsh-plugin/src/client/context-meter.ts
     function formatTokenCount(value) {
@@ -20997,13 +21272,13 @@ window.__ModuleLoader__.load({
     }
 
     // packages/dsh-plugin/src/client/components/TopBar.tsx
-    var import_jsx_runtime10 = require("react/jsx-runtime");
+    var import_jsx_runtime11 = require("react/jsx-runtime");
     function ModelSelector(props) {
       const { catalog } = props;
-      const [open2, setOpen] = (0, import_react10.useState)(false);
-      const [pending, setPending] = (0, import_react10.useState)(void 0);
-      const [loading, setLoading] = (0, import_react10.useState)(false);
-      const [error, setError] = (0, import_react10.useState)(void 0);
+      const [open2, setOpen] = (0, import_react11.useState)(false);
+      const [pending, setPending] = (0, import_react11.useState)(void 0);
+      const [loading, setLoading] = (0, import_react11.useState)(false);
+      const [error, setError] = (0, import_react11.useState)(void 0);
       const close2 = () => {
         setOpen(false);
         setPending(void 0);
@@ -21047,8 +21322,8 @@ window.__ModuleLoader__.load({
         if (id === void 0) return "\u9ED8\u8BA4";
         return catalog.providers.flatMap((provider) => provider.models).length > 0 ? id : id;
       };
-      return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "ai-model-selector", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+      return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { className: "ai-model-selector", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
           "button",
           {
             type: "button",
@@ -21062,14 +21337,14 @@ window.__ModuleLoader__.load({
               else setOpen(true);
             },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-model-name", children: currentLabel }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-badge", "data-follow-host": catalog.followHost, children: catalog.followHost ? "\u8DDF\u968F\u5BBF\u4E3B" : "\u5DF2\u8986\u76D6" }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { "aria-hidden": "true", children: "\u25BE" })
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "ai-model-name", children: currentLabel }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "ai-badge", "data-follow-host": catalog.followHost, children: catalog.followHost ? "\u8DDF\u968F\u5BBF\u4E3B" : "\u5DF2\u8986\u76D6" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { "aria-hidden": "true", children: "\u25BE" })
             ]
           }
         ),
-        open2 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-model-menu", role: "menu", "aria-label": "\u9009\u62E9\u6A21\u578B", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+        open2 && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-model-menu", role: "menu", "aria-label": "\u9009\u62E9\u6A21\u578B", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
             "button",
             {
               type: "button",
@@ -21082,8 +21357,8 @@ window.__ModuleLoader__.load({
                 void apply2({ followHost: true });
               },
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: "\u8DDF\u968F\u5BBF\u4E3B\u9ED8\u8BA4" }),
-                /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "ai-muted", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "\u8DDF\u968F\u5BBF\u4E3B\u9ED8\u8BA4" }),
+                /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { className: "ai-muted", children: [
                   catalog.default.provider,
                   "/",
                   catalog.default.model
@@ -21091,9 +21366,9 @@ window.__ModuleLoader__.load({
               ]
             }
           ),
-          catalog.providers.map((provider) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-model-provider", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-model-provider-name", children: provider.name }),
-            provider.models.map((model) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+          catalog.providers.map((provider) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-model-provider", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "ai-model-provider-name", children: provider.name }),
+            provider.models.map((model) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
               "button",
               {
                 type: "button",
@@ -21107,20 +21382,20 @@ window.__ModuleLoader__.load({
                   void chooseModel(provider.id, model.id);
                 },
                 children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: model.name }),
-                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-muted", children: model.id })
+                  /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: model.name }),
+                  /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "ai-muted", children: model.id })
                 ]
               },
               `${provider.id}/${model.id}`
             ))
           ] }, provider.id)),
-          pending !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-model-efforts", role: "group", "aria-label": "\u63A8\u7406\u529B\u5EA6", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-model-provider-name", children: [
+          pending !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-model-efforts", role: "group", "aria-label": "\u63A8\u7406\u529B\u5EA6", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-model-provider-name", children: [
               "\u63A8\u7406\u529B\u5EA6\uFF08",
               pending.model,
               "\uFF09"
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
               "button",
               {
                 type: "button",
@@ -21132,12 +21407,12 @@ window.__ModuleLoader__.load({
                   void apply2({ followHost: false, provider: pending.provider, model: pending.model });
                 },
                 children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: "\u9ED8\u8BA4\uFF08\u7EE7\u627F\u6A21\u578B\u9ED8\u8BA4\u529B\u5EA6\uFF09" }),
-                  pending.defaultEffort !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-muted", children: pending.defaultEffort })
+                  /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "\u9ED8\u8BA4\uFF08\u7EE7\u627F\u6A21\u578B\u9ED8\u8BA4\u529B\u5EA6\uFF09" }),
+                  pending.defaultEffort !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "ai-muted", children: pending.defaultEffort })
                 ]
               }
             ),
-            pending.efforts.map((effort) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+            pending.efforts.map((effort) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
               "button",
               {
                 type: "button",
@@ -21153,32 +21428,32 @@ window.__ModuleLoader__.load({
                   });
                 },
                 children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: effort.name }),
-                  /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-muted", children: effortLabel(effort.id) })
+                  /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: effort.name }),
+                  /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "ai-muted", children: effortLabel(effort.id) })
                 ]
               },
               effort.id
             ))
           ] }),
-          catalog.failures !== void 0 && catalog.failures.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-model-failures", children: catalog.failures.map((failure) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-muted", children: [
+          catalog.failures !== void 0 && catalog.failures.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "ai-model-failures", children: catalog.failures.map((failure) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-muted", children: [
             "\u65E0\u6CD5\u5217\u51FA ",
             failure.provider,
             "\uFF1A",
             failure.message
           ] }, failure.provider)) }),
-          loading && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-muted", children: "\u6B63\u5728\u5E94\u7528\u2026" }),
-          error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-model-error", role: "alert", children: error }),
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-link-button", onClick: close2, children: "\u5173\u95ED" })
+          loading && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "ai-muted", children: "\u6B63\u5728\u5E94\u7528\u2026" }),
+          error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "ai-model-error", role: "alert", children: error }),
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { type: "button", className: "ai-link-button", onClick: close2, children: "\u5173\u95ED" })
         ] })
       ] });
     }
     function ContextMeter(props) {
       const meter = contextMeter(props.usage);
       if (meter === void 0) return null;
-      return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: "ai-context-meter", title: meter.tooltip, "aria-label": `\u4E0A\u4E0B\u6587\u7528\u91CF\uFF1A${meter.label}`, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-context-bar", "data-tone": meter.tone, "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { style: { width: `${Math.round((meter.fraction ?? 0) * 100)}%` } }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-context-label", children: meter.label }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { className: "ai-context-meter", title: meter.tooltip, "aria-label": `\u4E0A\u4E0B\u6587\u7528\u91CF\uFF1A${meter.label}`, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "ai-context-bar", "data-tone": meter.tone, "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { style: { width: `${Math.round((meter.fraction ?? 0) * 100)}%` } }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "ai-context-label", children: meter.label }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
           "button",
           {
             type: "button",
@@ -21195,11 +21470,11 @@ window.__ModuleLoader__.load({
     function TopBar(props) {
       const model = props.bootstrap?.model;
       const imageCapability = model?.imageInput === "yes" ? "\u53EF\u8BFB\u56FE" : model?.imageInput === "no" ? "\u4E0D\u53EF\u8BFB\u56FE" : "\u56FE\u50CF\u80FD\u529B\u672A\u77E5";
-      return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("header", { className: "ai-teaching-topbar", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-topbar-titles", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-row", style: { alignItems: "center", gap: 6 }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("header", { className: "ai-teaching-topbar", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-topbar-titles", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-row", style: { alignItems: "center", gap: 6 }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
                 "button",
                 {
                   type: "button",
@@ -21211,8 +21486,8 @@ window.__ModuleLoader__.load({
                   children: props.leftCollapsed ? "\u25B8" : "\u25C2"
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("h2", { className: "ai-topbar-title", children: props.courseTitle ?? "AI \u77E5\u8BC6\u5E93\u6559\u5B66" }),
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("h2", { className: "ai-topbar-title", children: props.courseTitle ?? "AI \u77E5\u8BC6\u5E93\u6559\u5B66" }),
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
                 "button",
                 {
                   type: "button",
@@ -21225,20 +21500,20 @@ window.__ModuleLoader__.load({
                 }
               )
             ] }),
-            props.goals.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-topbar-goal", title: props.goals.join("\uFF1B"), children: [
+            props.goals.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-topbar-goal", title: props.goals.join("\uFF1B"), children: [
               "\u76EE\u6807\uFF1A",
               props.goals.join("\uFF1B")
             ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-topbar-meta", children: [
-            props.offline && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-badge", style: { color: "var(--dsw-alias-state-warn-primary, #b45309)", borderColor: "var(--dsw-alias-state-warn-primary, #d97706)" }, children: "\u79BB\u7EBF" }),
-            props.modelCatalog !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(ModelSelector, { catalog: props.modelCatalog, busy: props.busy, onSet: props.onModelSet }) : model !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { title: `\u6A21\u578B\uFF1A${model.provider}/${model.model}\uFF1B${imageCapability}${model.note !== void 0 ? `\uFF1B${model.note}` : ""}`, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-topbar-meta", children: [
+            props.offline && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "ai-badge", style: { color: "var(--dsw-alias-state-warn-primary, #b45309)", borderColor: "var(--dsw-alias-state-warn-primary, #d97706)" }, children: "\u79BB\u7EBF" }),
+            props.modelCatalog !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(ModelSelector, { catalog: props.modelCatalog, busy: props.busy, onSet: props.onModelSet }) : model !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { title: `\u6A21\u578B\uFF1A${model.provider}/${model.model}\uFF1B${imageCapability}${model.note !== void 0 ? `\uFF1B${model.note}` : ""}`, children: [
               "\u6A21\u578B ",
               model.model,
               " \xB7 ",
               imageCapability
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
               ContextMeter,
               {
                 usage: props.contextUsage,
@@ -21247,11 +21522,11 @@ window.__ModuleLoader__.load({
                 onCompress: props.onCompressContext
               }
             ),
-            props.bootstrap !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { title: `Host ${props.bootstrap.host.platform}-${props.bootstrap.host.arch} \xB7 Node ${props.bootstrap.host.nodeVersion} \xB7 \u6570\u636E\u76EE\u5F55 ${props.bootstrap.dataDir}`, children: [
+            props.bootstrap !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { title: `Host ${props.bootstrap.host.platform}-${props.bootstrap.host.arch} \xB7 Node ${props.bootstrap.host.nodeVersion} \xB7 \u6570\u636E\u76EE\u5F55 ${props.bootstrap.dataDir}`, children: [
               "v",
               props.bootstrap.pluginVersion
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: "ai-lang-switch", role: "group", "aria-label": "\u8BB2\u89E3\u8BED\u8A00", children: Object.keys(LANGUAGE_LABELS).map((language) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: "ai-lang-switch", role: "group", "aria-label": "\u8BB2\u89E3\u8BED\u8A00", children: Object.keys(LANGUAGE_LABELS).map((language) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
               "button",
               {
                 type: "button",
@@ -21265,8 +21540,8 @@ window.__ModuleLoader__.load({
             )) })
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(TaskProgressBar, { tasks: props.tasks, onCancel: props.onCancelTask }),
-        props.bootstrap !== void 0 && props.bootstrap.warnings.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-banner", "data-kind": "warning", role: "status", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(TaskProgressBar, { tasks: props.tasks, onCancel: props.onCancelTask }),
+        props.bootstrap !== void 0 && props.bootstrap.warnings.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "ai-banner", "data-kind": "warning", role: "status", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { children: [
           "\u80FD\u529B\u63D0\u793A\uFF1A",
           props.bootstrap.warnings.join("\uFF1B")
         ] }) })
@@ -21274,7 +21549,7 @@ window.__ModuleLoader__.load({
     }
 
     // packages/dsh-plugin/src/client/components/Workspace.tsx
-    var import_jsx_runtime11 = require("react/jsx-runtime");
+    var import_jsx_runtime12 = require("react/jsx-runtime");
     function activityPrompt(activity) {
       const payload = activity.payload;
       switch (payload.type) {
@@ -21305,33 +21580,33 @@ window.__ModuleLoader__.load({
       return new Promise((resolve) => setTimeout(resolve, ms));
     }
     function TeachingWorkspace(props = {}) {
-      const [initialLayout] = (0, import_react11.useState)(() => loadLayoutPrefs());
-      const [state, dispatch] = import_react11.default.useReducer(workspaceReducer, {
+      const [initialLayout] = (0, import_react12.useState)(() => loadLayoutPrefs());
+      const [state, dispatch] = import_react12.default.useReducer(workspaceReducer, {
         ...INITIAL_WORKSPACE_STATE,
         leftCollapsed: initialLayout.leftCollapsed,
         rightCollapsed: initialLayout.rightCollapsed
       });
-      const stateRef = (0, import_react11.useRef)(state);
+      const stateRef = (0, import_react12.useRef)(state);
       stateRef.current = state;
-      const streamAbort = (0, import_react11.useRef)(null);
-      const mounted = (0, import_react11.useRef)(true);
-      const pollTimer = (0, import_react11.useRef)(void 0);
-      const helpByActivity = (0, import_react11.useRef)({});
-      const activeRuns = (0, import_react11.useRef)({});
-      const saveTimers = (0, import_react11.useRef)({});
-      const [online, setOnline] = (0, import_react11.useState)(() => typeof navigator === "undefined" ? true : navigator.onLine !== false);
-      const [compression, setCompression] = (0, import_react11.useState)(void 0);
-      const [compressing, setCompressing] = (0, import_react11.useState)(false);
-      const [deleteTarget, setDeleteTarget] = (0, import_react11.useState)(void 0);
-      const [activityDeleteTarget, setActivityDeleteTarget] = (0, import_react11.useState)(void 0);
-      const [deleteActivityBusy, setDeleteActivityBusy] = (0, import_react11.useState)(false);
-      const [goalsEditor, setGoalsEditor] = (0, import_react11.useState)(void 0);
-      const [savingGoals, setSavingGoals] = (0, import_react11.useState)(false);
-      const [deleteSources, setDeleteSources] = (0, import_react11.useState)(false);
-      const [deleting, setDeleting] = (0, import_react11.useState)(false);
-      const [notesDraft, setNotesDraft] = (0, import_react11.useState)("");
-      const [setup, setSetup] = (0, import_react11.useState)({ phase: "ready" });
-      (0, import_react11.useEffect)(() => {
+      const streamAbort = (0, import_react12.useRef)(null);
+      const mounted = (0, import_react12.useRef)(true);
+      const pollTimer = (0, import_react12.useRef)(void 0);
+      const helpByActivity = (0, import_react12.useRef)({});
+      const activeRuns = (0, import_react12.useRef)({});
+      const saveTimers = (0, import_react12.useRef)({});
+      const [online, setOnline] = (0, import_react12.useState)(() => typeof navigator === "undefined" ? true : navigator.onLine !== false);
+      const [compression, setCompression] = (0, import_react12.useState)(void 0);
+      const [compressing, setCompressing] = (0, import_react12.useState)(false);
+      const [deleteTarget, setDeleteTarget] = (0, import_react12.useState)(void 0);
+      const [activityDeleteTarget, setActivityDeleteTarget] = (0, import_react12.useState)(void 0);
+      const [deleteActivityBusy, setDeleteActivityBusy] = (0, import_react12.useState)(false);
+      const [goalsEditor, setGoalsEditor] = (0, import_react12.useState)(void 0);
+      const [savingGoals, setSavingGoals] = (0, import_react12.useState)(false);
+      const [deleteSources, setDeleteSources] = (0, import_react12.useState)(false);
+      const [deleting, setDeleting] = (0, import_react12.useState)(false);
+      const [notesDraft, setNotesDraft] = (0, import_react12.useState)("");
+      const [setup, setSetup] = (0, import_react12.useState)({ phase: "ready" });
+      (0, import_react12.useEffect)(() => {
         mounted.current = true;
         const update = () => setOnline(typeof navigator === "undefined" ? true : navigator.onLine !== false);
         window.addEventListener("online", update);
@@ -21346,27 +21621,29 @@ window.__ModuleLoader__.load({
           streamAbort.current?.abort();
         };
       }, []);
-      const seenVisualActivityIds = (0, import_react11.useRef)(/* @__PURE__ */ new Set());
-      (0, import_react11.useEffect)(() => {
-        const decision = visualAutoExpand({
-          activities: state.activities,
-          seenVisualIds: seenVisualActivityIds.current,
-          rightCollapsed: state.rightCollapsed
-        });
-        if (decision.seenVisualIds !== seenVisualActivityIds.current) {
-          seenVisualActivityIds.current = decision.seenVisualIds;
+      const seenGraphicalActivityIds = (0, import_react12.useRef)(void 0);
+      (0, import_react12.useEffect)(() => {
+        const graphicalIds = new Set(
+          state.activities.filter((activity) => isGraphicalActivityKind(activity.kind)).map((activity) => activity.id)
+        );
+        if (seenGraphicalActivityIds.current === void 0) {
+          seenGraphicalActivityIds.current = graphicalIds;
+          return;
         }
-        if (decision.expand) {
-          dispatch({ type: "ui/collapse", panel: "right", collapsed: false });
-        }
+        const fresh = [...graphicalIds].filter((id) => !seenGraphicalActivityIds.current?.has(id));
+        if (fresh.length === 0) return;
+        const next = new Set(seenGraphicalActivityIds.current);
+        for (const id of fresh) next.add(id);
+        seenGraphicalActivityIds.current = next;
+        if (!state.rightCollapsed) dispatch({ type: "ui/collapse", panel: "right", collapsed: true });
       }, [state.activities, state.rightCollapsed]);
-      (0, import_react11.useEffect)(() => {
+      (0, import_react12.useEffect)(() => {
         saveLayoutPrefs({ leftCollapsed: state.leftCollapsed, rightCollapsed: state.rightCollapsed });
       }, [state.leftCollapsed, state.rightCollapsed]);
-      (0, import_react11.useEffect)(() => {
+      (0, import_react12.useEffect)(() => {
         setSetup({ phase: "ready" });
       }, [state.courseDetail?.course.id]);
-      (0, import_react11.useEffect)(() => {
+      (0, import_react12.useEffect)(() => {
         const activityId = state.selectedActivityId;
         if (activityId === void 0) {
           setNotesDraft("");
@@ -21374,17 +21651,17 @@ window.__ModuleLoader__.load({
         }
         setNotesDraft(state.activityStates[activityId]?.notes ?? "");
       }, [state.selectedActivityId, state.session?.session.id]);
-      const notify = (0, import_react11.useCallback)((notice) => {
+      const notify = (0, import_react12.useCallback)((notice) => {
         dispatch({ type: "notice", notice });
       }, []);
-      const loadModelCatalog = (0, import_react11.useCallback)(async () => {
+      const loadModelCatalog = (0, import_react12.useCallback)(async () => {
         try {
           const catalog = await apiGet("model.catalog");
           if (mounted.current) dispatch({ type: "model/catalog", catalog });
         } catch {
         }
       }, []);
-      const loadContextUsage = (0, import_react11.useCallback)(async (sessionId) => {
+      const loadContextUsage = (0, import_react12.useCallback)(async (sessionId) => {
         try {
           const usage = await apiGet("context.usage", { sessionId });
           if (mounted.current && stateRef.current.session?.session.id === sessionId) {
@@ -21393,7 +21670,7 @@ window.__ModuleLoader__.load({
         } catch {
         }
       }, []);
-      const bootstrap = (0, import_react11.useCallback)(async () => {
+      const bootstrap = (0, import_react12.useCallback)(async () => {
         dispatch({ type: "workspace/loading" });
         try {
           const bootstrapInfo = await apiGet("bootstrap");
@@ -21409,7 +21686,7 @@ window.__ModuleLoader__.load({
           if (mounted.current) dispatch({ type: "bootstrap/failed", error: toAppError(error) });
         }
       }, [loadModelCatalog]);
-      const selectCourse = (0, import_react11.useCallback)(async (courseId) => {
+      const selectCourse = (0, import_react12.useCallback)(async (courseId) => {
         try {
           const [detail2, sessionsResponse] = await Promise.all([
             apiGet("courses.get", { courseId }),
@@ -21427,7 +21704,7 @@ window.__ModuleLoader__.load({
           notify({ kind: "error", message: `\u52A0\u8F7D\u8BFE\u7A0B\u5931\u8D25\uFF1A${describeError(error)}`, ...error instanceof Error ? {} : {} });
         }
       }, [notify]);
-      const confirmDeleteCourse = (0, import_react11.useCallback)(async () => {
+      const confirmDeleteCourse = (0, import_react12.useCallback)(async () => {
         if (deleteTarget === void 0) return;
         setDeleting(true);
         try {
@@ -21457,7 +21734,7 @@ window.__ModuleLoader__.load({
           setDeleting(false);
         }
       }, [deleteTarget, deleteSources, state.courseDetail, selectCourse, notify]);
-      const loadLatestRuns = (0, import_react11.useCallback)(async (sessionId) => {
+      const loadLatestRuns = (0, import_react12.useCallback)(async (sessionId) => {
         try {
           const { runs } = await apiGet("runs.latest", { sessionId });
           if (mounted.current && stateRef.current.session?.session.id === sessionId) {
@@ -21466,7 +21743,7 @@ window.__ModuleLoader__.load({
         } catch {
         }
       }, []);
-      const selectSession = (0, import_react11.useCallback)(async (sessionId) => {
+      const selectSession = (0, import_react12.useCallback)(async (sessionId) => {
         try {
           const view = await apiGet("sessions.get", { sessionId });
           if (!mounted.current) return;
@@ -21477,7 +21754,7 @@ window.__ModuleLoader__.load({
           notify({ kind: "error", message: `\u6062\u590D\u5B66\u4E60\u4F1A\u8BDD\u5931\u8D25\uFF1A${describeError(error)}` });
         }
       }, [notify, loadLatestRuns, loadContextUsage]);
-      const createSession = (0, import_react11.useCallback)(async (courseId) => {
+      const createSession = (0, import_react12.useCallback)(async (courseId) => {
         try {
           await apiPost("sessions.create", { courseId });
           const { sessions } = await apiGet("sessions.list", { courseId });
@@ -21489,7 +21766,7 @@ window.__ModuleLoader__.load({
           notify({ kind: "error", message: `\u521B\u5EFA\u5B66\u4E60\u4F1A\u8BDD\u5931\u8D25\uFF1A${describeError(error)}` });
         }
       }, [notify]);
-      const loadTasks = (0, import_react11.useCallback)(async () => {
+      const loadTasks = (0, import_react12.useCallback)(async () => {
         try {
           const { tasks } = await apiGet("tasks.list");
           if (!mounted.current) return tasks;
@@ -21506,7 +21783,7 @@ window.__ModuleLoader__.load({
           return [];
         }
       }, []);
-      const awaitTask = (0, import_react11.useCallback)(async (taskId, timeoutMs = 12e4) => {
+      const awaitTask = (0, import_react12.useCallback)(async (taskId, timeoutMs = 12e4) => {
         const started = Date.now();
         for (; ; ) {
           if (!mounted.current || Date.now() - started > timeoutMs) return void 0;
@@ -21519,7 +21796,7 @@ window.__ModuleLoader__.load({
           await sleep(800);
         }
       }, []);
-      const cancelTask = (0, import_react11.useCallback)(async (taskId) => {
+      const cancelTask = (0, import_react12.useCallback)(async (taskId) => {
         try {
           await apiPost("tasks.cancel", { taskId });
           await loadTasks();
@@ -21528,7 +21805,7 @@ window.__ModuleLoader__.load({
           notify({ kind: "error", message: `\u53D6\u6D88\u5931\u8D25\uFF1A${describeError(error)}` });
         }
       }, [loadTasks, notify]);
-      const sendMessage = (0, import_react11.useCallback)(async (text2) => {
+      const sendMessage = (0, import_react12.useCallback)(async (text2) => {
         const current = stateRef.current;
         if (current.session === void 0) {
           notify({ kind: "warning", message: "\u8FD8\u6CA1\u6709\u5B66\u4E60\u4F1A\u8BDD\uFF1A\u8BF7\u5148\u5EFA\u7ACB\u8BFE\u7A0B\u6216\u65B0\u5EFA\u4F1A\u8BDD\u3002" });
@@ -21570,7 +21847,7 @@ window.__ModuleLoader__.load({
           streamAbort.current = null;
         }
       }, [online, notify]);
-      const refreshLearning = (0, import_react11.useCallback)(async (sessionId) => {
+      const refreshLearning = (0, import_react12.useCallback)(async (sessionId) => {
         try {
           const view = await apiGet("sessions.get", { sessionId });
           if (!mounted.current) return;
@@ -21578,7 +21855,7 @@ window.__ModuleLoader__.load({
         } catch {
         }
       }, []);
-      const stopGeneration = (0, import_react11.useCallback)(async () => {
+      const stopGeneration = (0, import_react12.useCallback)(async () => {
         const session = stateRef.current.session;
         if (session === void 0) return;
         dispatch({ type: "chat/cancel-requested" });
@@ -21589,7 +21866,7 @@ window.__ModuleLoader__.load({
           dispatch({ type: "chat/local-error", error: toAppError(error) });
         }
       }, []);
-      const retryLast = (0, import_react11.useCallback)(() => {
+      const retryLast = (0, import_react12.useCallback)(() => {
         const messages = stateRef.current.messages;
         for (let index = messages.length - 1; index >= 0; index -= 1) {
           const message = messages[index];
@@ -21601,10 +21878,10 @@ window.__ModuleLoader__.load({
         }
         notify({ kind: "info", message: "\u6CA1\u6709\u53EF\u91CD\u8BD5\u7684\u5B66\u751F\u63D0\u95EE\u3002" });
       }, [sendMessage, notify]);
-      const quickAction = (0, import_react11.useCallback)((action) => {
+      const quickAction = (0, import_react12.useCallback)((action) => {
         void sendMessage(QUICK_ACTION_PROMPTS[action]);
       }, [sendMessage]);
-      const persistActivityState = (0, import_react11.useCallback)((activity, patch) => {
+      const persistActivityState = (0, import_react12.useCallback)((activity, patch) => {
         const previous = stateRef.current.activityStates[activity.id];
         const next = {
           activityId: activity.id,
@@ -21642,7 +21919,7 @@ window.__ModuleLoader__.load({
           Send();
         }, 350);
       }, [notify]);
-      const onRunCode = (0, import_react11.useCallback)(async (activity, request) => {
+      const onRunCode = (0, import_react12.useCallback)(async (activity, request) => {
         const clientRunId = request.clientRunId;
         activeRuns.current[clientRunId] = { activityId: activity.id };
         try {
@@ -21679,7 +21956,7 @@ window.__ModuleLoader__.load({
           delete activeRuns.current[clientRunId];
         }
       }, []);
-      const onCancelRun = (0, import_react11.useCallback)((runId) => {
+      const onCancelRun = (0, import_react12.useCallback)((runId) => {
         const target = runId ?? Object.keys(activeRuns.current)[0];
         if (target === void 0) {
           notify({ kind: "info", message: "\u5F53\u524D\u6CA1\u6709\u53EF\u53D6\u6D88\u7684\u8FD0\u884C\u3002" });
@@ -21697,7 +21974,7 @@ window.__ModuleLoader__.load({
           }
         }).catch((error) => notify({ kind: "warning", message: `\u53D6\u6D88\u8FD0\u884C\u5931\u8D25\uFF1A${describeError(error)}` }));
       }, [notify]);
-      const applyActivityPosition = (0, import_react11.useCallback)(async (activityId) => {
+      const applyActivityPosition = (0, import_react12.useCallback)(async (activityId) => {
         const session = stateRef.current.session;
         if (session === void 0) return false;
         try {
@@ -21713,7 +21990,7 @@ window.__ModuleLoader__.load({
           return false;
         }
       }, [notify]);
-      const restoreActivity = (0, import_react11.useCallback)((activityId) => {
+      const restoreActivity = (0, import_react12.useCallback)((activityId) => {
         void (async () => {
           if (await applyActivityPosition(activityId)) {
             dispatch({ type: "ui/tab", tab: "activity" });
@@ -21721,17 +21998,17 @@ window.__ModuleLoader__.load({
           }
         })();
       }, [applyActivityPosition, notify]);
-      const collapseActivity = (0, import_react11.useCallback)(() => {
+      const collapseActivity = (0, import_react12.useCallback)(() => {
         void (async () => {
           if (await applyActivityPosition(null)) {
             notify({ kind: "info", message: "\u5DF2\u6536\u8D77\u5F53\u524D\u6D3B\u52A8\uFF1B\u53EF\u5728\u300C\u5386\u53F2\u6D3B\u52A8\u300D\u4E2D\u6062\u590D\u7EE7\u7EED\u64CD\u4F5C\u3002" });
           }
         })();
       }, [applyActivityPosition, notify]);
-      const requestDeleteActivity = (0, import_react11.useCallback)((activity) => {
+      const requestDeleteActivity = (0, import_react12.useCallback)((activity) => {
         setActivityDeleteTarget(activity);
       }, []);
-      const confirmDeleteActivity = (0, import_react11.useCallback)(async () => {
+      const confirmDeleteActivity = (0, import_react12.useCallback)(async () => {
         const target = activityDeleteTarget;
         if (target === void 0) return;
         setDeleteActivityBusy(true);
@@ -21753,14 +22030,14 @@ window.__ModuleLoader__.load({
           setDeleteActivityBusy(false);
         }
       }, [activityDeleteTarget, notify]);
-      const onChatActivityClick = (0, import_react11.useCallback)((activityId) => {
+      const onChatActivityClick = (0, import_react12.useCallback)((activityId) => {
         if (activityId === stateRef.current.selectedActivityId) {
           dispatch({ type: "ui/tab", tab: "activity" });
           return;
         }
         restoreActivity(activityId);
       }, [restoreActivity]);
-      const onHelpExposure = (0, import_react11.useCallback)((activity, help) => {
+      const onHelpExposure = (0, import_react12.useCallback)((activity, help) => {
         const previous = helpByActivity.current[activity.id];
         const merged = {
           level: help.level,
@@ -21774,7 +22051,7 @@ window.__ModuleLoader__.load({
           notify({ kind: "info", message: "\u5DF2\u4F7F\u7528\u63D0\u793A\uFF1A\u672C\u6B21\u4F5C\u7B54\u4F1A\u5982\u5B9E\u8BB0\u5F55\u4E3A\u201C\u6709\u63D0\u793A\u201D\u3002" });
         }
       }, [notify]);
-      const submitAttempt = (0, import_react11.useCallback)(async (activity, data) => {
+      const submitAttempt = (0, import_react12.useCallback)(async (activity, data) => {
         const session = stateRef.current.session;
         if (session === void 0) return;
         const help = helpByActivity.current[activity.id];
@@ -21803,15 +22080,15 @@ window.__ModuleLoader__.load({
           if (mounted.current) dispatch({ type: "busy", label: void 0 });
         }
       }, [notify]);
-      const onQuizSubmit = (0, import_react11.useCallback)((activity, selected) => {
+      const onQuizSubmit = (0, import_react12.useCallback)((activity, selected) => {
         const payload = activity.payload;
         const labels = payload.type === "quiz" ? selected.map((id) => payload.options.find((option) => option.id === id)?.label ?? id) : selected;
         void submitAttempt(activity, { answerText: labels.join("\uFF1B"), selectedOptionIds: selected });
       }, [submitAttempt]);
-      const onAnswerSubmit = (0, import_react11.useCallback)((activity, answerText) => {
+      const onAnswerSubmit = (0, import_react12.useCallback)((activity, answerText) => {
         void submitAttempt(activity, { answerText });
       }, [submitAttempt]);
-      const saveNotes = (0, import_react11.useCallback)(() => {
+      const saveNotes = (0, import_react12.useCallback)(() => {
         const activity = selectedActivity(stateRef.current);
         if (activity === void 0) {
           notify({ kind: "warning", message: "\u8BF7\u5148\u9009\u62E9\u4E00\u4E2A\u6D3B\u52A8\u518D\u4FDD\u5B58\u7B14\u8BB0\u3002" });
@@ -21841,14 +22118,14 @@ window.__ModuleLoader__.load({
           notify({ kind: "error", message: `\u7B14\u8BB0\u4FDD\u5B58\u5931\u8D25\uFF1A${describeError(error)}` });
         });
       }, [notesDraft, notify]);
-      const loadSource = (0, import_react11.useCallback)(async (documentId, offset, limit) => {
+      const loadSource = (0, import_react12.useCallback)(async (documentId, offset, limit) => {
         return await apiGet("sources.get", {
           documentId,
           ...offset !== void 0 ? { offset } : {},
           ...limit !== void 0 ? { limit } : {}
         });
       }, []);
-      const refreshSource = (0, import_react11.useCallback)(async (documentId) => {
+      const refreshSource = (0, import_react12.useCallback)(async (documentId) => {
         try {
           const { task } = await apiPost("sources.refresh", { documentId });
           notify({ kind: "info", message: `\u6B63\u5728\u68C0\u67E5\u8D44\u6599\u53D8\u5316\uFF1A${task.snapshot.label}` });
@@ -21862,12 +22139,12 @@ window.__ModuleLoader__.load({
           notify({ kind: "error", message: `\u8D44\u6599\u5237\u65B0\u5931\u8D25\uFF1A${describeError(error)}` });
         }
       }, [notify, loadTasks, awaitTask]);
-      const loadEnvironments = (0, import_react11.useCallback)(() => {
+      const loadEnvironments = (0, import_react12.useCallback)(() => {
         void apiGet("environments.list").then((environments2) => {
           if (mounted.current) dispatch({ type: "environments/loaded", environments: environments2 });
         }).catch((error) => notify({ kind: "warning", message: `\u73AF\u5883\u6E05\u5355\u52A0\u8F7D\u5931\u8D25\uFF1A${describeError(error)}` }));
       }, [notify]);
-      const switchLanguage = (0, import_react11.useCallback)((language2) => {
+      const switchLanguage = (0, import_react12.useCallback)((language2) => {
         dispatch({ type: "busy", label: "\u4FDD\u5B58\u8BED\u8A00\u504F\u597D\u2026" });
         void apiPost("profile.set", { patch: { language: language2 } }).then(() => {
           if (!mounted.current) return;
@@ -21877,14 +22154,14 @@ window.__ModuleLoader__.load({
           if (mounted.current) dispatch({ type: "busy", label: void 0 });
         });
       }, [notify, bootstrap]);
-      const openSource = (0, import_react11.useCallback)((documentId) => {
+      const openSource = (0, import_react12.useCallback)((documentId) => {
         if (documentId === void 0) {
           notify({ kind: "info", message: "\u8FD9\u6761\u6765\u6E90\u6CA1\u6709\u672C\u5730\u539F\u6587\u4F4D\u7F6E\uFF08\u53EF\u80FD\u662F\u6A21\u578B\u8865\u5145\u6216\u5916\u90E8\u7F51\u9875\uFF09\u3002" });
           return;
         }
         dispatch({ type: "ui/select-source", documentId });
       }, [notify]);
-      const onEvidenceClick = (0, import_react11.useCallback)((reference) => {
+      const onEvidenceClick = (0, import_react12.useCallback)((reference) => {
         if (reference.anchor !== void 0) {
           dispatch({ type: "ui/select-source", documentId: reference.anchor.documentId });
           dispatch({ type: "ui/tab", tab: "sources" });
@@ -21896,11 +22173,11 @@ window.__ModuleLoader__.load({
         }
         notify({ kind: "info", message: `\u8BE5\u6765\u6E90\u7C7B\u578B\uFF1A${reference.kind}${reference.note !== void 0 ? `\uFF08${reference.note}\uFF09` : ""}` });
       }, [notify]);
-      const onAnchorClick = (0, import_react11.useCallback)((anchor) => {
+      const onAnchorClick = (0, import_react12.useCallback)((anchor) => {
         dispatch({ type: "ui/select-source", documentId: anchor.documentId });
         dispatch({ type: "ui/tab", tab: "sources" });
       }, []);
-      const openGoalsEditor = (0, import_react11.useCallback)(() => {
+      const openGoalsEditor = (0, import_react12.useCallback)(() => {
         const current = state.courseDetail;
         if (current === void 0) return;
         const revision = current.activeRevision ?? current.draftRevision;
@@ -21910,7 +22187,7 @@ window.__ModuleLoader__.load({
           background: revision?.background ?? ""
         });
       }, [state.courseDetail]);
-      const saveGoals = (0, import_react11.useCallback)(async () => {
+      const saveGoals = (0, import_react12.useCallback)(async () => {
         if (goalsEditor === void 0) return;
         const goals2 = goalsEditor.goals.split("\n").map((line) => line.trim()).filter((line) => line !== "");
         if (goals2.length === 0) {
@@ -21937,7 +22214,7 @@ window.__ModuleLoader__.load({
           setSavingGoals(false);
         }
       }, [goalsEditor, notify]);
-      const createCourse = (0, import_react11.useCallback)(async (input) => {
+      const createCourse = (0, import_react12.useCallback)(async (input) => {
         dispatch({ type: "busy", label: "\u5EFA\u7ACB\u8BFE\u7A0B\u2026" });
         try {
           const { course } = await apiPost("courses.create", input);
@@ -21951,7 +22228,7 @@ window.__ModuleLoader__.load({
           if (mounted.current) dispatch({ type: "busy", label: void 0 });
         }
       }, [notify]);
-      const refreshCourse = (0, import_react11.useCallback)(async (courseId) => {
+      const refreshCourse = (0, import_react12.useCallback)(async (courseId) => {
         const [detail2, sessionsResponse, coursesResponse] = await Promise.all([
           apiGet("courses.get", { courseId }),
           apiGet("sessions.list", { courseId }),
@@ -21964,7 +22241,7 @@ window.__ModuleLoader__.load({
         }
         return { detail: detail2, sessions: sessionsResponse.sessions };
       }, []);
-      const importPaths = (0, import_react11.useCallback)(async (courseId, paths) => {
+      const importPaths = (0, import_react12.useCallback)(async (courseId, paths) => {
         dispatch({ type: "busy", label: "\u5F00\u59CB\u5BFC\u5165\u8D44\u6599\u2026" });
         try {
           const { task } = await apiPost("sources.import", { courseId, paths });
@@ -21987,7 +22264,7 @@ window.__ModuleLoader__.load({
           void loadTasks();
         }
       }, [loadTasks, awaitTask, notify]);
-      const generateDraft = (0, import_react11.useCallback)(async (courseId) => {
+      const generateDraft = (0, import_react12.useCallback)(async (courseId) => {
         dispatch({ type: "busy", label: "\u751F\u6210\u8BFE\u7A0B\u7ED3\u6784\u8349\u6848\u2026" });
         try {
           const { task } = await apiPost("courseDraft.generate", { courseId });
@@ -22014,7 +22291,7 @@ window.__ModuleLoader__.load({
           void loadTasks();
         }
       }, [loadTasks, awaitTask]);
-      const confirmDraft = (0, import_react11.useCallback)(async (courseId, revisionId, edits) => {
+      const confirmDraft = (0, import_react12.useCallback)(async (courseId, revisionId, edits) => {
         if (revisionId === "") return { ok: false, error: "\u8349\u6848\u7248\u672C\u65E0\u6548\uFF0C\u8BF7\u91CD\u65B0\u751F\u6210\u8349\u6848\u3002" };
         dispatch({ type: "busy", label: "\u786E\u8BA4\u8BFE\u7A0B\u7ED3\u6784\u2026" });
         try {
@@ -22035,7 +22312,7 @@ window.__ModuleLoader__.load({
           if (mounted.current) dispatch({ type: "busy", label: void 0 });
         }
       }, [notify, refreshCourse, selectSession, createSession]);
-      const startAdhocSession = (0, import_react11.useCallback)(async (courseId) => {
+      const startAdhocSession = (0, import_react12.useCallback)(async (courseId) => {
         dispatch({ type: "busy", label: "\u521B\u5EFA\u968F\u95EE\u968F\u5B66\u4F1A\u8BDD\u2026" });
         try {
           const { session } = await apiPost("sessions.create", {
@@ -22052,7 +22329,7 @@ window.__ModuleLoader__.load({
           if (mounted.current) dispatch({ type: "busy", label: void 0 });
         }
       }, [notify, refreshCourse, selectSession]);
-      const loadSetupDraft = (0, import_react11.useCallback)(async (courseId) => {
+      const loadSetupDraft = (0, import_react12.useCallback)(async (courseId) => {
         setSetup({ phase: "loading" });
         try {
           const { draft } = await apiGet("courseDraft.get", { courseId });
@@ -22066,26 +22343,26 @@ window.__ModuleLoader__.load({
           if (mounted.current) setSetup({ phase: "error", error: `\u8BFB\u53D6\u8BFE\u7A0B\u8349\u6848\u5931\u8D25\uFF1A${describeError(error)}` });
         }
       }, []);
-      const generateSetupDraft = (0, import_react11.useCallback)(async (courseId) => {
+      const generateSetupDraft = (0, import_react12.useCallback)(async (courseId) => {
         setSetup({ phase: "loading" });
         const result = await generateDraft(courseId);
         if (!mounted.current) return;
         if (result.ok && result.draft !== void 0) setSetup({ phase: "draft", draft: result.draft });
         else setSetup({ phase: "error", error: result.error ?? "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5931\u8D25" });
       }, [generateDraft]);
-      const confirmSetupDraft = (0, import_react11.useCallback)(async (courseId, revisionId, edits) => {
+      const confirmSetupDraft = (0, import_react12.useCallback)(async (courseId, revisionId, edits) => {
         setSetup((previous) => ({ ...previous, busy: true, error: void 0 }));
         const result = await confirmDraft(courseId, revisionId, edits);
         if (!mounted.current) return;
         setSetup(result.ok ? { phase: "ready" } : (previous) => ({ ...previous, busy: false, error: result.error }));
       }, [confirmDraft]);
-      const adhocSetup = (0, import_react11.useCallback)(async (courseId) => {
+      const adhocSetup = (0, import_react12.useCallback)(async (courseId) => {
         setSetup((previous) => ({ ...previous, busy: true, error: void 0 }));
         const result = await startAdhocSession(courseId);
         if (!mounted.current) return;
         setSetup(result.ok ? { phase: "ready" } : (previous) => ({ ...previous, busy: false, error: result.error }));
       }, [startAdhocSession]);
-      const setModelSelection = (0, import_react11.useCallback)(async (request) => {
+      const setModelSelection = (0, import_react12.useCallback)(async (request) => {
         dispatch({ type: "busy", label: "\u5207\u6362\u6A21\u578B\u2026" });
         try {
           await apiPost("model.set", request);
@@ -22111,7 +22388,7 @@ window.__ModuleLoader__.load({
           if (mounted.current) dispatch({ type: "busy", label: void 0 });
         }
       }, [notify, loadContextUsage]);
-      const openCompression = (0, import_react11.useCallback)(() => {
+      const openCompression = (0, import_react12.useCallback)(() => {
         if (stateRef.current.session === void 0) {
           notify({ kind: "warning", message: "\u8BF7\u5148\u9009\u62E9\u5B66\u4E60\u4F1A\u8BDD\uFF0C\u518D\u538B\u7F29\u4E0A\u4E0B\u6587\u3002" });
           return;
@@ -22122,7 +22399,7 @@ window.__ModuleLoader__.load({
         }
         setCompression({ phase: "confirm" });
       }, [notify]);
-      const runCompression = (0, import_react11.useCallback)(async (force) => {
+      const runCompression = (0, import_react12.useCallback)(async (force) => {
         const session = stateRef.current.session;
         if (session === void 0) return;
         const sessionId = session.session.id;
@@ -22194,8 +22471,8 @@ window.__ModuleLoader__.load({
         onStartAdhoc: startAdhocSession,
         ...props.pickDirectory === void 0 ? {} : { onPickDirectory: props.pickDirectory }
       };
-      return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-teaching-root", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "ai-teaching-root", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
           TopBar,
           {
             ...state.bootstrap !== void 0 ? { bootstrap: state.bootstrap } : {},
@@ -22220,7 +22497,7 @@ window.__ModuleLoader__.load({
             }
           }
         ),
-        state.notice !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+        state.notice !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
           Banner,
           {
             kind: state.notice.kind,
@@ -22229,12 +22506,12 @@ window.__ModuleLoader__.load({
             onDismiss: () => notify(void 0)
           }
         ),
-        state.phase === "fatal" && state.fatalError !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { style: { padding: 20 }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(ErrorBanner, { error: state.fatalError, onRetry: () => void bootstrap() }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { className: "ai-muted", children: "\u65E0\u6CD5\u8FDE\u63A5\u6559\u5B66 Host\u3002\u8BF7\u786E\u8BA4\u63D2\u4EF6\u5DF2\u542F\u7528\u3001Harness \u4ECD\u5728\u8FD0\u884C\uFF1B\u5DF2\u5B8C\u6210\u7684\u672C\u5730\u5B66\u4E60\u8BB0\u5F55\u4E0D\u4F1A\u4E22\u5931\u3002" })
+        state.phase === "fatal" && state.fatalError !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { style: { padding: 20 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(ErrorBanner, { error: state.fatalError, onRetry: () => void bootstrap() }),
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "ai-muted", children: "\u65E0\u6CD5\u8FDE\u63A5\u6559\u5B66 Host\u3002\u8BF7\u786E\u8BA4\u63D2\u4EF6\u5DF2\u542F\u7528\u3001Harness \u4ECD\u5728\u8FD0\u884C\uFF1B\u5DF2\u5B8C\u6210\u7684\u672C\u5730\u5B66\u4E60\u8BB0\u5F55\u4E0D\u4F1A\u4E22\u5931\u3002" })
         ] }),
-        state.phase === "loading" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { style: { padding: 24 }, children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Spinner, { label: "\u6B63\u5728\u8FDE\u63A5\u6559\u5B66 Host\u2026" }) }),
-        state.phase === "onboarding" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+        state.phase === "loading" && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { style: { padding: 24 }, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Spinner, { label: "\u6B63\u5728\u8FDE\u63A5\u6559\u5B66 Host\u2026" }) }),
+        state.phase === "onboarding" && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
           Onboarding,
           {
             ...onboardingCallbacks,
@@ -22242,7 +22519,7 @@ window.__ModuleLoader__.load({
             onCancel: () => dispatch({ type: "wizard/close" })
           }
         ),
-        state.phase === "ready" && needsCourseSetup(detail) && detail !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+        state.phase === "ready" && needsCourseSetup(detail) && detail !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
           CourseSetupCard,
           {
             detail,
@@ -22265,14 +22542,14 @@ window.__ModuleLoader__.load({
             }
           }
         ),
-        state.phase === "ready" && !needsCourseSetup(detail) && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
+        state.phase === "ready" && !needsCourseSetup(detail) && /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
           "div",
           {
             className: "ai-teaching-body",
             "data-left-collapsed": state.leftCollapsed,
             "data-right-collapsed": state.rightCollapsed,
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                 Sidebar,
                 {
                   courses: state.courses,
@@ -22313,8 +22590,8 @@ window.__ModuleLoader__.load({
                   onOpenSource: (documentId) => openSource(documentId)
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-teaching-main", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "ai-teaching-main", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                   ChatPanel,
                   {
                     ...detail !== void 0 ? { courseTitle: detail.course.title } : {},
@@ -22331,13 +22608,15 @@ window.__ModuleLoader__.load({
                       void stopGeneration();
                     },
                     onQuickAction: quickAction,
+                    activityStates: state.activityStates,
+                    onActivityStateChange: persistActivityState,
                     onActivityClick: onChatActivityClick,
                     onEvidenceClick,
                     onRetry: retryLast,
                     onDismissError: () => dispatch({ type: "error/clear" })
                   }
                 ),
-                /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+                /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                   TeachingArea,
                   {
                     activities: state.activities,
@@ -22380,36 +22659,36 @@ window.__ModuleLoader__.load({
             ]
           }
         ),
-        compression !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u538B\u7F29\u4E0A\u4E0B\u6587", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-modal ai-compress-modal", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("h3", { children: "\u538B\u7F29\u4E0A\u4E0B\u6587" }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { className: "ai-muted", style: { margin: "0 0 8px" }, children: COMPRESSION_CONFIRM_TEXT }),
-          state.contextUsage !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-muted", style: { marginBottom: 8 }, children: [
+        compression !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u538B\u7F29\u4E0A\u4E0B\u6587", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "ai-modal ai-compress-modal", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h3", { children: "\u538B\u7F29\u4E0A\u4E0B\u6587" }),
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "ai-muted", style: { margin: "0 0 8px" }, children: COMPRESSION_CONFIRM_TEXT }),
+          state.contextUsage !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "ai-muted", style: { marginBottom: 8 }, children: [
             "\u5F53\u524D\u7528\u91CF\uFF1A",
             state.contextUsage.tokensUsed !== void 0 ? `${state.contextUsage.tokensUsed} tokens` : "\u672A\u77E5",
             state.contextUsage.contextWindow !== void 0 ? ` / ${state.contextUsage.contextWindow} \u7A97\u53E3` : "",
             state.contextUsage.percent !== void 0 ? `\uFF08${Math.round(state.contextUsage.percent)}%\uFF09` : "",
             state.contextUsage.compressed !== void 0 ? `\uFF1B\u5DF2\u538B\u7F29 ${state.contextUsage.compressed.compactedMessages} \u6761` : ""
           ] }),
-          compression.phase === "not-compacted" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "ai-banner", "data-kind": "info", role: "status", style: { borderRadius: 8, marginBottom: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { children: [
+          compression.phase === "not-compacted" && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "ai-banner", "data-kind": "info", role: "status", style: { borderRadius: 8, marginBottom: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { children: [
               "\u672A\u8FBE\u5230\u538B\u7F29\u9608\u503C\uFF0C\u672C\u6B21\u6CA1\u6709\u538B\u7F29\uFF1A",
               compression.reason
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "ai-muted", style: { marginTop: 4 }, children: COMPRESSION_FORCE_TEXT })
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "ai-muted", style: { marginTop: 4 }, children: COMPRESSION_FORCE_TEXT })
           ] }) }),
-          compression.phase === "error" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { borderRadius: 8, marginBottom: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: compression.error }) }),
-          compression.phase === "running" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { style: { marginBottom: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Spinner, { label: "\u6B63\u5728\u538B\u7F29\u8F83\u65E9\u5BF9\u8BDD\u2026\uFF08\u53EF\u7EE7\u7EED\u7B49\u5F85\u6216\u7A0D\u540E\u67E5\u770B\u7ED3\u679C\uFF09" }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-modal-actions", children: [
-            compression.phase === "confirm" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => {
+          compression.phase === "error" && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { borderRadius: 8, marginBottom: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { children: compression.error }) }),
+          compression.phase === "running" && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { style: { marginBottom: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(Spinner, { label: "\u6B63\u5728\u538B\u7F29\u8F83\u65E9\u5BF9\u8BDD\u2026\uFF08\u53EF\u7EE7\u7EED\u7B49\u5F85\u6216\u7A0D\u540E\u67E5\u770B\u7ED3\u679C\uFF09" }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "ai-modal-actions", children: [
+            compression.phase === "confirm" && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => {
               void runCompression(false);
             }, children: "\u5F00\u59CB\u538B\u7F29" }),
-            compression.phase === "not-compacted" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => {
+            compression.phase === "not-compacted" && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => {
               void runCompression(true);
             }, children: "\u5F3A\u5236\u538B\u7F29\uFF08\u5FFD\u7565\u9608\u503C\uFF09" }),
-            compression.phase === "error" && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => {
+            compression.phase === "error" && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => {
               void runCompression(false);
             }, children: "\u91CD\u8BD5" }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
               "button",
               {
                 type: "button",
@@ -22421,10 +22700,10 @@ window.__ModuleLoader__.load({
             )
           ] })
         ] }) }),
-        goalsEditor !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u7F16\u8F91\u5B66\u4E60\u76EE\u6807", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-modal", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("h3", { children: "\u7F16\u8F91\u5B66\u4E60\u76EE\u6807" }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { className: "ai-muted", style: { margin: "0 0 8px" }, children: "\u6BCF\u884C\u4E00\u4E2A\u76EE\u6807\u3002\u66F4\u65B0\u4F1A\u751F\u6210\u65B0\u7684\u8BFE\u7A0B\u7ED3\u6784\u4FEE\u8BA2\uFF1B\u5DF2\u6709\u5B66\u4E60\u4F1A\u8BDD\u4ECD\u7ED1\u5B9A\u539F\u4FEE\u8BA2\uFF0C\u65B0\u4F1A\u8BDD\u4F7F\u7528\u65B0\u76EE\u6807\u3002" }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+        goalsEditor !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u7F16\u8F91\u5B66\u4E60\u76EE\u6807", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "ai-modal", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h3", { children: "\u7F16\u8F91\u5B66\u4E60\u76EE\u6807" }),
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "ai-muted", style: { margin: "0 0 8px" }, children: "\u6BCF\u884C\u4E00\u4E2A\u76EE\u6807\u3002\u66F4\u65B0\u4F1A\u751F\u6210\u65B0\u7684\u8BFE\u7A0B\u7ED3\u6784\u4FEE\u8BA2\uFF1B\u5DF2\u6709\u5B66\u4E60\u4F1A\u8BDD\u4ECD\u7ED1\u5B9A\u539F\u4FEE\u8BA2\uFF0C\u65B0\u4F1A\u8BDD\u4F7F\u7528\u65B0\u76EE\u6807\u3002" }),
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
             "textarea",
             {
               "aria-label": "\u5B66\u4E60\u76EE\u6807\uFF08\u6BCF\u884C\u4E00\u4E2A\uFF09",
@@ -22434,8 +22713,8 @@ window.__ModuleLoader__.load({
               onChange: (event) => setGoalsEditor({ ...goalsEditor, goals: event.target.value })
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("label", { className: "ai-muted", style: { display: "block", marginTop: 8, fontSize: 12 }, children: "\u6211\u7684\u57FA\u7840/\u80CC\u666F\uFF08\u53EF\u9009\uFF09" }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("label", { className: "ai-muted", style: { display: "block", marginTop: 8, fontSize: 12 }, children: "\u6211\u7684\u57FA\u7840/\u80CC\u666F\uFF08\u53EF\u9009\uFF09" }),
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
             "textarea",
             {
               "aria-label": "\u5B66\u4E60\u57FA\u7840\u4E0E\u80CC\u666F",
@@ -22445,25 +22724,25 @@ window.__ModuleLoader__.load({
               onChange: (event) => setGoalsEditor({ ...goalsEditor, background: event.target.value })
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-modal-actions", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { type: "button", className: "ai-small-button", disabled: savingGoals, onClick: () => setGoalsEditor(void 0), children: "\u53D6\u6D88" }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { type: "button", className: "ai-primary-button", disabled: savingGoals, onClick: () => void saveGoals(), children: savingGoals ? "\u4FDD\u5B58\u4E2D\u2026" : "\u4FDD\u5B58\u76EE\u6807" })
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "ai-modal-actions", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { type: "button", className: "ai-small-button", disabled: savingGoals, onClick: () => setGoalsEditor(void 0), children: "\u53D6\u6D88" }),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { type: "button", className: "ai-primary-button", disabled: savingGoals, onClick: () => void saveGoals(), children: savingGoals ? "\u4FDD\u5B58\u4E2D\u2026" : "\u4FDD\u5B58\u76EE\u6807" })
           ] })
         ] }) }),
-        activityDeleteTarget !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u5220\u9664\u6D3B\u52A8\u786E\u8BA4", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-modal", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("h3", { children: [
+        activityDeleteTarget !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u5220\u9664\u6D3B\u52A8\u786E\u8BA4", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "ai-modal", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("h3", { children: [
             "\u5220\u9664\u6D3B\u52A8\u300C",
             activityDeleteTarget.title,
             "\u300D\uFF1F"
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("p", { className: "ai-muted", style: { margin: "0 0 10px" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { className: "ai-muted", style: { margin: "0 0 10px" }, children: [
             "\u5C06\u5220\u9664\u8BE5\u6D3B\u52A8\u7684\u5B9A\u4E49\u4E0E\u7F16\u8F91\u72B6\u6001",
             activityDeleteTarget.kind === "code-run" ? "\u3001\u8FD0\u884C\u8BB0\u5F55" : "",
             "\u3002",
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("strong", { children: "\u5B66\u4E60\u5C1D\u8BD5\u4E0E\u638C\u63E1\u8BB0\u5F55\u4FDD\u7559\uFF0C\u4F60\u7684\u539F\u59CB\u8D44\u6599\u6587\u4EF6\u4E0D\u4F1A\u88AB\u4FEE\u6539\u3002" })
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("strong", { children: "\u5B66\u4E60\u5C1D\u8BD5\u4E0E\u638C\u63E1\u8BB0\u5F55\u4FDD\u7559\uFF0C\u4F60\u7684\u539F\u59CB\u8D44\u6599\u6587\u4EF6\u4E0D\u4F1A\u88AB\u4FEE\u6539\u3002" })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-modal-actions", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "ai-modal-actions", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
               "button",
               {
                 type: "button",
@@ -22473,7 +22752,7 @@ window.__ModuleLoader__.load({
                 children: "\u53D6\u6D88"
               }
             ),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
               "button",
               {
                 type: "button",
@@ -22487,18 +22766,18 @@ window.__ModuleLoader__.load({
             )
           ] })
         ] }) }),
-        deleteTarget !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u5220\u9664\u8BFE\u7A0B\u786E\u8BA4", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-modal", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("h3", { children: [
+        deleteTarget !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u5220\u9664\u8BFE\u7A0B\u786E\u8BA4", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "ai-modal", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("h3", { children: [
             "\u5220\u9664\u8BFE\u7A0B\u300C",
             deleteTarget.title,
             "\u300D\uFF1F"
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("p", { className: "ai-muted", style: { margin: "0 0 10px" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { className: "ai-muted", style: { margin: "0 0 10px" }, children: [
             "\u5C06\u5220\u9664\u8BE5\u8BFE\u7A0B\u7684\u8BFE\u7A0B\u7ED3\u6784\u3001\u5168\u90E8\u5B66\u4E60\u4F1A\u8BDD\u3001\u6D3B\u52A8\u3001\u5B66\u4E60\u8BB0\u5F55\uFF08\u5C1D\u8BD5/\u638C\u63E1/\u590D\u4E60/\u7B14\u8BB0\uFF09\u3002",
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("strong", { children: "\u4F60\u7684\u539F\u59CB\u8D44\u6599\u6587\u4EF6\u4E0D\u4F1A\u88AB\u4FEE\u6539\u3002" })
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("strong", { children: "\u4F60\u7684\u539F\u59CB\u8D44\u6599\u6587\u4EF6\u4E0D\u4F1A\u88AB\u4FEE\u6539\u3002" })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("label", { className: "ai-row", style: { alignItems: "center", gap: 6, fontSize: 13 }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("label", { className: "ai-row", style: { alignItems: "center", gap: 6, fontSize: 13 }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
               "input",
               {
                 type: "checkbox",
@@ -22508,8 +22787,8 @@ window.__ModuleLoader__.load({
             ),
             "\u540C\u65F6\u5220\u9664\u8BE5\u8BFE\u7A0B\u5BFC\u5165\u7684\u8D44\u6599\u89E3\u6790\u8BB0\u5F55\uFF08\u4EC5\u9650\u672A\u88AB\u5176\u4ED6\u8BFE\u7A0B\u4F7F\u7528\uFF1B\u539F\u6587\u4EF6\u4E0D\u53D7\u5F71\u54CD\uFF09"
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "ai-modal-actions", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "ai-modal-actions", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
               "button",
               {
                 type: "button",
@@ -22522,7 +22801,7 @@ window.__ModuleLoader__.load({
                 children: "\u53D6\u6D88"
               }
             ),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
               "button",
               {
                 type: "button",
@@ -22538,7 +22817,7 @@ window.__ModuleLoader__.load({
     }
 
     // packages/dsh-plugin/src/client/index.tsx
-    var import_jsx_runtime12 = require("react/jsx-runtime");
+    var import_jsx_runtime13 = require("react/jsx-runtime");
     var name = "ai-teaching-client";
     var inject = ["slots"];
     var PANEL_ID = "ai-teaching";
@@ -22560,8 +22839,8 @@ window.__ModuleLoader__.load({
     }
     function TeachingIcon({ size }) {
       const dimension = size ?? 20;
-      return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("svg", { width: dimension, height: dimension, viewBox: "0 0 20 20", fill: "none", "aria-hidden": "true", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("svg", { width: dimension, height: dimension, viewBox: "0 0 20 20", fill: "none", "aria-hidden": "true", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
           "path",
           {
             d: "M3.5 4.2c1.9-.9 3.9-.9 6.5.4 2.6-1.3 4.6-1.3 6.5-.4v9.6c-1.9-.8-3.9-.8-6.5.5-2.6-1.3-4.6-1.3-6.5-.5V4.2Z",
@@ -22570,17 +22849,17 @@ window.__ModuleLoader__.load({
             strokeLinejoin: "round"
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("path", { d: "M10 4.8v9.2M6.2 7.1h1.9M6.2 9.6h1.9M11.9 7.1h1.9M11.9 9.6h1.9", stroke: "currentColor", strokeWidth: "1.1", strokeLinecap: "round" })
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("path", { d: "M10 4.8v9.2M6.2 7.1h1.9M6.2 9.6h1.9M11.9 7.1h1.9M11.9 9.6h1.9", stroke: "currentColor", strokeWidth: "1.1", strokeLinecap: "round" })
       ] });
     }
-    var PanelErrorBoundary = class extends import_react12.default.Component {
+    var PanelErrorBoundary = class extends import_react13.default.Component {
       state = {};
       static getDerivedStateFromError(error) {
         return { error };
       }
       render() {
         if (this.state.error !== void 0) {
-          return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { style: { padding: 20 }, children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { children: [
+          return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { style: { padding: 20 }, children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { children: [
             "\u6559\u5B66\u754C\u9762\u51FA\u73B0\u4E86\u9519\u8BEF\uFF1A",
             this.state.error.message,
             "\u3002\u5237\u65B0\u9875\u9762\u53EF\u91CD\u8BD5\uFF1B\u5B66\u4E60\u8BB0\u5F55\u4FDD\u5B58\u5728\u672C\u673A Host\u3002"
@@ -22590,10 +22869,10 @@ window.__ModuleLoader__.load({
       }
     };
     function TeachingPage(props) {
-      (0, import_react12.useEffect)(() => {
+      (0, import_react13.useEffect)(() => {
         ensureStyles();
       }, []);
-      return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(PanelErrorBoundary, { children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(TeachingWorkspace, { ...props.pickDirectory === void 0 ? {} : { pickDirectory: props.pickDirectory } }) });
+      return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(PanelErrorBoundary, { children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(TeachingWorkspace, { ...props.pickDirectory === void 0 ? {} : { pickDirectory: props.pickDirectory } }) });
     }
     function bindDirectoryPicker(ctx) {
       return async () => {
@@ -22610,7 +22889,7 @@ window.__ModuleLoader__.load({
       const pickDirectory = bindDirectoryPicker(ctx);
       ctx.slots.inject("main", () => ctx.slots.register(
         { name: "main", key: PANEL_ID },
-        () => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(TeachingPage, { pickDirectory })
+        () => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(TeachingPage, { pickDirectory })
       ));
       ctx.slots.inject("sidebar.panellist", () => ctx.slots.register({
         name: "sidebar.panellist",

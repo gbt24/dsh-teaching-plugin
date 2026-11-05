@@ -516,39 +516,6 @@ export function isChatBusy(state: WorkspaceState): boolean {
   return state.chat.status === 'streaming' || state.chat.status === 'stopping'
 }
 
-/** Activity kinds that count as a teaching visualization. */
-const VISUAL_ACTIVITY_KINDS: ReadonlySet<string> = new Set([
-  'visual', 'interactive-graph', 'static-figure', 'animation',
-])
-
-/** Visualization activity ids that have not been auto-revealed yet. */
-export function freshVisualActivityIds(
-  activities: readonly LessonActivity[],
-  seenVisualIds: ReadonlySet<string>,
-): readonly string[] {
-  return activities
-    .filter(activity => VISUAL_ACTIVITY_KINDS.has(activity.kind))
-    .map(activity => activity.id as string)
-    .filter(id => !seenVisualIds.has(id))
-}
-
-/**
- * Decide whether a newly arrived visual activity should reveal the collapsed
- * right column. The caller marks returned ids as seen so a student who collapses
- * the column again is not fought by the next render/turn.
- */
-export function visualAutoExpand(input: {
-  readonly activities: readonly LessonActivity[]
-  readonly seenVisualIds: ReadonlySet<string>
-  readonly rightCollapsed: boolean
-}): { readonly expand: boolean; readonly seenVisualIds: ReadonlySet<string> } {
-  const fresh = freshVisualActivityIds(input.activities, input.seenVisualIds)
-  if (fresh.length === 0) return { expand: false, seenVisualIds: input.seenVisualIds }
-  const next = new Set(input.seenVisualIds)
-  for (const id of fresh) next.add(id)
-  return { expand: input.rightCollapsed, seenVisualIds: next }
-}
-
 /** The activity currently shown in the persistent area. */
 export function selectedActivity(state: WorkspaceState): LessonActivity | undefined {
   return state.activities.find(activity => activity.id === state.selectedActivityId)

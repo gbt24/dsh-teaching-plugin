@@ -1465,7 +1465,11 @@ ${buildSummaryInput(selection.compacted)}
           const nextPosition = {
             stage: (finalMeta?.stage ?? latest.position.stage) as TeachingSession['position']['stage'],
             conceptId: finalMeta?.conceptIds?.[0] ?? latest.position.conceptId,
-            activityId: createdActivities.at(-1)?.id ?? latest.position.activityId,
+            // Graphical activities are rendered inline in the conversation; never
+            // make one the right-side "current activity" (other activities still are).
+            activityId: [...createdActivities].reverse()
+              .find(activity => !CHAT_INLINE_ACTIVITY_KINDS.has(activity.kind))?.id
+              ?? latest.position.activityId,
             updatedAt: nowIso(),
           }
           await services.sessions.save({
@@ -2252,6 +2256,11 @@ async function validateAttempt(
   }
   return undefined
 }
+
+/** Activity kinds displayed inline in the chat, never as the right-side current activity. */
+const CHAT_INLINE_ACTIVITY_KINDS: ReadonlySet<string> = new Set([
+  'visual', 'interactive-graph', 'static-figure', 'animation',
+])
 
 /** Heuristic: the student explicitly asked for a visual/交互演示. */
 function wantsVisual(text: string): boolean {

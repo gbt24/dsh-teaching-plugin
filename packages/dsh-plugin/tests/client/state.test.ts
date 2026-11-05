@@ -10,9 +10,8 @@ import type {
 } from '@deepseek-teaching/core/contracts'
 import {
   INITIAL_WORKSPACE_STATE, applyChatStreamEvent, appendMessage, computeCourseProgress,
-  draftConceptCount, freshVisualActivityIds, latestActivity, mergeEvidence, needsCourseSetup,
-  selectedActivity, sortedReview, visualAutoExpand, upsertActivity, workspaceReducer,
-  type WorkspaceState,
+  draftConceptCount, latestActivity, mergeEvidence, needsCourseSetup, selectedActivity,
+  sortedReview, upsertActivity, workspaceReducer, type WorkspaceState,
 } from '../../src/client/state.ts'
 
 const NOW = '2026-11-04T08:00:00.000Z'
@@ -383,47 +382,3 @@ test('context usage is stored per session and cleared when the session changes',
   assert.equal(state.contextUsage, undefined)
 })
 
-
-function lessonActivity(kind: string, id: string): LessonActivity {
-  const base = activity(id, 1)
-  return {
-    ...base,
-    kind: kind as LessonActivity['kind'],
-    payload: kind === 'visual'
-      ? { type: 'visual', renderer: 'svg', source: '<svg/>' }
-      : base.payload,
-  }
-}
-
-test('visual auto-expand only reacts to unseen visual activities', () => {
-  const explanation = lessonActivity('explanation', 'a1')
-  const visual = lessonActivity('visual', 'a2')
-  const seen = new Set<string>(['a2'])
-  assert.deepEqual([...freshVisualActivityIds([explanation, visual], new Set())], ['a2'])
-  assert.deepEqual([...freshVisualActivityIds([explanation], new Set())], [])
-  assert.deepEqual([...freshVisualActivityIds([visual], seen)], [])
-  // Declarative plots/figures are visualizations too; they should reveal the column.
-  const graph = lessonActivity('interactive-graph', 'a4')
-  assert.deepEqual([...freshVisualActivityIds([graph], new Set())], ['a4'])
-
-  const first = visualAutoExpand({ activities: [visual], seenVisualIds: new Set(), rightCollapsed: true })
-  assert.equal(first.expand, true)
-  assert.deepEqual([...first.seenVisualIds], ['a2'])
-  // User re-collapses: the same activity must not expand the column again.
-  const again = visualAutoExpand({ activities: [visual], seenVisualIds: first.seenVisualIds, rightCollapsed: true })
-  assert.equal(again.expand, false)
-
-  // Already expanded by the user: nothing to do.
-  const alreadyOpen = visualAutoExpand({ activities: [visual], seenVisualIds: new Set(), rightCollapsed: false })
-  assert.equal(alreadyOpen.expand, false)
-  assert.deepEqual([...alreadyOpen.seenVisualIds], ['a2'])
-
-  // A second visual activity arriving later expands again once.
-  const second = visualAutoExpand({
-    activities: [visual, lessonActivity('visual', 'a3')],
-    seenVisualIds: first.seenVisualIds,
-    rightCollapsed: true,
-  })
-  assert.equal(second.expand, true)
-  assert.deepEqual([...second.seenVisualIds], ['a2', 'a3'])
-})

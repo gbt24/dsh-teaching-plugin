@@ -434,6 +434,38 @@ function renderActivity(
   return { entry, html }
 }
 
+/** Graphical activities are rendered inline under their teacher message. */
+function isGraphicalActivity(activity: LessonActivity): boolean {
+  return activity.kind === 'visual' || activity.kind === 'interactive-graph'
+    || activity.kind === 'static-figure' || activity.kind === 'animation'
+}
+
+/** Render one activity into an arbitrary container and register its runtime entry. */
+function appendActivityInto(
+  document: Document,
+  container: HTMLElement,
+  activity: LessonActivity,
+  sessionData: PageSessionInput,
+  warnings: string[],
+  entries: OfflineActivityEntry[],
+  className: string,
+): void {
+  const state = sessionData.activityStates.get(activity.id)
+  const lastRun = sessionData.lastRunByActivity.get(activity.id)
+  const rendered = renderActivity(document, activity, state, lastRun, warnings)
+  const holder = el(document, 'div', { className })
+  if (rendered === undefined) {
+    holder.appendChild(el(document, 'div', {
+      className: 'tp-note',
+      text: `活动「${activity.title}」无法在离线页面中渲染，见导出清单 limitations。`,
+    }))
+  } else {
+    asOfflineElement(holder).innerHTML = rendered.html
+    entries.push(rendered.entry)
+  }
+  container.appendChild(holder)
+}
+
 /** Base page CSS: layout + teaching widget polish, no external resources. */
 const PAGE_CSS = String.raw`
 :root {
@@ -510,6 +542,8 @@ section.tp-session h2, section.tp-course h2, section.tp-learning h2 { margin: 0 
 .tp-evidence-external-web { color: #7c3aed; }
 .tp-activity { margin: 14px 0; }
 .tp-activity .teaching-activity { background: #ffffff; }
+.tp-inline-activity { margin: 10px 0; }
+.tp-inline-activity .teaching-visual-frame { width: 100%; }
 .tp-run-facts { margin-top: 8px; font-size: 12px; }
 .tp-run-facts pre { margin: 6px 0; padding: 8px; border-radius: 6px; background: rgba(15, 23, 42, 0.05); font-size: 12px; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow: auto; }
 .tp-run-stderr { color: #b91c1c; background: rgba(239, 68, 68, 0.08); }
@@ -569,6 +603,14 @@ function buildSessionSection(
     warnings.push(note)
     limitations.push(note)
   }
+  const activitiesById = new Map(sessionData.activities.map(activity => [activity.id as string, activity]))
+  const linkedGraphicalIds = new Set<string>()
+  for (const message of messages) {
+    for (const activityId of message.activityIds ?? []) {
+      const activity = activitiesById.get(activityId as string)
+      if (activity !== undefined && isGraphicalActivity(activity)) linkedGraphicalIds.add(activity.id as string)
+    }
+  }
   for (const message of messages) {
     const article = el(document, 'article', {
       className: `tp-message tp-message-${message.role}`,
@@ -597,34 +639,32 @@ function buildSessionSection(
         text: `这条消息记录的是失败：${message.error.code} · ${message.error.message}`,
       }))
     }
+    // Graphical activities live inside the chat message, mirroring the desktop UI.
+    for (const activityId of message.activityIds ?? []) {
+      const activity = activitiesById.get(activityId as string)
+      if (activity !== undefined && isGraphicalActivity(activity)) {
+        appendActivityInto(document, body, activity, sessionData, warnings, entries, 'tp-activity tp-inline-activity')
+      }
+    }
     appendEvidenceRow(document, body, message.evidenceRefs ?? [])
     article.appendChild(body)
     section.appendChild(article)
   }
 
-  if (sessionData.activities.length > 0) {
+  // Linked graphical activities are inline in chat; unlinked/legacy graphical
+  // activities stay in the activity section so nothing silently disappears.
+  const panelActivities = sessionData.activities.filter(activity =>
+    !isGraphicalActivity(activity) || !linkedGraphicalIds.has(activity.id as string))
+  if (panelActivities.length > 0) {
     section.appendChild(el(document, 'h3', { text: '教学活动' }))
-    const activities = sessionData.activities.slice(0, OFFLINE_LIMITS.maxActivitiesPerSession)
+    const activities = panelActivities.slice(0, OFFLINE_LIMITS.maxActivitiesPerSession)
     if (sessionData.activities.length > OFFLINE_LIMITS.maxActivitiesPerSession) {
       const note = `会话「${session.title}」有 ${sessionData.activities.length} 个活动，导出页只包含前 ${OFFLINE_LIMITS.maxActivitiesPerSession} 个`
       warnings.push(note)
       limitations.push(note)
     }
     for (const activity of activities) {
-      const state = sessionData.activityStates.get(activity.id)
-      const lastRun = sessionData.lastRunByActivity.get(activity.id)
-      const rendered = renderActivity(document, activity, state, lastRun, warnings)
-      const holder = el(document, 'div', { className: 'tp-activity' })
-      if (rendered === undefined) {
-        holder.appendChild(el(document, 'div', {
-          className: 'tp-note',
-          text: `活动「${activity.title}」无法在离线页面中渲染，见导出清单 limitations。`,
-        }))
-      } else {
-        asOfflineElement(holder).innerHTML = rendered.html
-        entries.push(rendered.entry)
-      }
-      section.appendChild(holder)
+      appendActivityInto(document, section, activity, sessionData, warnings, entries, 'tp-activity')
     }
   }
   return section

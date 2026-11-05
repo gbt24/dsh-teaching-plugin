@@ -35,3 +35,14 @@ export function extractChatVisualFences(text: string): readonly ChatVisualFence[
   }
   return fences
 }
+
+
+/**
+ * Heuristic for HTML fences that likely need script execution: `<script>` tags or
+ * inline `on*=` handlers. The source still renders only inside the sandboxed
+ * iframe with `script-src 'unsafe-inline'`; this only selects the CSP/sandbox
+ * variant and shows the "交互演示 · 沙箱运行" badge.
+ */
+export function looksInteractiveHtml(source: string): boolean {
+  return /<script\b/iu.test(source) || /\son[a-z]{3,}\s*=/iu.test(source)
+}

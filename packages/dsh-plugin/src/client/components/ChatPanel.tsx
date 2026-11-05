@@ -5,15 +5,20 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type {
-  ChatMessage, EvidenceReference, LessonActivity, SessionView,
+  ActivityState, ChatMessage, EvidenceReference, LessonActivity, SessionView,
 } from '@deepseek-teaching/core/contracts'
+import type { MountedActivityState } from '@deepseek-teaching/core/render'
 import type { ChatStreamState } from '../state.ts'
 import { EVIDENCE_KIND_LABELS, STAGE_LABELS, formatTime, truncate } from '../helpers.ts'
 import { RenderedMarkdown } from './Markdown.tsx'
 import { Banner } from './Banner.tsx'
 import { compactedMessageIds, compressionBannerText } from '../context-compress.ts'
 import { extractChatVisualFences } from '../chat-visuals.ts'
+import {
+  linkedActivitiesForMessage, messageHasGraphicalActivity, splitGraphicalActivities,
+} from '../activity-kinds.ts'
 import { ChatVisualPreview } from './ChatVisualPreview.tsx'
+import { InlineActivity } from './InlineActivity.tsx'
 
 /** One quick action the student can request during teaching. */
 export type QuickAction = 'skip' | 'hint' | 'full-answer' | 'restyle'
@@ -44,6 +49,9 @@ export interface ChatPanelProps {
   readonly onStop: () => void
   readonly onQuickAction: (action: QuickAction) => void
   readonly onActivityClick: (activityId: string) => void
+  /** Persisted activity state (graph params etc.) for inline graphical activities. */
+  readonly activityStates?: Readonly<Record<string, ActivityState>>
+  readonly onActivityStateChange?: (activity: LessonActivity, patch: MountedActivityState) => void
   readonly onEvidenceClick: (reference: EvidenceReference) => void
   readonly onRetry: () => void
   readonly onDismissError: () => void
@@ -115,23 +123,51 @@ function formatPage(locator: { readonly page?: number; readonly slide?: number; 
 function MessageBubble(props: {
   readonly message: ChatMessage
   readonly activities: readonly LessonActivity[]
+  readonly activityStates?: Readonly<Record<string, ActivityState>>
+  readonly onActivityStateChange?: (activity: LessonActivity, patch: MountedActivityState) => void
   readonly onActivityClick: (activityId: string) => void
+  readonly onFullscreen: (activity: LessonActivity) => void
   readonly onEvidenceClick: (reference: EvidenceReference) => void
 }): React.ReactElement {
   const { message } = props
   const roleClass = message.role === 'student' ? 'ai-msg-student' : message.role === 'system' ? 'ai-msg-system' : 'ai-msg-teacher'
-  const visualFences = message.role === 'teacher' ? extractChatVisualFences(message.text) : []
-  const linkedActivities = (message.activityIds ?? [])
-    .map(id => props.activities.find(activity => activity.id === id))
-    .filter((activity): activity is LessonActivity => activity !== undefined)
+  const linked = linkedActivitiesForMessage(message, props.activities)
+  const { graphical, other } = splitGraphicalActivities(linked)
+  // Inline graphical cards already show the visual; fenced previews would duplicate it.
+  const visualFences = message.role === 'teacher' && graphical.length === 0
+    ? extractChatVisualFences(message.text)
+    : []
+  const hasGraphical = graphical.length > 0
   return (
-    <article className={`ai-msg ${roleClass}`} data-role={message.role}>
+    <article
+      className={`ai-msg ${roleClass}`}
+      data-role={message.role}
+      data-message-id={message.id as string}
+      data-graphical={hasGraphical}
+    >
       {message.role === 'teacher' && message.kind !== 'teacher-explanation' && (
         <div className="ai-muted" style={{ marginBottom: 2 }}>{TEACHER_KIND_LABELS[message.kind] ?? ''}</div>
       )}
       {message.markdown === true
         ? <RenderedMarkdown source={message.text} />
         : <div style={{ whiteSpace: 'pre-wrap' }}>{message.text}</div>}
+      {hasGraphical && (
+        <div className="ai-inline-activities">
+          {graphical.map(activity => (
+            <InlineActivity
+              key={activity.id}
+              activity={activity}
+              {...(props.activityStates?.[activity.id] !== undefined
+                ? { state: props.activityStates[activity.id] }
+                : {})}
+              {...(props.onActivityStateChange !== undefined
+                ? { onStateChange: props.onActivityStateChange }
+                : {})}
+              onFullscreen={() => props.onFullscreen(activity)}
+            />
+          ))}
+        </div>
+      )}
       {visualFences.length > 0 && (
         <div className="ai-chat-visuals">
           {visualFences.map(fence => (
@@ -139,9 +175,9 @@ function MessageBubble(props: {
           ))}
         </div>
       )}
-      {linkedActivities.length > 0 && (
+      {other.length > 0 && (
         <div className="ai-evidence-row">
-          {linkedActivities.map(activity => (
+          {other.map(activity => (
             <button
               key={activity.id}
               type="button"
@@ -184,14 +220,46 @@ const TEACHER_KIND_LABELS: Readonly<Record<string, string>> = {
 /** The conversation panel. */
 export function ChatPanel(props: ChatPanelProps): React.ReactElement {
   const [draft, setDraft] = useState('')
+  const [fullscreenActivity, setFullscreenActivity] = useState<LessonActivity | undefined>(undefined)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const scrollToBottom = useCallback(() => {
     const element = scrollRef.current
     if (element !== null) element.scrollTop = element.scrollHeight
   }, [])
   useEffect(() => {
+    // Prefer the newest inline graphical block, otherwise keep the chat pinned
+    // to the bottom (streaming text behaves as before).
+    const newest = props.messages[props.messages.length - 1]
+    if (newest !== undefined && messageHasGraphicalActivity(newest, props.activities)) {
+      const article = scrollRef.current?.querySelector(
+        `[data-message-id="${newest.id as string}"][data-graphical="true"]`,
+      )
+      const inline = article?.querySelector('.ai-inline-activity')
+      if (inline instanceof HTMLElement) {
+        inline.scrollIntoView({ block: 'start', behavior: 'smooth' })
+        return
+      }
+    }
     scrollToBottom()
-  }, [props.messages.length, props.chat.text, scrollToBottom])
+  }, [props.messages.length, props.chat.text, props.activities.length, scrollToBottom])
+
+  // Page-internal fullscreen: Esc closes, body scroll locked while open.
+  useEffect(() => {
+    if (fullscreenActivity === undefined) return
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setFullscreenActivity(undefined)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [fullscreenActivity])
   const send = (): void => {
     const text = draft.trim()
     if (text === '' || props.busy) return
@@ -209,7 +277,10 @@ export function ChatPanel(props: ChatPanelProps): React.ReactElement {
       key={message.id}
       message={message}
       activities={props.activities}
+      {...(props.activityStates !== undefined ? { activityStates: props.activityStates } : {})}
+      {...(props.onActivityStateChange !== undefined ? { onActivityStateChange: props.onActivityStateChange } : {})}
       onActivityClick={props.onActivityClick}
+      onFullscreen={activity => setFullscreenActivity(activity)}
       onEvidenceClick={props.onEvidenceClick}
     />
   )
@@ -283,6 +354,44 @@ export function ChatPanel(props: ChatPanelProps): React.ReactElement {
           </button>
         ))}
       </div>
+      {fullscreenActivity !== undefined && (
+        <div
+          className="ai-fullscreen-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`全屏活动：${fullscreenActivity.title}`}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setFullscreenActivity(undefined)
+          }}
+        >
+          <div className="ai-fullscreen-panel">
+            <div className="ai-fullscreen-head">
+              <span className="ai-fullscreen-title">{fullscreenActivity.title}</span>
+              <span className="ai-muted">页面内全屏 · 按 Esc 或点击背景关闭</span>
+              <button
+                type="button"
+                className="ai-small-button"
+                onClick={() => setFullscreenActivity(undefined)}
+                aria-label="关闭全屏活动"
+              >
+                关闭
+              </button>
+            </div>
+            <div className="ai-fullscreen-body">
+              <InlineActivity
+                activity={fullscreenActivity}
+                variant="fullscreen"
+                {...(props.activityStates?.[fullscreenActivity.id] !== undefined
+                  ? { state: props.activityStates[fullscreenActivity.id] }
+                  : {})}
+                {...(props.onActivityStateChange !== undefined
+                  ? { onStateChange: props.onActivityStateChange }
+                  : {})}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       <div className="ai-composer">
         <textarea
           value={draft}

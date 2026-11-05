@@ -20,10 +20,11 @@ import {
 } from '../api.ts'
 import {
   INITIAL_WORKSPACE_STATE, computeCourseProgress, draftConceptCount, isChatBusy, needsCourseSetup,
-  selectedActivity, sortedReview, visualAutoExpand, workspaceReducer, type WorkspaceNotice,
+  selectedActivity, sortedReview, workspaceReducer, type WorkspaceNotice,
 } from '../state.ts'
 import { Banner, ErrorBanner, Spinner } from './Banner.tsx'
 import { ChatPanel, QUICK_ACTION_PROMPTS, type QuickAction } from './ChatPanel.tsx'
+import { isGraphicalActivityKind } from '../activity-kinds.ts'
 import { Onboarding, type WizardResult } from './Onboarding.tsx'
 import type { DraftConfirmEdits } from '../draft-edits.ts'
 import { CourseSetupCard } from './CourseSetupCard.tsx'
@@ -130,21 +131,26 @@ export function TeachingWorkspace(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  /** Visual activities already auto-revealed; a manual re-collapse must stick. */
-  const seenVisualActivityIds = useRef<ReadonlySet<string>>(new Set())
+  /**
+   * A newly arrived graphical activity is rendered inline in the chat. Auto-collapse
+   * the right teaching column once so the figure/HTML gets the full conversation
+   * width; a manual re-open sticks (only unseen activity ids trigger this).
+   */
+  const seenGraphicalActivityIds = useRef<ReadonlySet<string> | undefined>(undefined)
   useEffect(() => {
-    const decision = visualAutoExpand({
-      activities: state.activities,
-      seenVisualIds: seenVisualActivityIds.current,
-      rightCollapsed: state.rightCollapsed,
-    })
-    if (decision.seenVisualIds !== seenVisualActivityIds.current) {
-      seenVisualActivityIds.current = decision.seenVisualIds
+    const graphicalIds = new Set(
+      state.activities.filter(activity => isGraphicalActivityKind(activity.kind)).map(activity => activity.id as string),
+    )
+    if (seenGraphicalActivityIds.current === undefined) {
+      seenGraphicalActivityIds.current = graphicalIds
+      return
     }
-    if (decision.expand) {
-      // A new visual activity arrived while the teaching column was collapsed.
-      dispatch({ type: 'ui/collapse', panel: 'right', collapsed: false })
-    }
+    const fresh = [...graphicalIds].filter(id => !seenGraphicalActivityIds.current?.has(id))
+    if (fresh.length === 0) return
+    const next = new Set(seenGraphicalActivityIds.current)
+    for (const id of fresh) next.add(id)
+    seenGraphicalActivityIds.current = next
+    if (!state.rightCollapsed) dispatch({ type: 'ui/collapse', panel: 'right', collapsed: true })
   }, [state.activities, state.rightCollapsed])
 
   // Persist the plugin-column layout choice.
@@ -1269,6 +1275,8 @@ export function TeachingWorkspace(props: {
               onSend={text => { void sendMessage(text) }}
               onStop={() => { void stopGeneration() }}
               onQuickAction={quickAction}
+              activityStates={state.activityStates}
+              onActivityStateChange={persistActivityState}
               onActivityClick={onChatActivityClick}
               onEvidenceClick={onEvidenceClick}
               onRetry={retryLast}

@@ -19,6 +19,7 @@ import {
 } from '@deepseek-teaching/core/render'
 import type { TeachingTab } from '../state.ts'
 import { formatDay, formatTime, truncate } from '../helpers.ts'
+import { isGraphicalActivityKind } from '../activity-kinds.ts'
 import { Spinner } from './Banner.tsx'
 
 /** Callback bundle the area hands to the vanilla renderer. */
@@ -277,17 +278,30 @@ function ActivityTab(props: {
   readonly onRequestDeleteActivity: (activity: LessonActivity) => void
 }): React.ReactElement {
   const [showAll, setShowAll] = useState(false)
-  const current = props.activities.find(activity => activity.id === props.currentActivityId)
-  const history = props.activities
+  // Graphical activities now render inline under their teacher message; this
+  // panel keeps the text/code/practice activities.
+  const graphical = props.activities.filter(activity => isGraphicalActivityKind(activity.kind))
+  const panelActivities = props.activities.filter(activity => !isGraphicalActivityKind(activity.kind))
+  const current = panelActivities.find(activity => activity.id === props.currentActivityId)
+  const history = panelActivities
     .filter(activity => activity.id !== current?.id)
     .slice()
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const visibleHistory = showAll ? history : history.slice(0, 10)
   return (
     <div>
+      {graphical.length > 0 && (
+        <div className="ai-banner ai-graphical-moved-note" data-kind="info" role="status" style={{ marginBottom: 8 }}>
+          <span>
+            图形类活动已显示在对话中（{graphical.length} 个）；此面板只保留文字、代码与练习类活动。
+          </span>
+        </div>
+      )}
       {current === undefined && (
         <div className="ai-empty">
-          当前没有进行中的活动。可以在下方「历史活动」中恢复一个继续操作，或继续对话让教师创建新的活动。
+          {graphical.length > 0
+            ? '当前图形类活动已显示在对话中；此面板可在下方「历史活动」恢复其它活动，或继续对话。'
+            : '当前没有进行中的活动。可以在下方「历史活动」中恢复一个继续操作，或继续对话让教师创建新的活动。'}
         </div>
       )}
       {current !== undefined && (

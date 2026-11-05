@@ -9,7 +9,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import type { VisualPayload } from '@deepseek-teaching/core/contracts'
 import { mountVisual, validateVisualPayload } from '@deepseek-teaching/core/render'
-import type { ChatVisualFence } from '../chat-visuals.ts'
+import { looksInteractiveHtml, type ChatVisualFence } from '../chat-visuals.ts'
 
 /** One chat preview card. */
 export function ChatVisualPreview({ fence }: { readonly fence: ChatVisualFence }): React.ReactElement {
@@ -20,11 +20,12 @@ export function ChatVisualPreview({ fence }: { readonly fence: ChatVisualFence }
     if (element === null) return
     element.textContent = ''
     setError(undefined)
+    const interactive = fence.renderer === 'html' && looksInteractiveHtml(fence.source)
     const payload: VisualPayload = {
       type: 'visual',
       renderer: fence.renderer,
       source: fence.source,
-      interactive: false,
+      interactive,
       height: fence.renderer === 'mermaid' ? 220 : 360,
       caption: '模型生成的图表（安全预览）',
       alt: '模型生成的图表（安全预览）',
@@ -44,6 +45,9 @@ export function ChatVisualPreview({ fence }: { readonly fence: ChatVisualFence }
     <div className="ai-chat-visual" data-visual-renderer={fence.renderer}>
       <div className="ai-chat-visual-caption">
         模型生成的图表（安全预览）· {fence.renderer.toUpperCase()} · 在沙箱中显示，不执行插件页面代码
+        {fence.renderer === 'html' && looksInteractiveHtml(fence.source) && (
+          <span className="ai-badge ai-inline-interactive">交互演示 · 沙箱运行</span>
+        )}
       </div>
       {error !== undefined && <div className="ai-chat-visual-error" role="alert">{error}</div>}
       <div ref={host} />
