@@ -35814,6 +35814,12 @@ function truncate2(text2, max2) {
   const clean = text2.replace(/\s+/g, " ").trim();
   return clean.length <= max2 ? clean : `${clean.slice(0, max2)}\u2026`;
 }
+function truncatePreserveLines(text2, max2) {
+  const normalized = text2.replace(/\r\n?/g, "\n").trim();
+  if (normalized.length <= max2) return normalized;
+  return `${normalized.slice(0, max2)}
+\u2026\uFF08\u6458\u8981\u5DF2\u622A\u65AD\uFF09`;
+}
 function formatLocator(locator) {
   const parts = [];
   if (locator.sectionPath !== void 0 && locator.sectionPath.length > 0) {
@@ -35926,6 +35932,7 @@ function buildTeachingSystemPrompt(ctx) {
     "5. \u8D44\u6599\u4E4B\u95F4\u6216\u8D44\u6599\u4E0E\u6A21\u578B\u77E5\u8BC6\u51B2\u7A81\u65F6\uFF1A\u533A\u5206\u300C\u7EA6\u5B9A\u5DEE\u5F02\u300D\uFF08\u7B26\u53F7\u3001\u8BB0\u6CD5\u3001\u672F\u8BED\u4E60\u60EF\u4E0D\u540C\uFF0C\u4E0D\u662F\u5B9E\u8D28\u9519\u8BEF\uFF09\u4E0E\u300C\u5B9E\u8D28\u9519\u8BEF\u300D\uFF1B\u7ED9\u51FA\u4F9D\u636E\uFF08M \u7F16\u53F7\u6216\u63A8\u7406\uFF09\uFF0C\u65E0\u6CD5\u786E\u5B9A\u65F6\u4FDD\u7559\u4E3A\u672A\u51B3\u7591\u95EE\uFF0C\u4E0D\u8981\u5F3A\u884C\u88C1\u51B3\u3002",
     "6. \u4E0B\u9762\u5217\u51FA\u7684\u300C\u8D44\u6599\u4E0D\u786E\u5B9A\u6027\u300D\u5FC5\u987B\u8FDB\u5165 uncertainty \u5143\u6570\u636E\uFF0C\u5E76\u5728\u6B63\u6587\u4E2D\u9700\u8981\u65F6\u5411\u5B66\u751F\u8BF4\u660E\u3002",
     "7. \u6D3B\u52A8 sourceRefs \u7531\u7CFB\u7EDF\u6309 M \u7F16\u53F7\u56DE\u586B\uFF1B\u4F60\u4E0D\u9700\u8981\u4E5F\u4E0D\u5F97\u63D0\u4F9B anchor\u3002",
+    "8. \u82E5\u672C\u8F6E\u63D0\u4F9B\u300C\u66F4\u65E9\u5BF9\u8BDD\u7684\u538B\u7F29\u68C0\u67E5\u70B9\u300D\uFF0C\u5B83\u53EA\u662F\u65E2\u5B9A\u80CC\u666F\u6458\u8981\uFF1A\u4E0D\u8981\u590D\u8FF0\u68C0\u67E5\u70B9\u672C\u8EAB\uFF1B\u5B83\u4E0D\u662F\u8BFE\u7A0B\u8D44\u6599\u8BC1\u636E\uFF0C\u4E0D\u80FD\u5F53\u4F5C M/C/W \u5F15\u7528\u6765\u6E90\uFF1B\u6D89\u53CA\u8D44\u6599\u4E8B\u5B9E\u65F6\u4ECD\u4EE5\u672C\u8F6E M \u7F16\u53F7\u4E0E\u539F\u6587\u4E3A\u51C6\u3002",
     "",
     "## \u6559\u5B66\u884C\u4E3A\u8981\u6C42",
     "- \u6982\u5FF5\u8BB2\u89E3\uFF1A\u76F4\u89C9 \u2192 \u51C6\u786E\u8868\u8FF0 \u2192 \u9002\u7528\u6761\u4EF6 \u2192 \u7C7B\u6BD4\u8FB9\u754C\uFF1B\u7C7B\u6BD4\u8981\u8BF4\u660E\u5728\u54EA\u4E9B\u5730\u65B9\u4F1A\u5931\u6548\u3002",
@@ -35975,6 +35982,19 @@ function buildTeachingSystemPrompt(ctx) {
     requested !== void 0 ? `- \u5B66\u751F\u672C\u8F6E\u660E\u786E\u8981\u6C42\u7684\u5F62\u5F0F\u662F\u300C${truncate2(requested, 60)}\u300D\uFF1B\u5728 requestedForm \u5B57\u6BB5\u56DE\u586B\u5B83\uFF0C\u5E76\u4FDD\u7559\u539F\u5B66\u4E60\u76EE\u6807\u3002` : ""
   ];
   return lines.filter((line) => line !== "").join("\n");
+}
+var CONTEXT_CHECKPOINT_SUMMARY_LIMIT = 6e3;
+function buildContextCheckpointLines(input) {
+  const checkpoint = input.contextCheckpoint;
+  if (checkpoint === void 0) return [];
+  const summary = truncatePreserveLines(checkpoint.summary, CONTEXT_CHECKPOINT_SUMMARY_LIMIT);
+  return [
+    "## \u66F4\u65E9\u5BF9\u8BDD\u7684\u538B\u7F29\u68C0\u67E5\u70B9",
+    "\uFF08\u8FD9\u662F\u8F83\u65E9\u5BF9\u8BDD\u7684\u6458\u8981\uFF0C\u4F5C\u4E3A\u65E2\u5B9A\u80CC\u666F\u7EE7\u7EED\u6559\u5B66\uFF1B\u4E0D\u8981\u590D\u8FF0\u68C0\u67E5\u70B9\u672C\u8EAB\u3002\u5B83\u53EA\u662F\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u662F\u8BFE\u7A0B\u8D44\u6599\u8BC1\u636E\uFF0C\u4E0D\u80FD\u5F53\u4F5C M/C/W \u5F15\u7528\u6765\u6E90\uFF1B\u5176\u4E2D\u7684\u4E8B\u5B9E\u4ECD\u9700\u6309\u6765\u6E90\u7EAA\u5F8B\u6838\u5BF9\uFF0C\u6D89\u53CA\u8D44\u6599\u5185\u5BB9\u65F6\u4EE5\u672C\u8F6E\u8D44\u6599\u7F16\u53F7\u4E0E\u539F\u6587\u4E3A\u51C6\u3002\uFF09",
+    ...checkpoint.compactedAt === void 0 ? [] : [`- \u538B\u7F29\u65F6\u95F4\uFF1A${checkpoint.compactedAt}`],
+    summary === "" ? "\uFF08\u68C0\u67E5\u70B9\u5185\u5BB9\u4E3A\u7A7A\uFF09" : summary,
+    ""
+  ];
 }
 function buildTeachingUserPrompt(ctx) {
   const { input, plan, materialRefs, crossCourseRefs, webRefs, excerptChars, maxHistory } = ctx;
@@ -36036,6 +36056,7 @@ function buildTeachingUserPrompt(ctx) {
     `- \u662F\u5426\u8981\u6C42\u5B8C\u6574\u7B54\u6848\uFF1A${input.wantsFullAnswer === true ? "\u662F" : "\u5426"}`,
     `- \u672C\u8F6E\u5EFA\u8BAE\u6D3B\u52A8\u7C7B\u578B\uFF1A${plan.activityKindHint}`,
     "",
+    ...buildContextCheckpointLines(input),
     "## \u6700\u8FD1\u5BF9\u8BDD\uFF08\u7531\u65E7\u5230\u65B0\uFF09",
     ...historyLines,
     "",
@@ -61847,14 +61868,25 @@ var HarnessModelAdapter = class {
   options;
   host;
   cachedInfo;
+  cachedInfoKey;
   constructor(host, options) {
     this.host = host;
     this.options = options;
   }
+  /** Effective selection: plugin override when configured, else the host default. */
+  effectiveSelection() {
+    return this.options.selectionOverride?.() ?? this.host.agentDefaultModel.currentSelection();
+  }
+  /** Invalidate cached capability info after a model/effort change. */
+  invalidateInfo() {
+    this.cachedInfo = void 0;
+    this.cachedInfoKey = void 0;
+  }
   /** Read the deployment default selection; falls back to an explicit error state. */
   async info() {
-    if (this.cachedInfo !== void 0) return this.cachedInfo;
-    const selection = this.host.agentDefaultModel.currentSelection();
+    const selection = this.effectiveSelection();
+    const key = `${selection.provider}/${selection.model}`;
+    if (this.cachedInfo !== void 0 && this.cachedInfoKey === key) return this.cachedInfo;
     let imageInput = "unknown";
     let contextWindow;
     try {
@@ -61871,10 +61903,11 @@ var HarnessModelAdapter = class {
     this.cachedInfo = {
       provider: selection.provider,
       model: selection.model,
-      reasoningEffort: selection.reasoningEffort,
+      ...selection.reasoningEffort === void 0 ? {} : { reasoningEffort: selection.reasoningEffort },
       imageInput,
-      contextWindow
+      ...contextWindow === void 0 ? {} : { contextWindow }
     };
+    this.cachedInfoKey = key;
     return this.cachedInfo;
   }
   /** Stream one completion with timeout, at most one transient retry, and usage accounting. */
@@ -61894,7 +61927,7 @@ var HarnessModelAdapter = class {
       let usage;
       let terminal;
       try {
-        const selection = this.host.agentDefaultModel.currentSelection();
+        const selection = this.effectiveSelection();
         const options = toGenerateOptions(effective, selection, this.options.routingSessionId);
         if (attempt > 1) delete options.reasoningEffort;
         options.signal = controller.signal;
@@ -62084,6 +62117,139 @@ function toSearchQuery(text2) {
 import { randomUUID as randomUUID2 } from "node:crypto";
 import { readdir as readdir5, stat as stat6 } from "node:fs/promises";
 import { basename as basename6, extname as extname7, join as join15 } from "node:path";
+
+// packages/dsh-plugin/src/host/context.ts
+var CHARS_PER_TOKEN = 2.5;
+var RESERVED_COMPLETION_TOKENS = 12e3;
+var COMPACTION_HEADROOM_TOKENS = 65536;
+var COMPACTION_THRESHOLD_RATIO = 0.8;
+var COMPACTION_RETAIN_RATIO = 0.16;
+var SUMMARY_MAX_TOKENS = 12e3;
+var SUMMARY_INPUT_MAX_CHARS = 6e4;
+function estimateTokens(text2) {
+  if (text2.length === 0) return 0;
+  return Math.max(1, Math.ceil(text2.length / CHARS_PER_TOKEN));
+}
+function estimateMessageTokens(messages) {
+  let total = 0;
+  for (const message of messages) total += estimateTokens(message.text) + 4;
+  return total;
+}
+function resolveCompactionPolicy(contextWindow) {
+  const window2 = typeof contextWindow === "number" && contextWindow > 0 ? contextWindow : 128e3;
+  const messageBudget = Math.max(4096, window2 - RESERVED_COMPLETION_TOKENS);
+  const pressureBudget = messageBudget - COMPACTION_HEADROOM_TOKENS;
+  const thresholdTokens = Math.max(0, Math.min(
+    Math.floor(window2 * COMPACTION_THRESHOLD_RATIO),
+    pressureBudget
+  ));
+  const retainTokens = Math.max(256, Math.floor(messageBudget * COMPACTION_RETAIN_RATIO));
+  return { contextWindow: window2, thresholdTokens, retainTokens };
+}
+var FORCE_RETAIN_MESSAGES = 2;
+function selectCompactionRange(messages, policy, force) {
+  const tokensBefore = estimateMessageTokens(messages);
+  if (messages.length <= 1) {
+    return { compacted: [], retained: [...messages], tokensBefore, reason: "\u6D88\u606F\u592A\u5C11\uFF0C\u65E0\u9700\u538B\u7F29" };
+  }
+  if (force) {
+    const keep = Math.min(FORCE_RETAIN_MESSAGES, messages.length - 1);
+    const split = messages.length - keep;
+    return {
+      compacted: messages.slice(0, split),
+      retained: messages.slice(split),
+      tokensBefore
+    };
+  }
+  if (tokensBefore <= policy.retainTokens) {
+    return {
+      compacted: [],
+      retained: [...messages],
+      tokensBefore,
+      reason: `\u5F53\u524D\u4F30\u7B97 ${tokensBefore} tokens\uFF0C\u4F4E\u4E8E\u4FDD\u7559\u5C3E\u5DF4 ${policy.retainTokens} tokens\uFF08DSH \u9ED8\u8BA4\u7B56\u7565\uFF09\uFF0C\u65E0\u9700\u538B\u7F29`
+    };
+  }
+  let retainedStart = messages.length;
+  let retainedTokens = 0;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message === void 0) break;
+    const cost = estimateTokens(message.text) + 4;
+    if (retainedTokens + cost > policy.retainTokens && retainedStart < messages.length) break;
+    retainedTokens += cost;
+    retainedStart = index;
+  }
+  if (retainedStart <= 0) {
+    return {
+      compacted: [],
+      retained: [...messages],
+      tokensBefore,
+      reason: "\u6CA1\u6709\u53EF\u538B\u7F29\u7684\u65E9\u671F\u6D88\u606F\uFF08\u5168\u90E8\u843D\u5728\u4FDD\u7559\u5C3E\u5DF4\u5185\uFF09"
+    };
+  }
+  return {
+    compacted: messages.slice(0, retainedStart),
+    retained: messages.slice(retainedStart),
+    tokensBefore
+  };
+}
+var TEACHING_COMPACTION_INSTRUCTION = [
+  "You are now acting as a compaction engine for an AI teaching assistant. Condense the conversation ABOVE into a structured checkpoint that lets another model resume the teaching with no loss of essential context.",
+  "",
+  'Output EXACTLY the Markdown structure below: keep every section, in order. Use terse bullets, not prose paragraphs. Write "(none)" for an empty section \u2014 never drop a section.',
+  "",
+  "## Primary Request and Intent",
+  "- [the student's original and evolving learning goals; quote verbatim where the exact wording matters]",
+  "",
+  "## Course and Sources",
+  "- [course title/revision, source files or anchors referenced, unresolved source uncertainty]",
+  "",
+  "## Key Concepts",
+  "- [concepts taught, definition/conditions/examples the student has seen, with concept ids when present]",
+  "",
+  "## Activities and Evidence",
+  "- [activities, student attempts, experiment outputs, help level, independence, what remains unverified]",
+  "",
+  "## Errors and Misunderstandings",
+  "- [student misconceptions, failed attempts, corrections, and open questions]",
+  "",
+  "## Pending Jobs",
+  "- [requested work not yet completed]",
+  "",
+  "## Current Work",
+  "- [precisely what was in progress at this checkpoint]",
+  "",
+  "## Next Step",
+  '- [the single next action in line with the latest student request, or "(none)"]',
+  "",
+  "## Critical Context",
+  "- [decisions and rationale, constraints, student preferences, data needed to continue]",
+  "",
+  "Rules:",
+  "- Preserve exact ids, file paths, source labels, numbers, code fragments and error strings.",
+  "- Preserve student feedback and corrections faithfully.",
+  "- Do not invent sources, anchors or results that were not present.",
+  "- Do NOT mention this summarization request or that the context was compacted.",
+  "- Output only the checkpoint text; do not call any tool."
+].join("\n");
+function buildSummaryInput(messages) {
+  const lines = [];
+  for (const message of messages) {
+    const role = message.role === "student" ? "\u5B66\u751F" : message.role === "teacher" ? "\u52A9\u6559" : "\u7CFB\u7EDF";
+    lines.push(`### ${role}\uFF08${message.kind}\uFF0C${message.createdAt}\uFF09`);
+    lines.push(message.text);
+    lines.push("");
+  }
+  let text2 = lines.join("\n");
+  if (text2.length > SUMMARY_INPUT_MAX_CHARS) {
+    text2 = `\u2026\uFF08\u8F83\u65E9\u5185\u5BB9\u5DF2\u7701\u7565\uFF09
+${text2.slice(text2.length - SUMMARY_INPUT_MAX_CHARS)}`;
+  }
+  return text2;
+}
+function estimateCompactedTokens(summary, retained) {
+  return estimateTokens(summary) + estimateMessageTokens(retained) + 16;
+}
 
 // packages/dsh-plugin/src/host/minimal.ts
 import "node:crypto";
@@ -62329,6 +62495,242 @@ function registerRoutes(services) {
       },
       environments: await services.experiments.directory()
     });
+  });
+  const selectionView = (selection) => ({
+    provider: selection.provider,
+    model: selection.model,
+    ...selection.reasoningEffort === void 0 ? {} : { reasoningEffort: selection.reasoningEffort }
+  });
+  const modelInfoView = async (provider, model) => {
+    const raw = await services.modelCatalog.resolveModelInfo(provider, model);
+    const context = raw?.["context"];
+    const window2 = typeof raw?.["contextWindow"] === "number" ? raw["contextWindow"] : typeof context?.contextWindow === "number" ? context.contextWindow : void 0;
+    const modalities = Array.isArray(raw?.["inputModalities"]) ? (raw?.["inputModalities"]).filter((item) => typeof item === "string") : void 0;
+    const reasoningRaw = raw?.["reasoning"];
+    const efforts = Array.isArray(reasoningRaw?.efforts) ? reasoningRaw.efforts.flatMap((effort) => {
+      if (typeof effort !== "object" || effort === null) return [];
+      const record = effort;
+      if (typeof record["id"] !== "string" || record["id"] === "") return [];
+      return [{
+        id: record["id"],
+        name: typeof record["name"] === "string" ? record["name"] : record["id"],
+        ...typeof record["description"] === "string" ? { description: record["description"] } : {}
+      }];
+    }) : [];
+    return {
+      provider,
+      model,
+      ...typeof raw?.["name"] === "string" ? { name: raw["name"] } : {},
+      ...window2 === void 0 ? {} : { contextWindow: window2 },
+      ...modalities === void 0 ? {} : { inputModalities: modalities },
+      ...efforts.length === 0 ? {} : {
+        reasoning: {
+          efforts,
+          ...typeof reasoningRaw?.defaultEffort === "string" ? { defaultEffort: reasoningRaw.defaultEffort } : {}
+        }
+      }
+    };
+  };
+  route("model.catalog", async () => {
+    const override = services.settings.modelOverride();
+    const fallback = services.defaultModelSelection();
+    const providers = [];
+    const failures = [];
+    for (const provider of await services.modelCatalog.listProviders()) {
+      try {
+        const models = await services.modelCatalog.listModels(provider.id);
+        providers.push({
+          id: provider.id,
+          name: provider.name,
+          models: models.filter((model) => typeof model.id === "string" && model.id !== "").map((model) => ({
+            id: model.id,
+            name: typeof model.name === "string" && model.name !== "" ? model.name : model.id,
+            ...typeof model.description === "string" ? { description: model.description } : {}
+          }))
+        });
+      } catch (cause) {
+        failures.push({ provider: provider.id, message: cause instanceof Error ? cause.message : String(cause) });
+      }
+    }
+    return envelope({
+      followHost: override === void 0,
+      current: selectionView(override ?? fallback),
+      default: selectionView(fallback),
+      ...override === void 0 ? {} : { override: selectionView(override) },
+      providers,
+      ...failures.length === 0 ? {} : { failures }
+    });
+  });
+  route("model.info", async ({ query }) => {
+    const provider = requireQuery(query, "provider");
+    const model = requireQuery(query, "model");
+    return envelope(await modelInfoView(provider, model));
+  });
+  route("model.set", async ({ body }) => {
+    const input = body;
+    if (input?.followHost === true) {
+      await services.settings.setModelSelection(void 0);
+      services.invalidateModelInfo();
+      return envelope({ selection: selectionView(services.defaultModelSelection()), followHost: true });
+    }
+    if (typeof input?.provider !== "string" || typeof input?.model !== "string" || input.provider.trim() === "" || input.model.trim() === "") {
+      throw appError("invalid-input", "\u7F3A\u5C11 provider \u6216 model");
+    }
+    const provider = input.provider.trim();
+    const model = input.model.trim();
+    const reasoningEffort = typeof input.reasoningEffort === "string" && input.reasoningEffort !== "" ? input.reasoningEffort : void 0;
+    const info2 = await modelInfoView(provider, model);
+    if (info2.reasoning !== void 0 && reasoningEffort !== void 0 && !info2.reasoning.efforts.some((effort) => effort.id === reasoningEffort)) {
+      throw appError("invalid-input", `\u6A21\u578B ${provider}/${model} \u4E0D\u652F\u6301\u601D\u8003\u5F3A\u5EA6 ${reasoningEffort}`);
+    }
+    await services.settings.setModelSelection({
+      provider,
+      model,
+      ...reasoningEffort === void 0 ? {} : { reasoningEffort }
+    });
+    services.invalidateModelInfo();
+    return envelope({
+      selection: selectionView({ provider, model, ...reasoningEffort === void 0 ? {} : { reasoningEffort } }),
+      followHost: false
+    });
+  });
+  route("context.usage", async ({ query }) => {
+    const sessionId2 = requireQuery(query, "sessionId");
+    const session = await services.sessions.get(sessionId2);
+    if (session === void 0) throw notFoundError("\u5B66\u4E60\u4F1A\u8BDD");
+    const info2 = await services.model.info();
+    const resolved = info2.contextWindow === void 0 ? await modelInfoView(info2.provider, info2.model) : void 0;
+    const contextWindow = info2.contextWindow ?? resolved?.contextWindow;
+    const last = services.lastUsage(session.id);
+    const checkpoint = session.context;
+    let tokensUsed;
+    let source = "unknown";
+    let reportedAt;
+    let note;
+    if (checkpoint !== void 0 && (last === void 0 || checkpoint.compactedAt > (last.at ?? ""))) {
+      tokensUsed = checkpoint.tokensAfterEstimate;
+      source = "estimated";
+      note = `\u538B\u7F29\u68C0\u67E5\u70B9\u4F30\u7B97\uFF1B\u6700\u8FD1\u4E00\u6B21\u8BF7\u6C42 ${last?.inputTokens ?? "\u672A\u77E5"} tokens`;
+    } else if (last?.inputTokens !== void 0) {
+      tokensUsed = last.inputTokens;
+      source = "reported";
+      reportedAt = last.at;
+    } else {
+      const messages = await services.sessions.messages(session.id);
+      tokensUsed = estimateMessageTokens(messages) + 2e3;
+      source = "estimated";
+      note = "\u5C1A\u65E0\u6A21\u578B\u7528\u91CF\u62A5\u544A\uFF1B\u6309\u6D88\u606F\u5B57\u7B26\u4F30\u7B97";
+    }
+    const percent = tokensUsed !== void 0 && contextWindow !== void 0 ? Math.round(tokensUsed / contextWindow * 1e3) / 10 : void 0;
+    const payload = {
+      sessionId: session.id,
+      ...tokensUsed === void 0 ? {} : { tokensUsed },
+      ...contextWindow === void 0 ? {} : { contextWindow },
+      ...percent === void 0 ? {} : { percent },
+      source,
+      ...reportedAt === void 0 ? {} : { reportedAt },
+      model: selectionView({ provider: info2.provider, model: info2.model, ...info2.reasoningEffort === void 0 ? {} : { reasoningEffort: info2.reasoningEffort } }),
+      ...checkpoint === void 0 ? {} : {
+        compressed: {
+          compactedAt: checkpoint.compactedAt,
+          compactedMessages: checkpoint.compactedMessageIds.length,
+          tokensBefore: checkpoint.tokensBefore,
+          tokensAfterEstimate: checkpoint.tokensAfterEstimate
+        }
+      },
+      ...note === void 0 ? {} : { note }
+    };
+    return envelope(payload);
+  });
+  route("context.compress", async ({ body }) => {
+    const input = body;
+    if (typeof input?.sessionId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 sessionId");
+    const session = await services.sessions.get(input.sessionId);
+    if (session === void 0) throw notFoundError("\u5B66\u4E60\u4F1A\u8BDD");
+    const force = input.force === true;
+    const handle = services.tasks.start({
+      kind: "context-compact",
+      label: "\u538B\u7F29\u6559\u5B66\u4E0A\u4E0B\u6587",
+      steps: [
+        { id: "read", label: "\u8BFB\u53D6\u5BF9\u8BDD\u5386\u53F2" },
+        { id: "summarize", label: "\u751F\u6210\u538B\u7F29\u6458\u8981" },
+        { id: "save", label: "\u4FDD\u5B58\u4E0A\u4E0B\u6587\u68C0\u67E5\u70B9" }
+      ]
+    }, async (context) => {
+      context.step("read", { status: "running" });
+      const messages = await services.sessions.messages(session.id);
+      if (messages.length === 0) throw appError("invalid-input", "\u8BE5\u5B66\u4E60\u4F1A\u8BDD\u8FD8\u6CA1\u6709\u6D88\u606F\uFF0C\u65E0\u6CD5\u538B\u7F29");
+      const info2 = await services.model.info();
+      const resolved = info2.contextWindow === void 0 ? await modelInfoView(info2.provider, info2.model) : void 0;
+      const policy = resolveCompactionPolicy(info2.contextWindow ?? resolved?.contextWindow);
+      const selection = selectCompactionRange(messages, policy, force);
+      if (selection.compacted.length === 0) {
+        context.step("read", { status: "done", detail: "\u65E0\u9700\u538B\u7F29" });
+        context.result({ compacted: false, reason: selection.reason ?? "\u6CA1\u6709\u53EF\u538B\u7F29\u7684\u5386\u53F2" });
+        return { compacted: false };
+      }
+      context.step("read", {
+        status: "done",
+        detail: `${selection.compacted.length} \u6761\u6D88\u606F / \u7EA6 ${selection.tokensBefore} tokens`
+      });
+      context.step("summarize", { status: "running" });
+      const completion = await services.model.complete({
+        system: TEACHING_COMPACTION_INSTRUCTION,
+        messages: [{
+          role: "user",
+          text: `\u4EE5\u4E0B\u662F\u8F83\u65E9\u7684\u6559\u5B66\u5BF9\u8BDD\uFF08\u539F\u6587\uFF09\uFF1A
+
+${buildSummaryInput(selection.compacted)}
+
+\u8BF7\u6309\u8981\u6C42\u8F93\u51FA\u538B\u7F29\u68C0\u67E5\u70B9\u3002`
+        }],
+        maxTokens: SUMMARY_MAX_TOKENS,
+        purpose: "compaction",
+        sessionId: session.id,
+        language: "zh"
+      }, context.signal);
+      const summary = completion.text.trim();
+      if (summary === "") throw appError("uncertain", "\u538B\u7F29\u6458\u8981\u4E3A\u7A7A\uFF0C\u672A\u4FDD\u5B58");
+      const tokensAfterEstimate = estimateCompactedTokens(summary, selection.retained);
+      if (tokensAfterEstimate >= selection.tokensBefore) {
+        context.step("summarize", { status: "done", detail: "\u538B\u7F29\u6536\u76CA\u4E0D\u8DB3" });
+        context.result({
+          compacted: false,
+          reason: `\u538B\u7F29\u540E\u4F30\u7B97\u6CA1\u6709\u51CF\u5C11\uFF08${selection.tokensBefore} \u2192 ${tokensAfterEstimate} tokens\uFF09\uFF1B\u6458\u8981\u6BD4\u539F\u6587\u957F\u65F6\u4E0D\u4FDD\u5B58\uFF0C\u907F\u514D\u4E0A\u4E0B\u6587\u53CD\u800C\u53D8\u5927`
+        });
+        return { compacted: false };
+      }
+      context.step("summarize", { status: "done", detail: `\u7EA6 ${selection.tokensBefore} \u2192 ${tokensAfterEstimate} tokens` });
+      context.step("save", { status: "running" });
+      const checkpoint = {
+        summary,
+        compactedMessageIds: selection.compacted.map((message) => message.id),
+        compactedAt: nowIso(),
+        tokensBefore: selection.tokensBefore,
+        tokensAfterEstimate,
+        model: { provider: info2.provider, model: info2.model }
+      };
+      const latest = await services.sessions.get(session.id);
+      if (latest === void 0) throw notFoundError("\u5B66\u4E60\u4F1A\u8BDD");
+      const saved = await services.sessions.save({
+        ...latest,
+        context: checkpoint,
+        updatedAt: nowIso()
+      });
+      context.step("save", { status: "done" });
+      context.result({ compacted: true, checkpoint });
+      return { compacted: true, checkpoint, session: saved };
+    });
+    return envelope({ task: handle });
+  });
+  route("context.reset", async ({ body }) => {
+    const input = body;
+    if (typeof input?.sessionId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 sessionId");
+    const session = await services.sessions.get(input.sessionId);
+    if (session === void 0) throw notFoundError("\u5B66\u4E60\u4F1A\u8BDD");
+    const { context: _context, ...rest } = session;
+    const saved = await services.sessions.save({ ...rest, updatedAt: nowIso() });
+    return envelope({ session: saved });
   });
   route("courses.list", async () => {
     const courses = await services.courses.list();
@@ -62896,7 +63298,9 @@ function registerRoutes(services) {
     const revision = await services.courses.getRevision(session.courseId, session.courseRevisionId);
     if (course === void 0 || revision === void 0) throw notFoundError("\u8BFE\u7A0B\u7ED3\u6784");
     const profile = await services.profiles.get();
-    const history = await services.sessions.messages(session.id);
+    const allHistory = await services.sessions.messages(session.id);
+    const checkpoint = session.context;
+    const history = checkpoint === void 0 ? allHistory : allHistory.filter((message) => !checkpoint.compactedMessageIds.includes(message.id));
     const student = studentMessage(session.id, input.text.trim());
     await services.sessions.appendMessage(student);
     await services.sessions.save({
@@ -62989,6 +63393,7 @@ function registerRoutes(services) {
             courseRevision: revision,
             currentConceptId: session.position.conceptId,
             history,
+            ...checkpoint === void 0 ? {} : { contextCheckpoint: { summary: checkpoint.summary, compactedAt: checkpoint.compactedAt } },
             material,
             crossCourse,
             learning: learningSummary,
@@ -63603,7 +64008,10 @@ function requestSpec(operation) {
     "tasks.get",
     "tasks.list",
     "capabilities.get",
-    "runs.latest"
+    "runs.latest",
+    "model.catalog",
+    "model.info",
+    "context.usage"
   ]);
   return { method: getOperations.has(operation) ? "GET" : "POST" };
 }
@@ -64003,6 +64411,49 @@ function toTaskError(cause, cancelled) {
   };
 }
 
+// packages/dsh-plugin/src/host/settings.ts
+var SETTINGS_FILE = "settings.json";
+function isSelection(value) {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value;
+  return typeof record["provider"] === "string" && record["provider"] !== "" && typeof record["model"] === "string" && record["model"] !== "" && (record["reasoningEffort"] === void 0 || typeof record["reasoningEffort"] === "string");
+}
+var SettingsStore = class {
+  state;
+  cached;
+  logger;
+  constructor(state, logger = () => void 0) {
+    this.state = state;
+    this.logger = logger;
+  }
+  /** Load once from disk; malformed settings fall back to defaults. */
+  async load() {
+    if (this.cached !== void 0) return this.cached;
+    let value = {};
+    try {
+      const raw = await this.state.readJson(SETTINGS_FILE);
+      if (typeof raw === "object" && raw !== null) {
+        const model = raw["model"];
+        if (isSelection(model)) value = { model };
+      }
+    } catch (cause) {
+      this.logger("settings read failed; using defaults", { message: cause instanceof Error ? cause.message : String(cause) });
+    }
+    this.cached = value;
+    return value;
+  }
+  /** Current model override without waiting for disk (after `load`). */
+  modelOverride() {
+    return this.cached?.model;
+  }
+  /** Replace the stored model override; `undefined` follows the host default. */
+  async setModelSelection(selection) {
+    const next = selection === void 0 ? {} : { model: selection };
+    await this.state.writeJson(SETTINGS_FILE, next);
+    this.cached = next;
+  }
+};
+
 // packages/dsh-plugin/src/host/index.ts
 var name = "ai-teaching";
 var inject = ["connection", "llm", "agentDefaultModel"];
@@ -64027,15 +64478,21 @@ function apply(ctx, config = {}) {
   const teaching = createTeachingService({ maxTokens: 12e3 });
   const experiments = createRunnerRegistry({ dataDir });
   const environments2 = createEnvironmentManager({ dataDir, runners: experiments, logger: (event, details) => logger(event, details) });
+  const settings = new SettingsStore(state, (message, fields) => logger(message, fields));
   const usageBySession = /* @__PURE__ */ new Map();
+  const lastUsageBySession = /* @__PURE__ */ new Map();
   const model = new HarnessModelAdapter(ctx, {
     routingSessionId: "session-teaching-plugin",
     onUsage: (entry) => {
-      if (entry.sessionId !== void 0) usageBySession.set(entry.sessionId, entry);
+      if (entry.sessionId !== void 0) {
+        usageBySession.set(entry.sessionId, entry);
+        lastUsageBySession.set(entry.sessionId, entry);
+      }
       void state.appendJsonl("usage/model-usage.jsonl", entry).catch((cause) => {
         logger("usage log failed", { message: String(cause) });
       });
     },
+    selectionOverride: () => settings.modelOverride(),
     log: logger
   });
   const portability = createPortabilityService({
@@ -64100,6 +64557,7 @@ function apply(ctx, config = {}) {
   };
   const ready = (async () => {
     const meta = await state.open();
+    await settings.load();
     await profiles.get();
     const recovered = await tasks.recoverInterrupted();
     if (recovered.length > 0) logger("recovered interrupted tasks", { count: recovered.length });
@@ -64119,6 +64577,29 @@ function apply(ctx, config = {}) {
     portability,
     createLearningFor,
     takeUsage,
+    lastUsage: (sessionId2) => lastUsageBySession.get(sessionId2),
+    settings,
+    defaultModelSelection: () => ctx.agentDefaultModel.currentSelection(),
+    invalidateModelInfo: () => model.invalidateInfo(),
+    modelCatalog: {
+      listProviders: async () => {
+        const llm = ctx.llm;
+        if (llm?.listProviders === void 0) return [];
+        const providers = llm.listProviders();
+        return Array.isArray(providers) ? providers.map((provider) => ({ id: String(provider.id ?? ""), name: String(provider.name ?? provider.id ?? "") })).filter((provider) => provider.id !== "") : [];
+      },
+      listModels: async (provider) => {
+        const llm = ctx.llm;
+        if (llm?.listModels === void 0) return [];
+        return await llm.listModels(provider);
+      },
+      resolveModelInfo: async (provider, model2) => {
+        const llm = ctx.llm;
+        if (llm?.resolveModelInfo === void 0) return void 0;
+        const info2 = await llm.resolveModelInfo(provider, model2);
+        return typeof info2 === "object" && info2 !== null ? info2 : void 0;
+      }
+    },
     getOcrInfo: () => ensureOcr(),
     profiles,
     courses,

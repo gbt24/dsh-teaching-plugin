@@ -354,6 +354,56 @@ window.__ModuleLoader__.load({
     .ai-edit-hint { font-size: 11px; opacity: 0.7; }
     .ai-add-concept { align-self: flex-start; margin-top: 2px; }
     .ai-unsaved-guard { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .ai-teaching-body[data-left-collapsed="true"] .ai-teaching-sidebar { display: none; }
+    .ai-teaching-body[data-right-collapsed="true"] .ai-teaching-area { display: none; }
+    .ai-topbar-titles { min-width: 0; }
+    .ai-icon-button { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3));
+      background: transparent; color: inherit; border-radius: 6px; cursor: pointer;
+      font-size: 12px; line-height: 1; padding: 3px 6px; }
+    .ai-icon-button:hover { background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.12)); }
+    .ai-icon-button[aria-pressed="false"] { opacity: 0.6; }
+    .ai-model-selector { position: relative; display: inline-flex; }
+    .ai-model-button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid
+      var(--dsw-alias-border-l2, rgba(127,127,127,0.3)); background: transparent; color: inherit;
+      border-radius: 8px; cursor: pointer; font-size: 12px; padding: 3px 8px; font-family: inherit; }
+    .ai-model-button:hover { background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.12)); }
+    .ai-model-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ai-badge[data-follow-host="true"] { opacity: 0.75; }
+    .ai-model-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 80;
+      min-width: 300px; max-width: 420px; max-height: 60vh; overflow-y: auto;
+      padding: 8px; border-radius: 10px; border: 1px solid
+      var(--dsw-alias-border-l2, rgba(127,127,127,0.3)); background: var(--dsw-alias-bg-layer-1, #fff);
+      color: var(--dsw-alias-label-primary, #111); box-shadow: 0 12px 36px rgba(0,0,0,0.28);
+      display: flex; flex-direction: column; gap: 4px; }
+    .ai-model-provider { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+    .ai-model-provider-name { font-size: 11px; opacity: 0.65; font-weight: 600; padding: 2px 4px; }
+    .ai-model-item { display: flex; justify-content: space-between; gap: 10px; align-items: baseline;
+      border: 1px solid transparent; border-radius: 6px; background: transparent; color: inherit;
+      cursor: pointer; font: inherit; font-size: 12px; padding: 4px 6px; text-align: left; }
+    .ai-model-item:hover { background: var(--dsw-alias-bg-base, rgba(127,127,127,0.1)); }
+    .ai-model-item[data-active="true"] { border-color: var(--dsw-alias-state-business-primary, #2563eb); }
+    .ai-model-efforts { border-top: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.2));
+      margin-top: 4px; padding-top: 4px; display: flex; flex-direction: column; gap: 2px; }
+    .ai-model-error { color: var(--dsw-alias-state-error-primary, #b91c1c); font-size: 11px; padding: 2px 4px; }
+    .ai-model-failures { border-top: 1px dashed var(--dsw-alias-border-l2, rgba(127,127,127,0.2));
+      margin-top: 4px; padding-top: 4px; display: flex; flex-direction: column; gap: 2px; }
+    .ai-context-meter { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; }
+    .ai-context-bar { display: inline-block; width: 56px; height: 6px; border-radius: 999px;
+      background: var(--dsw-alias-border-l2, rgba(127,127,127,0.25)); overflow: hidden; }
+    .ai-context-bar > span { display: block; height: 100%; border-radius: 999px;
+      background: var(--dsw-alias-state-business-primary, #2563eb); }
+    .ai-context-bar[data-tone="warn"] > span { background: var(--dsw-alias-state-warn-primary, #d97706); }
+    .ai-context-bar[data-tone="danger"] > span { background: var(--dsw-alias-state-error-primary, #dc2626); }
+    .ai-context-label { white-space: nowrap; opacity: 0.85; }
+    .ai-compaction-banner { display: flex; flex-direction: column; gap: 2px; font-size: 11px;
+      padding: 6px 8px; border-radius: 8px; border: 1px dashed
+      var(--dsw-alias-border-l2, rgba(127,127,127,0.35));
+      background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.06)); }
+    .ai-compacted-block { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25));
+      border-radius: 8px; padding: 4px 8px; font-size: 12px; }
+    .ai-compacted-block > summary { cursor: pointer; opacity: 0.8; font-size: 11px; }
+    .ai-compacted-messages { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; opacity: 0.85; }
+    .ai-compress-modal { max-width: 560px; }
     .ai-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:60}
     .ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
     .ai-modal h3{margin:0 0 8px;font-size:15px}
@@ -623,7 +673,9 @@ window.__ModuleLoader__.load({
       review: [],
       chat: { status: "idle", text: "", evidence: [] },
       tasks: [],
-      selectedTab: "activity"
+      selectedTab: "activity",
+      leftCollapsed: false,
+      rightCollapsed: false
     };
     function upsertActivity(activities, activity) {
       const index = activities.findIndex((existing) => existing.id === activity.id);
@@ -729,6 +781,17 @@ window.__ModuleLoader__.load({
         }
         case "bootstrap/failed":
           return { ...state, phase: "fatal", fatalError: action.error };
+        case "bootstrap/refreshed":
+          return { ...state, bootstrap: action.bootstrap };
+        case "model/catalog":
+          return { ...state, ...action.catalog !== void 0 ? { modelCatalog: action.catalog } : {} };
+        case "context/usage":
+          return { ...state, ...action.usage !== void 0 ? { contextUsage: action.usage } : { contextUsage: void 0 } };
+        case "ui/collapse":
+          return {
+            ...state,
+            ...action.panel === "left" ? { leftCollapsed: action.collapsed } : { rightCollapsed: action.collapsed }
+          };
         case "wizard/open":
           if (state.phase === "loading") return state;
           return {
@@ -789,6 +852,7 @@ window.__ModuleLoader__.load({
             activities: [...action.session.activities],
             activityStates,
             latestRuns: {},
+            contextUsage: void 0,
             mastery: [...action.session.mastery],
             review: [...action.session.review],
             selectedActivityId: selected,
@@ -801,6 +865,7 @@ window.__ModuleLoader__.load({
           return {
             ...state,
             session: void 0,
+            contextUsage: void 0,
             messages: [],
             activities: [],
             activityStates: {},
@@ -18333,6 +18398,44 @@ window.__ModuleLoader__.load({
       return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { ref: host, className: "teaching-markdown-host" });
     }
 
+    // packages/dsh-plugin/src/client/context-compress.ts
+    var COMPRESSION_CONFIRM_TEXT = [
+      "\u6309 DeepSeek Harness \u7684\u4FDD\u7559\u89C4\u5219\u538B\u7F29\u8F83\u65E9\u5BF9\u8BDD\uFF1A\u8F83\u65E9\u6D88\u606F\u4F1A\u88AB\u66FF\u6362\u4E3A\u7ED3\u6784\u5316\u6458\u8981\uFF0C\u6A21\u578B\u53EA\u770B\u5230\u6458\u8981 + \u6700\u8FD1\u6D88\u606F\u3002",
+      "\u672C\u673A\u4ECD\u4FDD\u7559\u5B8C\u6574\u5BF9\u8BDD\u539F\u6587\uFF0C\u53EF\u5C55\u5F00\u67E5\u770B\uFF0C\u4E0D\u4F1A\u5220\u9664\u5B66\u4E60\u8BB0\u5F55\u6216\u7B14\u8BB0\u3002",
+      "\u538B\u7F29\u53EA\u5F71\u54CD\u540E\u7EED\u6A21\u578B\u8BF7\u6C42\u7684\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u6539\u53D8\u6D3B\u52A8\u3001\u5B66\u60C5\u6216\u8D44\u6599\u3002"
+    ].join("");
+    var COMPRESSION_FORCE_TEXT = "\u5F3A\u5236\u538B\u7F29\u4F1A\u5FFD\u7565\u4FDD\u7559\u9608\u503C\uFF0C\u5E76\u4FDD\u7559\u66F4\u77ED\u7684\u6700\u8FD1\u5BF9\u8BDD\uFF1B\u8F83\u65E9\u5185\u5BB9\u540C\u6837\u53EA\u4EE5\u6458\u8981\u5F62\u5F0F\u63D0\u4F9B\u7ED9\u6A21\u578B\uFF0C\u539F\u6587\u4ECD\u5728\u672C\u673A\u3002";
+    function parseCompressionResult(result) {
+      if (typeof result !== "object" || result === null || Array.isArray(result)) return void 0;
+      const record = result;
+      if (typeof record.compacted !== "boolean") return void 0;
+      const reason = typeof record.reason === "string" && record.reason !== "" ? record.reason : void 0;
+      const checkpoint = isCheckpoint(record.checkpoint) ? record.checkpoint : void 0;
+      return {
+        compacted: record.compacted,
+        ...reason !== void 0 ? { reason } : {},
+        ...checkpoint !== void 0 ? { checkpoint } : {}
+      };
+    }
+    function isCheckpoint(value) {
+      if (typeof value !== "object" || value === null) return false;
+      const record = value;
+      return typeof record.summary === "string" && Array.isArray(record.compactedMessageIds) && typeof record.compactedAt === "string";
+    }
+    function compressionBannerText(context) {
+      if (context === void 0) return void 0;
+      const count = context.compactedMessageIds.length;
+      return `\u8F83\u65E9\u5BF9\u8BDD\u5DF2\u538B\u7F29\uFF08${count} \u6761\uFF09\uFF1B\u6A21\u578B\u4F7F\u7528\u6458\u8981 + \u6700\u8FD1\u6D88\u606F\uFF0C\u539F\u6587\u4ECD\u4FDD\u7559\u5728\u672C\u673A\u3002`;
+    }
+    function compactedMessageIds(context) {
+      return new Set((context?.compactedMessageIds ?? []).map((id) => id));
+    }
+    function compressionSuccessMessage(outcome) {
+      const count = outcome.checkpoint?.compactedMessageIds.length;
+      if (count !== void 0) return `\u5DF2\u538B\u7F29\u8F83\u65E9\u7684 ${count} \u6761\u5BF9\u8BDD\uFF1B\u539F\u6587\u4ECD\u4FDD\u7559\u5728\u672C\u673A\uFF0C\u540E\u7EED\u6559\u5B66\u4F7F\u7528\u6458\u8981 + \u6700\u8FD1\u6D88\u606F\u3002`;
+      return "\u5DF2\u5B8C\u6210\u4E0A\u4E0B\u6587\u538B\u7F29\uFF1B\u539F\u6587\u4ECD\u4FDD\u7559\u5728\u672C\u673A\u3002";
+    }
+
     // packages/dsh-plugin/src/client/components/ChatPanel.tsx
     var import_jsx_runtime3 = require("react/jsx-runtime");
     var QUICK_ACTION_LABELS = {
@@ -18472,19 +18575,37 @@ window.__ModuleLoader__.load({
         props.onSend(text2);
       };
       const session = props.session;
+      const context = session?.session.context;
+      const compactionBanner = compressionBannerText(context);
+      const compactedIds = compactedMessageIds(context);
+      const compactedMessages = props.messages.filter((message) => compactedIds.has(message.id));
+      const visibleMessages = props.messages.filter((message) => !compactedIds.has(message.id));
+      const renderMessage = (message) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+        MessageBubble,
+        {
+          message,
+          activities: props.activities,
+          onActivityClick: props.onActivityClick,
+          onEvidenceClick: props.onEvidenceClick
+        },
+        message.id
+      );
       return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("section", { className: "ai-chat-panel", "aria-label": "\u6559\u5B66\u5BF9\u8BDD", children: [
         /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "ai-chat-scroll", ref: scrollRef, children: [
           session === void 0 && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "ai-empty", children: "\u9009\u62E9\u5DE6\u4FA7\u8BFE\u7A0B\u4E0E\u4F1A\u8BDD\uFF0C\u6216\u65B0\u5EFA\u4E00\u4E2A\u5B66\u4E60\u4F1A\u8BDD\u5F00\u59CB\u3002" }),
-          props.messages.map((message) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-            MessageBubble,
-            {
-              message,
-              activities: props.activities,
-              onActivityClick: props.onActivityClick,
-              onEvidenceClick: props.onEvidenceClick
-            },
-            message.id
-          )),
+          compactionBanner !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "ai-compaction-banner", role: "status", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: compactionBanner }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "ai-muted", children: "\u538B\u7F29\u53EA\u5F71\u54CD\u6A21\u578B\u4E0A\u4E0B\u6587\uFF0C\u4E0D\u5220\u9664\u672C\u673A\u8BB0\u5F55\u3002" })
+          ] }),
+          compactedMessages.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("details", { className: "ai-compacted-block", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("summary", { children: [
+              "\u5DF2\u538B\u7F29\u7684\u8F83\u65E9\u6D88\u606F\uFF08",
+              compactedMessages.length,
+              " \u6761\uFF0C\u539F\u6587\u4ECD\u4FDD\u7559\uFF09"
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "ai-compacted-messages", children: compactedMessages.map(renderMessage) })
+          ] }),
+          visibleMessages.map(renderMessage),
           props.chat.text !== "" && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("article", { className: "ai-msg ai-msg-teacher", "data-streaming": "true", children: [
             /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(RenderedMarkdown, { source: props.chat.text }),
             /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "ai-msg-meta", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: "ai-spinner", "aria-label": "\u6B63\u5728\u751F\u6210" }) })
@@ -19561,6 +19682,50 @@ window.__ModuleLoader__.load({
       ] }) });
     }
 
+    // packages/dsh-plugin/src/client/layout-prefs.ts
+    var LAYOUT_STORAGE_KEY = "ai-teaching:layout";
+    var DEFAULT_LAYOUT_PREFS = { leftCollapsed: false, rightCollapsed: false };
+    function parseLayoutPrefs(raw) {
+      if (raw === null || raw === void 0 || raw.trim() === "") return DEFAULT_LAYOUT_PREFS;
+      try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return DEFAULT_LAYOUT_PREFS;
+        const record = parsed;
+        return {
+          leftCollapsed: typeof record.leftCollapsed === "boolean" ? record.leftCollapsed : false,
+          rightCollapsed: typeof record.rightCollapsed === "boolean" ? record.rightCollapsed : false
+        };
+      } catch {
+        return DEFAULT_LAYOUT_PREFS;
+      }
+    }
+    function serializeLayoutPrefs(prefs) {
+      return JSON.stringify({ leftCollapsed: prefs.leftCollapsed, rightCollapsed: prefs.rightCollapsed });
+    }
+    function defaultStorage() {
+      try {
+        if (typeof window === "undefined" || typeof window.localStorage === "undefined") return void 0;
+        return window.localStorage;
+      } catch {
+        return void 0;
+      }
+    }
+    function loadLayoutPrefs(storage = defaultStorage()) {
+      if (storage === void 0) return DEFAULT_LAYOUT_PREFS;
+      try {
+        return parseLayoutPrefs(storage.getItem(LAYOUT_STORAGE_KEY));
+      } catch {
+        return DEFAULT_LAYOUT_PREFS;
+      }
+    }
+    function saveLayoutPrefs(prefs, storage = defaultStorage()) {
+      if (storage === void 0) return;
+      try {
+        storage.setItem(LAYOUT_STORAGE_KEY, serializeLayoutPrefs(prefs));
+      } catch {
+      }
+    }
+
     // packages/dsh-plugin/src/client/components/Sidebar.tsx
     var import_react7 = require("react");
     var import_jsx_runtime7 = require("react/jsx-runtime");
@@ -20400,14 +20565,285 @@ window.__ModuleLoader__.load({
 
     // packages/dsh-plugin/src/client/components/TopBar.tsx
     var import_react9 = require("react");
+
+    // packages/dsh-plugin/src/client/context-meter.ts
+    function formatTokenCount(value) {
+      if (value === void 0 || !Number.isFinite(value) || value < 0) return "\u672A\u77E5";
+      if (value < 1e3) return String(Math.round(value));
+      if (value < 1e6) {
+        const thousands = value / 1e3;
+        return `${thousands >= 100 ? Math.round(thousands) : Math.round(thousands * 10) / 10}k`;
+      }
+      const millions = value / 1e6;
+      return `${Math.round(millions * 10) / 10}M`;
+    }
+    function toneForPercent(percent) {
+      if (percent >= 90) return "danger";
+      if (percent >= 70) return "warn";
+      return "ok";
+    }
+    var SOURCE_LABELS = {
+      reported: "\u6700\u8FD1\u4E00\u6B21\u6A21\u578B\u8BF7\u6C42\u7684\u670D\u52A1\u7AEF\u4E0A\u62A5 prompt tokens",
+      estimated: "\u672C\u5730\u4F30\u7B97\uFF08\u670D\u52A1\u7AEF\u672A\u4E0A\u62A5\u7528\u91CF\uFF09",
+      unknown: "\u6682\u65E0\u7528\u91CF\u6570\u636E"
+    };
+    function contextMeter(usage) {
+      if (usage === void 0) return void 0;
+      const tokens = usage.tokensUsed;
+      const window2 = usage.contextWindow;
+      const hasTokens = tokens !== void 0 && Number.isFinite(tokens) && tokens >= 0;
+      const hasWindow = hasTokens && window2 !== void 0 && Number.isFinite(window2) && window2 > 0;
+      const percent = hasWindow ? typeof usage.percent === "number" && Number.isFinite(usage.percent) ? usage.percent : tokens / window2 * 100 : void 0;
+      const tone = percent === void 0 ? "ok" : toneForPercent(percent);
+      const tokensLabel = hasTokens ? formatTokenCount(tokens) : "\u7528\u91CF\u672A\u77E5";
+      const label = hasWindow && percent !== void 0 ? `${tokensLabel} / ${formatTokenCount(window2)} (${Math.round(percent)}%)` : hasTokens ? `${tokensLabel}\uFF08\u7A97\u53E3\u672A\u77E5\uFF09` : "\u7528\u91CF\u672A\u77E5";
+      const tooltipParts = [
+        SOURCE_LABELS[usage.source],
+        hasWindow && percent !== void 0 ? `\u5DF2\u7528 ${formatTokenCount(tokens)} / ${formatTokenCount(window2)} tokens\uFF08${Math.round(percent)}%\uFF09` : hasTokens ? `\u5DF2\u7528 ${formatTokenCount(tokens)} tokens\uFF1B\u8BE5\u6A21\u578B\u672A\u62A5\u544A\u4E0A\u4E0B\u6587\u7A97\u53E3\uFF0C\u53EA\u663E\u793A\u7528\u91CF\u3002` : "Host \u5C1A\u672A\u62A5\u544A\u6216\u4F30\u7B97\u51FA\u7528\u91CF\u3002",
+        `\u6A21\u578B\uFF1A${usage.model.provider}/${usage.model.model}`,
+        usage.reportedAt !== void 0 ? `\u6700\u8FD1\u66F4\u65B0\uFF1A${usage.reportedAt}` : "",
+        usage.compressed !== void 0 ? `\u8F83\u65E9\u5BF9\u8BDD\u5DF2\u538B\u7F29 ${usage.compressed.compactedMessages} \u6761\uFF08\u7EA6 ${formatTokenCount(usage.compressed.tokensBefore)} \u2192 ${formatTokenCount(usage.compressed.tokensAfterEstimate)} tokens\uFF09` : "",
+        usage.note ?? "",
+        "\u63D0\u793A\uFF1A\u8BE5\u6570\u5B57\u662F\u6700\u8FD1\u4E00\u6B21\u8BF7\u6C42\u7684 prompt tokens\uFF08\u670D\u52A1\u7AEF\u4E0A\u62A5\u6216\u672C\u5730\u4F30\u7B97\uFF09\uFF0C\u4E0D\u7B49\u540C\u4E8E\u7CBE\u786E\u7684\u5269\u4F59\u7A97\u53E3\u3002"
+      ].filter((part) => part !== "");
+      return {
+        label,
+        ...hasWindow && percent !== void 0 ? { fraction: Math.min(1, Math.max(0, tokens / window2)), percent } : {},
+        tone,
+        tooltip: tooltipParts.join("\n"),
+        unknown: !hasTokens
+      };
+    }
+
+    // packages/dsh-plugin/src/client/components/TopBar.tsx
     var import_jsx_runtime9 = require("react/jsx-runtime");
+    function ModelSelector(props) {
+      const { catalog } = props;
+      const [open2, setOpen] = (0, import_react9.useState)(false);
+      const [pending, setPending] = (0, import_react9.useState)(void 0);
+      const [loading, setLoading] = (0, import_react9.useState)(false);
+      const [error, setError] = (0, import_react9.useState)(void 0);
+      const close2 = () => {
+        setOpen(false);
+        setPending(void 0);
+        setError(void 0);
+      };
+      const apply2 = async (request) => {
+        setLoading(true);
+        setError(void 0);
+        try {
+          const result = await props.onSet(request);
+          if (result.ok) close2();
+          else setError(result.error ?? "\u8BBE\u7F6E\u6A21\u578B\u5931\u8D25");
+        } finally {
+          setLoading(false);
+        }
+      };
+      const chooseModel = async (provider, model) => {
+        setError(void 0);
+        setLoading(true);
+        try {
+          const info = await apiGet("model.info", { provider, model });
+          const efforts = info.reasoning?.efforts ?? [];
+          if (efforts.length > 0) {
+            setPending({
+              provider,
+              model,
+              efforts,
+              ...info.reasoning?.defaultEffort !== void 0 ? { defaultEffort: info.reasoning.defaultEffort } : {}
+            });
+          } else {
+            await apply2({ followHost: false, provider, model });
+          }
+        } catch (cause) {
+          setError(`\u8BFB\u53D6\u6A21\u578B\u80FD\u529B\u5931\u8D25\uFF1A${describeError(cause)}`);
+        } finally {
+          setLoading(false);
+        }
+      };
+      const currentLabel = pending === void 0 ? `${catalog.current.model}${catalog.current.reasoningEffort !== void 0 ? ` \xB7 ${catalog.current.reasoningEffort}` : ""}` : `${pending.model} \xB7 \u9009\u62E9\u63A8\u7406\u529B\u5EA6`;
+      const effortLabel = (id) => {
+        if (id === void 0) return "\u9ED8\u8BA4";
+        return catalog.providers.flatMap((provider) => provider.models).length > 0 ? id : id;
+      };
+      return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "ai-model-selector", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+          "button",
+          {
+            type: "button",
+            className: "ai-model-button",
+            "aria-haspopup": "menu",
+            "aria-expanded": open2,
+            disabled: props.busy || loading,
+            title: `\u5F53\u524D\u6A21\u578B\uFF1A${catalog.current.provider}/${catalog.current.model}${catalog.current.reasoningEffort !== void 0 ? `\uFF08\u63A8\u7406\u529B\u5EA6 ${catalog.current.reasoningEffort}\uFF09` : ""}${catalog.followHost ? "\uFF1B\u8DDF\u968F\u5BBF\u4E3B\u9ED8\u8BA4" : "\uFF1B\u63D2\u4EF6\u8986\u76D6"}`,
+            onClick: () => {
+              if (open2) close2();
+              else setOpen(true);
+            },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-model-name", children: currentLabel }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", "data-follow-host": catalog.followHost, children: catalog.followHost ? "\u8DDF\u968F\u5BBF\u4E3B" : "\u5DF2\u8986\u76D6" }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { "aria-hidden": "true", children: "\u25BE" })
+            ]
+          }
+        ),
+        open2 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-model-menu", role: "menu", "aria-label": "\u9009\u62E9\u6A21\u578B", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+            "button",
+            {
+              type: "button",
+              role: "menuitemradio",
+              "aria-checked": catalog.followHost,
+              className: "ai-model-item",
+              "data-active": catalog.followHost,
+              disabled: loading,
+              onClick: () => {
+                void apply2({ followHost: true });
+              },
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u8DDF\u968F\u5BBF\u4E3B\u9ED8\u8BA4" }),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "ai-muted", children: [
+                  catalog.default.provider,
+                  "/",
+                  catalog.default.model
+                ] })
+              ]
+            }
+          ),
+          catalog.providers.map((provider) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-model-provider", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-model-provider-name", children: provider.name }),
+            provider.models.map((model) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+              "button",
+              {
+                type: "button",
+                role: "menuitemradio",
+                "aria-checked": !catalog.followHost && catalog.current.provider === provider.id && catalog.current.model === model.id,
+                className: "ai-model-item",
+                "data-active": !catalog.followHost && catalog.current.provider === provider.id && catalog.current.model === model.id,
+                disabled: loading,
+                title: model.description,
+                onClick: () => {
+                  void chooseModel(provider.id, model.id);
+                },
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: model.name }),
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-muted", children: model.id })
+                ]
+              },
+              `${provider.id}/${model.id}`
+            ))
+          ] }, provider.id)),
+          pending !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-model-efforts", role: "group", "aria-label": "\u63A8\u7406\u529B\u5EA6", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-model-provider-name", children: [
+              "\u63A8\u7406\u529B\u5EA6\uFF08",
+              pending.model,
+              "\uFF09"
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+              "button",
+              {
+                type: "button",
+                className: "ai-model-item",
+                "aria-checked": pending.defaultEffort === void 0,
+                "data-active": pending.defaultEffort === void 0,
+                disabled: loading,
+                onClick: () => {
+                  void apply2({ followHost: false, provider: pending.provider, model: pending.model });
+                },
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: "\u9ED8\u8BA4\uFF08\u7EE7\u627F\u6A21\u578B\u9ED8\u8BA4\u529B\u5EA6\uFF09" }),
+                  pending.defaultEffort !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-muted", children: pending.defaultEffort })
+                ]
+              }
+            ),
+            pending.efforts.map((effort) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+              "button",
+              {
+                type: "button",
+                className: "ai-model-item",
+                disabled: loading,
+                title: effort.description,
+                onClick: () => {
+                  void apply2({
+                    followHost: false,
+                    provider: pending.provider,
+                    model: pending.model,
+                    reasoningEffort: effort.id
+                  });
+                },
+                children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: effort.name }),
+                  /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-muted", children: effortLabel(effort.id) })
+                ]
+              },
+              effort.id
+            ))
+          ] }),
+          catalog.failures !== void 0 && catalog.failures.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-model-failures", children: catalog.failures.map((failure) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-muted", children: [
+            "\u65E0\u6CD5\u5217\u51FA ",
+            failure.provider,
+            "\uFF1A",
+            failure.message
+          ] }, failure.provider)) }),
+          loading && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: "\u6B63\u5728\u5E94\u7528\u2026" }),
+          error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-model-error", role: "alert", children: error }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: "ai-link-button", onClick: close2, children: "\u5173\u95ED" })
+        ] })
+      ] });
+    }
+    function ContextMeter(props) {
+      const meter = contextMeter(props.usage);
+      if (meter === void 0) return null;
+      return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "ai-context-meter", title: meter.tooltip, "aria-label": `\u4E0A\u4E0B\u6587\u7528\u91CF\uFF1A${meter.label}`, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-context-bar", "data-tone": meter.tone, "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { style: { width: `${Math.round((meter.fraction ?? 0) * 100)}%` } }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-context-label", children: meter.label }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+          "button",
+          {
+            type: "button",
+            className: "ai-small-button",
+            disabled: props.busy || props.compressing === true,
+            onClick: props.onCompress,
+            "aria-label": "\u538B\u7F29\u4E0A\u4E0B\u6587",
+            title: "\u628A\u8F83\u65E9\u5BF9\u8BDD\u538B\u7F29\u4E3A\u7ED3\u6784\u5316\u6458\u8981\uFF1B\u672C\u673A\u5B8C\u6574\u5386\u53F2\u4ECD\u4FDD\u7559",
+            children: props.compressing === true ? "\u538B\u7F29\u4E2D\u2026" : "\u538B\u7F29\u4E0A\u4E0B\u6587"
+          }
+        )
+      ] });
+    }
     function TopBar(props) {
       const model = props.bootstrap?.model;
       const imageCapability = model?.imageInput === "yes" ? "\u53EF\u8BFB\u56FE" : model?.imageInput === "no" ? "\u4E0D\u53EF\u8BFB\u56FE" : "\u56FE\u50CF\u80FD\u529B\u672A\u77E5";
       return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
         /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("header", { className: "ai-teaching-topbar", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h2", { className: "ai-topbar-title", children: props.courseTitle ?? "AI \u77E5\u8BC6\u5E93\u6559\u5B66" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-topbar-titles", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-row", style: { alignItems: "center", gap: 6 }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: "ai-icon-button",
+                  "aria-pressed": !props.leftCollapsed,
+                  "aria-label": props.leftCollapsed ? "\u5C55\u5F00\u8BFE\u7A0B\u5BFC\u822A" : "\u6536\u8D77\u8BFE\u7A0B\u5BFC\u822A",
+                  title: props.leftCollapsed ? "\u5C55\u5F00\u8BFE\u7A0B\u5BFC\u822A" : "\u6536\u8D77\u8BFE\u7A0B\u5BFC\u822A",
+                  onClick: props.onToggleLeft,
+                  children: props.leftCollapsed ? "\u25B8" : "\u25C2"
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h2", { className: "ai-topbar-title", children: props.courseTitle ?? "AI \u77E5\u8BC6\u5E93\u6559\u5B66" }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: "ai-icon-button",
+                  "aria-pressed": !props.rightCollapsed,
+                  "aria-label": props.rightCollapsed ? "\u5C55\u5F00\u6301\u7EED\u6559\u5B66\u533A\u57DF" : "\u6536\u8D77\u6301\u7EED\u6559\u5B66\u533A\u57DF",
+                  title: props.rightCollapsed ? "\u5C55\u5F00\u6301\u7EED\u6559\u5B66\u533A\u57DF" : "\u6536\u8D77\u6301\u7EED\u6559\u5B66\u533A\u57DF",
+                  onClick: props.onToggleRight,
+                  children: props.rightCollapsed ? "\u25C2" : "\u25B8"
+                }
+              )
+            ] }),
             props.goals.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-topbar-goal", title: props.goals.join("\uFF1B"), children: [
               "\u76EE\u6807\uFF1A",
               props.goals.join("\uFF1B")
@@ -20415,12 +20851,21 @@ window.__ModuleLoader__.load({
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "ai-topbar-meta", children: [
             props.offline && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", style: { color: "var(--dsw-alias-state-warn-primary, #b45309)", borderColor: "var(--dsw-alias-state-warn-primary, #d97706)" }, children: "\u79BB\u7EBF" }),
-            model !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { title: `\u6A21\u578B\uFF1A${model.provider}/${model.model}\uFF1B${imageCapability}${model.note !== void 0 ? `\uFF1B${model.note}` : ""}`, children: [
+            props.modelCatalog !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ModelSelector, { catalog: props.modelCatalog, busy: props.busy, onSet: props.onModelSet }) : model !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { title: `\u6A21\u578B\uFF1A${model.provider}/${model.model}\uFF1B${imageCapability}${model.note !== void 0 ? `\uFF1B${model.note}` : ""}`, children: [
               "\u6A21\u578B ",
               model.model,
               " \xB7 ",
               imageCapability
             ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+              ContextMeter,
+              {
+                usage: props.contextUsage,
+                busy: props.busy,
+                ...props.compressing !== void 0 ? { compressing: props.compressing } : {},
+                onCompress: props.onCompressContext
+              }
+            ),
             props.bootstrap !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { title: `Host ${props.bootstrap.host.platform}-${props.bootstrap.host.arch} \xB7 Node ${props.bootstrap.host.nodeVersion} \xB7 \u6570\u636E\u76EE\u5F55 ${props.bootstrap.dataDir}`, children: [
               "v",
               props.bootstrap.pluginVersion
@@ -20479,7 +20924,12 @@ window.__ModuleLoader__.load({
       return new Promise((resolve) => setTimeout(resolve, ms));
     }
     function TeachingWorkspace(props = {}) {
-      const [state, dispatch] = import_react10.default.useReducer(workspaceReducer, INITIAL_WORKSPACE_STATE);
+      const [initialLayout] = (0, import_react10.useState)(() => loadLayoutPrefs());
+      const [state, dispatch] = import_react10.default.useReducer(workspaceReducer, {
+        ...INITIAL_WORKSPACE_STATE,
+        leftCollapsed: initialLayout.leftCollapsed,
+        rightCollapsed: initialLayout.rightCollapsed
+      });
       const stateRef = (0, import_react10.useRef)(state);
       stateRef.current = state;
       const streamAbort = (0, import_react10.useRef)(null);
@@ -20489,6 +20939,8 @@ window.__ModuleLoader__.load({
       const activeRuns = (0, import_react10.useRef)({});
       const saveTimers = (0, import_react10.useRef)({});
       const [online, setOnline] = (0, import_react10.useState)(() => typeof navigator === "undefined" ? true : navigator.onLine !== false);
+      const [compression, setCompression] = (0, import_react10.useState)(void 0);
+      const [compressing, setCompressing] = (0, import_react10.useState)(false);
       const [deleteTarget, setDeleteTarget] = (0, import_react10.useState)(void 0);
       const [activityDeleteTarget, setActivityDeleteTarget] = (0, import_react10.useState)(void 0);
       const [deleteActivityBusy, setDeleteActivityBusy] = (0, import_react10.useState)(false);
@@ -20514,6 +20966,9 @@ window.__ModuleLoader__.load({
         };
       }, []);
       (0, import_react10.useEffect)(() => {
+        saveLayoutPrefs({ leftCollapsed: state.leftCollapsed, rightCollapsed: state.rightCollapsed });
+      }, [state.leftCollapsed, state.rightCollapsed]);
+      (0, import_react10.useEffect)(() => {
         setSetup({ phase: "ready" });
       }, [state.courseDetail?.course.id]);
       (0, import_react10.useEffect)(() => {
@@ -20527,6 +20982,22 @@ window.__ModuleLoader__.load({
       const notify = (0, import_react10.useCallback)((notice) => {
         dispatch({ type: "notice", notice });
       }, []);
+      const loadModelCatalog = (0, import_react10.useCallback)(async () => {
+        try {
+          const catalog = await apiGet("model.catalog");
+          if (mounted.current) dispatch({ type: "model/catalog", catalog });
+        } catch {
+        }
+      }, []);
+      const loadContextUsage = (0, import_react10.useCallback)(async (sessionId) => {
+        try {
+          const usage = await apiGet("context.usage", { sessionId });
+          if (mounted.current && stateRef.current.session?.session.id === sessionId) {
+            dispatch({ type: "context/usage", usage });
+          }
+        } catch {
+        }
+      }, []);
       const bootstrap = (0, import_react10.useCallback)(async () => {
         dispatch({ type: "workspace/loading" });
         try {
@@ -20534,6 +21005,7 @@ window.__ModuleLoader__.load({
           const { courses } = await apiGet("courses.list");
           if (!mounted.current) return;
           dispatch({ type: "bootstrap/loaded", bootstrap: bootstrapInfo, courses });
+          void loadModelCatalog();
           const firstCourse = courses[0];
           if (firstCourse !== void 0) {
             await selectCourse(firstCourse.course.id);
@@ -20541,7 +21013,7 @@ window.__ModuleLoader__.load({
         } catch (error) {
           if (mounted.current) dispatch({ type: "bootstrap/failed", error: toAppError(error) });
         }
-      }, []);
+      }, [loadModelCatalog]);
       const selectCourse = (0, import_react10.useCallback)(async (courseId) => {
         try {
           const [detail2, sessionsResponse] = await Promise.all([
@@ -20605,10 +21077,11 @@ window.__ModuleLoader__.load({
           if (!mounted.current) return;
           dispatch({ type: "session/loaded", session: view });
           void loadLatestRuns(sessionId);
+          void loadContextUsage(sessionId);
         } catch (error) {
           notify({ kind: "error", message: `\u6062\u590D\u5B66\u4E60\u4F1A\u8BDD\u5931\u8D25\uFF1A${describeError(error)}` });
         }
-      }, [notify, loadLatestRuns]);
+      }, [notify, loadLatestRuns, loadContextUsage]);
       const createSession = (0, import_react10.useCallback)(async (courseId) => {
         try {
           await apiPost("sessions.create", { courseId });
@@ -20682,6 +21155,7 @@ window.__ModuleLoader__.load({
               dispatch({ type: "chat/stream-event", event });
               if (event.type === "done") {
                 void refreshLearning(sessionId);
+                void loadContextUsage(sessionId);
               }
             },
             onProtocolError: (failure) => dispatch({ type: "chat/local-error", error: failure.appError })
@@ -21216,6 +21690,88 @@ window.__ModuleLoader__.load({
         if (!mounted.current) return;
         setSetup(result.ok ? { phase: "ready" } : (previous) => ({ ...previous, busy: false, error: result.error }));
       }, [startAdhocSession]);
+      const setModelSelection = (0, import_react10.useCallback)(async (request) => {
+        dispatch({ type: "busy", label: "\u5207\u6362\u6A21\u578B\u2026" });
+        try {
+          await apiPost("model.set", request);
+          const [catalog, bootstrapInfo] = await Promise.all([
+            apiGet("model.catalog"),
+            apiGet("bootstrap")
+          ]);
+          if (!mounted.current) return { ok: true };
+          dispatch({ type: "model/catalog", catalog });
+          dispatch({ type: "bootstrap/refreshed", bootstrap: bootstrapInfo });
+          const sessionId = stateRef.current.session?.session.id;
+          if (sessionId !== void 0) void loadContextUsage(sessionId);
+          notify({
+            kind: "info",
+            message: `\u5DF2\u66F4\u65B0\u6A21\u578B\u9009\u62E9\uFF1A${catalog.current.provider}/${catalog.current.model}${catalog.current.reasoningEffort !== void 0 ? ` \xB7 \u63A8\u7406\u529B\u5EA6 ${catalog.current.reasoningEffort}` : ""}\u3002`
+          });
+          return { ok: true };
+        } catch (error) {
+          const message = `\u5207\u6362\u6A21\u578B\u5931\u8D25\uFF1A${describeError(error)}`;
+          notify({ kind: "error", message });
+          return { ok: false, error: message };
+        } finally {
+          if (mounted.current) dispatch({ type: "busy", label: void 0 });
+        }
+      }, [notify, loadContextUsage]);
+      const openCompression = (0, import_react10.useCallback)(() => {
+        if (stateRef.current.session === void 0) {
+          notify({ kind: "warning", message: "\u8BF7\u5148\u9009\u62E9\u5B66\u4E60\u4F1A\u8BDD\uFF0C\u518D\u538B\u7F29\u4E0A\u4E0B\u6587\u3002" });
+          return;
+        }
+        if (stateRef.current.chat.status === "streaming" || stateRef.current.chat.status === "stopping") {
+          notify({ kind: "warning", message: "\u5F53\u524D\u56DE\u7B54\u4ECD\u5728\u751F\u6210\uFF0C\u8BF7\u5148\u505C\u6B62\u6216\u7B49\u5F85\u5B8C\u6210\u540E\u518D\u538B\u7F29\u4E0A\u4E0B\u6587\u3002" });
+          return;
+        }
+        setCompression({ phase: "confirm" });
+      }, [notify]);
+      const runCompression = (0, import_react10.useCallback)(async (force) => {
+        const session = stateRef.current.session;
+        if (session === void 0) return;
+        const sessionId = session.session.id;
+        setCompression({ phase: "running" });
+        setCompressing(true);
+        try {
+          const { task } = await apiPost("context.compress", {
+            sessionId,
+            ...force ? { force: true } : {}
+          });
+          void loadTasks();
+          const snapshot = await awaitTask(task.id, 18e4);
+          if (!mounted.current) return;
+          if (snapshot === void 0) {
+            setCompression({ phase: "error", error: "\u538B\u7F29\u4EFB\u52A1\u672A\u5728\u9650\u5B9A\u65F6\u95F4\u5185\u5B8C\u6210\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5\u3002" });
+            return;
+          }
+          if (snapshot.status !== "completed" && snapshot.status !== "partial") {
+            setCompression({
+              phase: "error",
+              error: `\u538B\u7F29\u4EFB\u52A1\u672A\u5B8C\u6210\uFF08${snapshot.status}\uFF09\uFF1A${snapshot.error?.message ?? "\u672A\u77E5\u539F\u56E0"}`
+            });
+            return;
+          }
+          const outcome = parseCompressionResult(snapshot.result);
+          if (outcome === void 0) {
+            setCompression({ phase: "error", error: "\u538B\u7F29\u4EFB\u52A1\u5B8C\u6210\u4F46\u6CA1\u6709\u8FD4\u56DE\u53EF\u8BC6\u522B\u7ED3\u679C\u3002" });
+            return;
+          }
+          if (!outcome.compacted) {
+            setCompression({ phase: "not-compacted", reason: outcome.reason ?? "\u5F53\u524D\u5BF9\u8BDD\u672A\u8FBE\u5230\u538B\u7F29\u9608\u503C\u3002" });
+            return;
+          }
+          setCompression(void 0);
+          await selectSession(sessionId);
+          void loadContextUsage(sessionId);
+          notify({ kind: "info", message: compressionSuccessMessage(outcome) });
+        } catch (error) {
+          if (mounted.current) setCompression({ phase: "error", error: describeError(error) });
+        } finally {
+          if (mounted.current) setCompressing(false);
+          void loadTasks();
+        }
+      }, [notify, awaitTask, loadTasks, selectSession, loadContextUsage]);
       const detail = state.courseDetail;
       const progress = computeCourseProgress({
         courseDetail: detail,
@@ -21254,6 +21810,15 @@ window.__ModuleLoader__.load({
             offline: !online,
             busy,
             tasks: state.tasks,
+            ...state.modelCatalog !== void 0 ? { modelCatalog: state.modelCatalog } : {},
+            ...state.contextUsage !== void 0 ? { contextUsage: state.contextUsage } : {},
+            leftCollapsed: state.leftCollapsed,
+            rightCollapsed: state.rightCollapsed,
+            onToggleLeft: () => dispatch({ type: "ui/collapse", panel: "left", collapsed: !state.leftCollapsed }),
+            onToggleRight: () => dispatch({ type: "ui/collapse", panel: "right", collapsed: !state.rightCollapsed }),
+            onModelSet: setModelSelection,
+            onCompressContext: openCompression,
+            compressing,
             onLanguage: switchLanguage,
             onCancelTask: (taskId) => {
               void cancelTask(taskId);
@@ -21305,113 +21870,162 @@ window.__ModuleLoader__.load({
             }
           }
         ),
-        state.phase === "ready" && !needsCourseSetup(detail) && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-teaching-body", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
-            Sidebar,
-            {
-              courses: state.courses,
-              ...detail !== void 0 ? { courseDetail: detail } : {},
-              sessions: state.sessions,
-              ...state.session !== void 0 ? { session: state.session } : {},
-              mastery: state.mastery,
-              review: sortedReview(state.review),
-              progress,
-              busy,
-              onSelectCourse: (courseId) => {
-                void selectCourse(courseId);
-              },
-              onNewCourse: () => dispatch({ type: "wizard/open" }),
-              onDeleteCourse: (courseId, title) => {
-                setDeleteSources(false);
-                setDeleteTarget({ id: courseId, title });
-              },
-              onEditGoals: openGoalsEditor,
-              onSelectSession: (sessionId) => {
-                void selectSession(sessionId);
-              },
-              onNewSession: () => {
-                const courseId = detail?.course.id;
-                if (courseId === void 0) {
-                  notify({ kind: "warning", message: "\u8BF7\u5148\u5EFA\u7ACB\u8BFE\u7A0B\u3002" });
-                  return;
+        state.phase === "ready" && !needsCourseSetup(detail) && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+          "div",
+          {
+            className: "ai-teaching-body",
+            "data-left-collapsed": state.leftCollapsed,
+            "data-right-collapsed": state.rightCollapsed,
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+                Sidebar,
+                {
+                  courses: state.courses,
+                  ...detail !== void 0 ? { courseDetail: detail } : {},
+                  sessions: state.sessions,
+                  ...state.session !== void 0 ? { session: state.session } : {},
+                  mastery: state.mastery,
+                  review: sortedReview(state.review),
+                  progress,
+                  busy,
+                  onSelectCourse: (courseId) => {
+                    void selectCourse(courseId);
+                  },
+                  onNewCourse: () => dispatch({ type: "wizard/open" }),
+                  onDeleteCourse: (courseId, title) => {
+                    setDeleteSources(false);
+                    setDeleteTarget({ id: courseId, title });
+                  },
+                  onEditGoals: openGoalsEditor,
+                  onSelectSession: (sessionId) => {
+                    void selectSession(sessionId);
+                  },
+                  onNewSession: () => {
+                    const courseId = detail?.course.id;
+                    if (courseId === void 0) {
+                      notify({ kind: "warning", message: "\u8BF7\u5148\u5EFA\u7ACB\u8BFE\u7A0B\u3002" });
+                      return;
+                    }
+                    void createSession(courseId);
+                  },
+                  onConceptClick: (concept) => {
+                    void sendMessage(`\u8BF7\u4ECE\u6982\u5FF5\u300C${concept.title}\u300D\u7EE7\u7EED\u6559\u5B66\uFF1A\u5148\u786E\u8BA4\u6211\u7684\u7406\u89E3\u7A0B\u5EA6\uFF0C\u518D\u51B3\u5B9A\u8BB2\u89E3\u6216\u7EC3\u4E60\u3002`);
+                  },
+                  onReviewConcept: (item) => {
+                    const concept = (detail?.activeRevision ?? detail?.draftRevision)?.concepts.find((candidate) => candidate.id === item.conceptId);
+                    void sendMessage(`\u8BF7\u5E2E\u6211\u590D\u4E60\u300C${concept?.title ?? "\u8FD9\u4E2A\u6982\u5FF5"}\u300D\uFF1A\u5148\u505A\u4E00\u4E2A\u7B80\u77ED\u8BCA\u65AD\uFF0C\u518D\u6309\u9700\u7ED9\u63D0\u793A\u3002`);
+                  },
+                  onOpenSource: (documentId) => openSource(documentId)
                 }
-                void createSession(courseId);
-              },
-              onConceptClick: (concept) => {
-                void sendMessage(`\u8BF7\u4ECE\u6982\u5FF5\u300C${concept.title}\u300D\u7EE7\u7EED\u6559\u5B66\uFF1A\u5148\u786E\u8BA4\u6211\u7684\u7406\u89E3\u7A0B\u5EA6\uFF0C\u518D\u51B3\u5B9A\u8BB2\u89E3\u6216\u7EC3\u4E60\u3002`);
-              },
-              onReviewConcept: (item) => {
-                const concept = (detail?.activeRevision ?? detail?.draftRevision)?.concepts.find((candidate) => candidate.id === item.conceptId);
-                void sendMessage(`\u8BF7\u5E2E\u6211\u590D\u4E60\u300C${concept?.title ?? "\u8FD9\u4E2A\u6982\u5FF5"}\u300D\uFF1A\u5148\u505A\u4E00\u4E2A\u7B80\u77ED\u8BCA\u65AD\uFF0C\u518D\u6309\u9700\u7ED9\u63D0\u793A\u3002`);
-              },
-              onOpenSource: (documentId) => openSource(documentId)
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-teaching-main", children: [
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-teaching-main", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+                  ChatPanel,
+                  {
+                    ...detail !== void 0 ? { courseTitle: detail.course.title } : {},
+                    ...state.session !== void 0 ? { session: state.session } : {},
+                    messages: state.messages,
+                    activities: state.activities,
+                    chat: state.chat,
+                    busy,
+                    offline: !online,
+                    onSend: (text2) => {
+                      void sendMessage(text2);
+                    },
+                    onStop: () => {
+                      void stopGeneration();
+                    },
+                    onQuickAction: quickAction,
+                    onActivityClick: onChatActivityClick,
+                    onEvidenceClick,
+                    onRetry: retryLast,
+                    onDismissError: () => dispatch({ type: "error/clear" })
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+                  TeachingArea,
+                  {
+                    activities: state.activities,
+                    ...state.selectedActivityId !== void 0 ? { currentActivityId: state.selectedActivityId } : {},
+                    ...state.selectedSourceDocumentId !== void 0 ? { selectedDocumentId: state.selectedSourceDocumentId } : {},
+                    activityStates: state.activityStates,
+                    latestRuns: state.latestRuns,
+                    selectedTab: state.selectedTab,
+                    ...detail !== void 0 ? { courseDetail: detail } : {},
+                    ...state.session !== void 0 ? { session: state.session } : {},
+                    ...state.environments !== void 0 ? { environments: state.environments } : {},
+                    notes: notesDraft,
+                    busy,
+                    onSelectTab: (tab) => {
+                      dispatch({ type: "ui/tab", tab });
+                      if (tab === "experiments" && state.environments === void 0) loadEnvironments();
+                    },
+                    onRestoreActivity: restoreActivity,
+                    onCollapseActivity: collapseActivity,
+                    onRequestDeleteActivity: requestDeleteActivity,
+                    onStateChange: persistActivityState,
+                    onRunCode,
+                    onCancelRun,
+                    onQuizSubmit,
+                    onAnswerSubmit,
+                    onHelpExposure,
+                    onAnchorClick,
+                    onOpenSource: (documentId) => openSource(documentId),
+                    onRefreshSource: (documentId) => {
+                      void refreshSource(documentId);
+                    },
+                    loadSource,
+                    onLoadEnvironments: loadEnvironments,
+                    onNotesChange: setNotesDraft,
+                    onSaveNotes: saveNotes,
+                    onEvidenceClick
+                  }
+                )
+              ] })
+            ]
+          }
+        ),
+        compression !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u538B\u7F29\u4E0A\u4E0B\u6587", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-modal ai-compress-modal", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("h3", { children: "\u538B\u7F29\u4E0A\u4E0B\u6587" }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "ai-muted", style: { margin: "0 0 8px" }, children: COMPRESSION_CONFIRM_TEXT }),
+          state.contextUsage !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-muted", style: { marginBottom: 8 }, children: [
+            "\u5F53\u524D\u7528\u91CF\uFF1A",
+            state.contextUsage.tokensUsed !== void 0 ? `${state.contextUsage.tokensUsed} tokens` : "\u672A\u77E5",
+            state.contextUsage.contextWindow !== void 0 ? ` / ${state.contextUsage.contextWindow} \u7A97\u53E3` : "",
+            state.contextUsage.percent !== void 0 ? `\uFF08${Math.round(state.contextUsage.percent)}%\uFF09` : "",
+            state.contextUsage.compressed !== void 0 ? `\uFF1B\u5DF2\u538B\u7F29 ${state.contextUsage.compressed.compactedMessages} \u6761` : ""
+          ] }),
+          compression.phase === "not-compacted" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-banner", "data-kind": "info", role: "status", style: { borderRadius: 8, marginBottom: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { children: [
+              "\u672A\u8FBE\u5230\u538B\u7F29\u9608\u503C\uFF0C\u672C\u6B21\u6CA1\u6709\u538B\u7F29\uFF1A",
+              compression.reason
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-muted", style: { marginTop: 4 }, children: COMPRESSION_FORCE_TEXT })
+          ] }) }),
+          compression.phase === "error" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { borderRadius: 8, marginBottom: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: compression.error }) }),
+          compression.phase === "running" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { style: { marginBottom: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Spinner, { label: "\u6B63\u5728\u538B\u7F29\u8F83\u65E9\u5BF9\u8BDD\u2026\uFF08\u53EF\u7EE7\u7EED\u7B49\u5F85\u6216\u7A0D\u540E\u67E5\u770B\u7ED3\u679C\uFF09" }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-modal-actions", children: [
+            compression.phase === "confirm" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => {
+              void runCompression(false);
+            }, children: "\u5F00\u59CB\u538B\u7F29" }),
+            compression.phase === "not-compacted" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => {
+              void runCompression(true);
+            }, children: "\u5F3A\u5236\u538B\u7F29\uFF08\u5FFD\u7565\u9608\u503C\uFF09" }),
+            compression.phase === "error" && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-primary-button", onClick: () => {
+              void runCompression(false);
+            }, children: "\u91CD\u8BD5" }),
             /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
-              ChatPanel,
+              "button",
               {
-                ...detail !== void 0 ? { courseTitle: detail.course.title } : {},
-                ...state.session !== void 0 ? { session: state.session } : {},
-                messages: state.messages,
-                activities: state.activities,
-                chat: state.chat,
-                busy,
-                offline: !online,
-                onSend: (text2) => {
-                  void sendMessage(text2);
-                },
-                onStop: () => {
-                  void stopGeneration();
-                },
-                onQuickAction: quickAction,
-                onActivityClick: onChatActivityClick,
-                onEvidenceClick,
-                onRetry: retryLast,
-                onDismissError: () => dispatch({ type: "error/clear" })
-              }
-            ),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
-              TeachingArea,
-              {
-                activities: state.activities,
-                ...state.selectedActivityId !== void 0 ? { currentActivityId: state.selectedActivityId } : {},
-                ...state.selectedSourceDocumentId !== void 0 ? { selectedDocumentId: state.selectedSourceDocumentId } : {},
-                activityStates: state.activityStates,
-                latestRuns: state.latestRuns,
-                selectedTab: state.selectedTab,
-                ...detail !== void 0 ? { courseDetail: detail } : {},
-                ...state.session !== void 0 ? { session: state.session } : {},
-                ...state.environments !== void 0 ? { environments: state.environments } : {},
-                notes: notesDraft,
-                busy,
-                onSelectTab: (tab) => {
-                  dispatch({ type: "ui/tab", tab });
-                  if (tab === "experiments" && state.environments === void 0) loadEnvironments();
-                },
-                onRestoreActivity: restoreActivity,
-                onCollapseActivity: collapseActivity,
-                onRequestDeleteActivity: requestDeleteActivity,
-                onStateChange: persistActivityState,
-                onRunCode,
-                onCancelRun,
-                onQuizSubmit,
-                onAnswerSubmit,
-                onHelpExposure,
-                onAnchorClick,
-                onOpenSource: (documentId) => openSource(documentId),
-                onRefreshSource: (documentId) => {
-                  void refreshSource(documentId);
-                },
-                loadSource,
-                onLoadEnvironments: loadEnvironments,
-                onNotesChange: setNotesDraft,
-                onSaveNotes: saveNotes,
-                onEvidenceClick
+                type: "button",
+                className: "ai-small-button",
+                disabled: compression.phase === "running",
+                onClick: () => setCompression(void 0),
+                children: "\u53D6\u6D88"
               }
             )
           ] })
-        ] }),
+        ] }) }),
         goalsEditor !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u7F16\u8F91\u5B66\u4E60\u76EE\u6807", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-modal", children: [
           /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("h3", { children: "\u7F16\u8F91\u5B66\u4E60\u76EE\u6807" }),
           /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "ai-muted", style: { margin: "0 0 8px" }, children: "\u6BCF\u884C\u4E00\u4E2A\u76EE\u6807\u3002\u66F4\u65B0\u4F1A\u751F\u6210\u65B0\u7684\u8BFE\u7A0B\u7ED3\u6784\u4FEE\u8BA2\uFF1B\u5DF2\u6709\u5B66\u4E60\u4F1A\u8BDD\u4ECD\u7ED1\u5B9A\u539F\u4FEE\u8BA2\uFF0C\u65B0\u4F1A\u8BDD\u4F7F\u7528\u65B0\u76EE\u6807\u3002" }),

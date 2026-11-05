@@ -24,6 +24,7 @@ import type { SourceAnchor, SourceDocument, SourceIssue, SourceRevision } from '
 import type { TaskHandle, TaskSnapshot } from './task.ts'
 import type { EnvironmentDirectory, EnvironmentRecord, ExperimentRun, RunRequest } from './experiment.ts'
 import type { BackupManifest, ExportedSession, RestoreReport } from './portability.ts'
+import type { ContextUsageView, ModelCatalogView, ModelInfoView, ModelSelectionView } from './model.ts'
 import type { ActivityId, ConceptId, CourseId, SessionId } from './ids.ts'
 
 /** Model identity and capability facts the client may render. */
@@ -296,6 +297,28 @@ export interface ApiRequests {
   }
   'mastery.recheck': { readonly method: 'POST'; readonly body: { readonly courseId: CourseId; readonly conceptId: ConceptId } }
   'review.list': { readonly method: 'GET'; readonly query: { readonly courseId: CourseId }; readonly body?: never }
+  'model.catalog': { readonly method: 'GET'; readonly query?: Record<string, never>; readonly body?: never }
+  'model.info': {
+    readonly method: 'GET'
+    readonly query: { readonly provider: string; readonly model: string }
+    readonly body?: never
+  }
+  'model.set': {
+    readonly method: 'POST'
+    readonly body:
+      | { readonly followHost: true }
+      | { readonly followHost?: false; readonly provider: string; readonly model: string; readonly reasoningEffort?: string }
+  }
+  'context.usage': { readonly method: 'GET'; readonly query: { readonly sessionId: SessionId }; readonly body?: never }
+  'context.compress': {
+    readonly method: 'POST'
+    readonly body: {
+      readonly sessionId: SessionId
+      /** Ignore the DSH retention threshold and compact the recent history anyway. */
+      readonly force?: boolean
+    }
+  }
+  'context.reset': { readonly method: 'POST'; readonly body: { readonly sessionId: SessionId } }
   'profile.get': { readonly method: 'GET'; readonly query?: Record<string, never>; readonly body?: never }
   'profile.set': { readonly method: 'POST'; readonly body: { readonly patch: Partial<StudentProfile> } }
   'environments.list': { readonly method: 'GET'; readonly query?: Record<string, never>; readonly body?: never }
@@ -397,6 +420,12 @@ export interface ApiResponses {
   'mastery.dispute': { readonly mastery: MasteryRecord }
   'mastery.recheck': { readonly mastery: MasteryRecord }
   'review.list': { readonly review: readonly ReviewItem[] }
+  'model.catalog': ModelCatalogView
+  'model.info': ModelInfoView
+  'model.set': { readonly selection: ModelSelectionView; readonly followHost: boolean }
+  'context.usage': ContextUsageView
+  'context.compress': { readonly task: TaskHandle }
+  'context.reset': { readonly session: TeachingSession }
   'profile.get': { readonly profile: StudentProfile }
   'profile.set': { readonly profile: StudentProfile }
   'environments.list': EnvironmentDirectory

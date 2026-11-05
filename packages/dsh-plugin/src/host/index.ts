@@ -27,6 +27,7 @@ import { HarnessModelAdapter } from './model-adapter.ts'
 import { createWebBridge } from './web.ts'
 import { registerRoutes } from './routes.ts'
 import { TaskManager } from './tasks.ts'
+import { SettingsStore } from './settings.ts'
 
 /** Plugin identity shown in logs. */
 export const name = 'ai-teaching'
@@ -85,15 +86,22 @@ export function apply(ctx: HostContext, config: Config = {}): void {
   const teaching = createTeachingService({ maxTokens: 12000 })
   const experiments = createRunnerRegistry({ dataDir })
   const environments = createEnvironmentManager({ dataDir, runners: experiments, logger: (event, details) => logger(event, details) })
+  const settings = new SettingsStore(state, (message, fields) => logger(message, fields))
   const usageBySession = new Map<string, import('@deepseek-teaching/core').UsageEntry>()
+  /** Latest settled usage per session; not consumed by chat (context meter reads it). */
+  const lastUsageBySession = new Map<string, import('@deepseek-teaching/core').UsageEntry>()
   const model = new HarnessModelAdapter(ctx, {
     routingSessionId: 'session-teaching-plugin',
     onUsage: entry => {
-      if (entry.sessionId !== undefined) usageBySession.set(entry.sessionId, entry)
+      if (entry.sessionId !== undefined) {
+        usageBySession.set(entry.sessionId, entry)
+        lastUsageBySession.set(entry.sessionId, entry)
+      }
       void state.appendJsonl('usage/model-usage.jsonl', entry).catch(cause => {
         logger('usage log failed', { message: String(cause) })
       })
     },
+    selectionOverride: () => settings.modelOverride(),
     log: logger,
   })
 
@@ -170,6 +178,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
 
   const ready = (async (): Promise<void> => {
     const meta = await state.open()
+    await settings.load()
     await profiles.get()
     const recovered = await tasks.recoverInterrupted()
     if (recovered.length > 0) logger('recovered interrupted tasks', { count: recovered.length })
@@ -190,6 +199,31 @@ export function apply(ctx: HostContext, config: Config = {}): void {
     portability,
     createLearningFor,
     takeUsage,
+    lastUsage: sessionId => lastUsageBySession.get(sessionId),
+    settings,
+    defaultModelSelection: () => ctx.agentDefaultModel.currentSelection(),
+    invalidateModelInfo: () => model.invalidateInfo(),
+    modelCatalog: {
+      listProviders: async () => {
+        const llm = (ctx as unknown as { llm: { listProviders?: () => unknown; listModels?: (provider: string) => Promise<unknown>; resolveModelInfo?: (provider: string, model: string) => Promise<unknown> } }).llm
+        if (llm?.listProviders === undefined) return []
+        const providers = llm.listProviders() as { id?: unknown; name?: unknown }[]
+        return Array.isArray(providers)
+          ? providers.map(provider => ({ id: String(provider.id ?? ''), name: String(provider.name ?? provider.id ?? '') })).filter(provider => provider.id !== '')
+          : []
+      },
+      listModels: async (provider: string) => {
+        const llm = (ctx as unknown as { llm: { listModels?: (provider: string) => Promise<unknown> } }).llm
+        if (llm?.listModels === undefined) return []
+        return await llm.listModels(provider) as never
+      },
+      resolveModelInfo: async (provider: string, model: string) => {
+        const llm = (ctx as unknown as { llm: { resolveModelInfo?: (provider: string, model: string) => Promise<unknown> } }).llm
+        if (llm?.resolveModelInfo === undefined) return undefined
+        const info = await llm.resolveModelInfo(provider, model)
+        return typeof info === 'object' && info !== null ? info as Record<string, unknown> : undefined
+      },
+    },
     getOcrInfo: () => ensureOcr(),
     profiles,
     courses,

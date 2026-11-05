@@ -7,11 +7,15 @@
  * semantics testable without a browser.
  */
 import type {
-  ActivityState, AppError, BootstrapInfo, ChatMessage, ChatStreamEvent, CourseDetail,
-  CourseDraftView, CourseSummary, EnvironmentDirectory, EvidenceReference, ExperimentRun,
-  LearningStage, LessonActivity, MasteryRecord, ReviewItem, SessionSummary, SessionView,
-  TaskSnapshot, TeachingSession,
+  ActivityState, AppError, BootstrapInfo, ChatMessage, ChatStreamEvent,
+  CourseDetail, CourseDraftView, CourseSummary, EnvironmentDirectory, EvidenceReference,
+  ExperimentRun, LearningStage, LessonActivity, MasteryRecord, ReviewItem,
+  SessionSummary, SessionView, TaskSnapshot, TeachingSession,
 } from '@deepseek-teaching/core/contracts'
+// The model/context views are exported by the core root barrel; the frozen
+// contracts barrel (`contracts/index.ts`) is owned by Lead and does not re-export
+// `model.ts` yet.
+import type { ContextUsageView, ModelCatalogView } from '@deepseek-teaching/core'
 
 /** Lifecycle of the whole panel. */
 export type WorkspacePhase = 'loading' | 'onboarding' | 'ready' | 'fatal'
@@ -64,6 +68,14 @@ export interface WorkspaceState {
   readonly notice?: WorkspaceNotice
   /** Short-lived non-task busy label (e.g. submitting an attempt). */
   readonly busy?: string
+  /** Model catalog (host default + plugin override + selectable providers). */
+  readonly modelCatalog?: ModelCatalogView
+  /** Latest context-window usage for the current session. */
+  readonly contextUsage?: ContextUsageView
+  /** Plugin-owned left column (course navigation) collapsed. */
+  readonly leftCollapsed: boolean
+  /** Plugin-owned right column (teaching area) collapsed. */
+  readonly rightCollapsed: boolean
 }
 
 /** Initial state. */
@@ -80,12 +92,18 @@ export const INITIAL_WORKSPACE_STATE: WorkspaceState = {
   chat: { status: 'idle', text: '', evidence: [] },
   tasks: [],
   selectedTab: 'activity',
+  leftCollapsed: false,
+  rightCollapsed: false,
 }
 
 /** Actions the workspace can dispatch. */
 export type WorkspaceAction =
   | { readonly type: 'bootstrap/loaded'; readonly bootstrap: BootstrapInfo; readonly courses: readonly CourseSummary[] }
   | { readonly type: 'bootstrap/failed'; readonly error: AppError }
+  | { readonly type: 'bootstrap/refreshed'; readonly bootstrap: BootstrapInfo }
+  | { readonly type: 'model/catalog'; readonly catalog?: ModelCatalogView }
+  | { readonly type: 'context/usage'; readonly usage?: ContextUsageView }
+  | { readonly type: 'ui/collapse'; readonly panel: 'left' | 'right'; readonly collapsed: boolean }
   | { readonly type: 'workspace/loading' }
   | { readonly type: 'courses/loaded'; readonly courses: readonly CourseSummary[] }
   | { readonly type: 'course/loaded'; readonly detail: CourseDetail; readonly sessions: readonly SessionSummary[] }
@@ -249,6 +267,18 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     }
     case 'bootstrap/failed':
       return { ...state, phase: 'fatal', fatalError: action.error }
+    case 'bootstrap/refreshed':
+      // Model selection/capability refresh: keep the loaded workspace as-is.
+      return { ...state, bootstrap: action.bootstrap }
+    case 'model/catalog':
+      return { ...state, ...(action.catalog !== undefined ? { modelCatalog: action.catalog } : {}) }
+    case 'context/usage':
+      return { ...state, ...(action.usage !== undefined ? { contextUsage: action.usage } : { contextUsage: undefined }) }
+    case 'ui/collapse':
+      return {
+        ...state,
+        ...(action.panel === 'left' ? { leftCollapsed: action.collapsed } : { rightCollapsed: action.collapsed }),
+      }
     case 'wizard/open':
       if (state.phase === 'loading') return state
       return {
@@ -314,6 +344,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         activities: [...action.session.activities],
         activityStates,
         latestRuns: {},
+        contextUsage: undefined,
         mastery: [...action.session.mastery],
         review: [...action.session.review],
         selectedActivityId: selected,
@@ -326,6 +357,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return {
         ...state,
         session: undefined,
+        contextUsage: undefined,
         messages: [],
         activities: [],
         activityStates: {},

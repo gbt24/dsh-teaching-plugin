@@ -9,6 +9,16 @@ export function truncate(text: string, max: number): string {
   return clean.length <= max ? clean : `${clean.slice(0, max)}…`
 }
 
+/**
+ * 截断长文本但保留换行结构（压缩检查点、多行摘要用）。
+ * 与 {@link truncate} 不同：不折叠空白，行首/段落结构原样保留。
+ */
+export function truncatePreserveLines(text: string, max: number): string {
+  const normalized = text.replace(/\r\n?/g, '\n').trim()
+  if (normalized.length <= max) return normalized
+  return `${normalized.slice(0, max)}\n…（摘要已截断）`
+}
+
 /** 把原文定位描述成学生/模型都能读的短串（不虚构精度）。 */
 export function formatLocator(locator: SourceLocator): string {
   const parts: string[] = []

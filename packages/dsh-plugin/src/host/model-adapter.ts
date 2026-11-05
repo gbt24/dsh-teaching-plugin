@@ -40,6 +40,8 @@ export interface HarnessModelAdapterOptions {
   readonly timeoutMs?: number
   /** Called after every settled call with its usage entry. */
   readonly onUsage?: (entry: UsageEntry) => void
+  /** Plugin-level override; absent follows the host deployment default. */
+  readonly selectionOverride?: () => { provider: string; model: string; reasoningEffort?: string } | undefined
   /** Console-like logger for diagnostics (never logs prompts by default). */
   readonly log?: (message: string, fields?: Record<string, unknown>) => void
 }
@@ -95,16 +97,29 @@ export class HarnessModelAdapter implements ModelClient {
   private readonly options: HarnessModelAdapterOptions
   private readonly host: HarnessModelHost
   private cachedInfo?: ModelInfo
+  private cachedInfoKey?: string
 
   constructor(host: HarnessModelHost, options: HarnessModelAdapterOptions) {
     this.host = host
     this.options = options
   }
 
+  /** Effective selection: plugin override when configured, else the host default. */
+  private effectiveSelection(): { provider: string; model: string; reasoningEffort?: string } {
+    return this.options.selectionOverride?.() ?? this.host.agentDefaultModel.currentSelection()
+  }
+
+  /** Invalidate cached capability info after a model/effort change. */
+  invalidateInfo(): void {
+    this.cachedInfo = undefined
+    this.cachedInfoKey = undefined
+  }
+
   /** Read the deployment default selection; falls back to an explicit error state. */
   async info(): Promise<ModelInfo> {
-    if (this.cachedInfo !== undefined) return this.cachedInfo
-    const selection = this.host.agentDefaultModel.currentSelection()
+    const selection = this.effectiveSelection()
+    const key = `${selection.provider}/${selection.model}`
+    if (this.cachedInfo !== undefined && this.cachedInfoKey === key) return this.cachedInfo
     let imageInput: ModelInfo['imageInput'] = 'unknown'
     let contextWindow: number | undefined
     try {
@@ -128,10 +143,11 @@ export class HarnessModelAdapter implements ModelClient {
     this.cachedInfo = {
       provider: selection.provider,
       model: selection.model,
-      reasoningEffort: selection.reasoningEffort,
+      ...(selection.reasoningEffort === undefined ? {} : { reasoningEffort: selection.reasoningEffort }),
       imageInput,
-      contextWindow,
+      ...(contextWindow === undefined ? {} : { contextWindow }),
     }
+    this.cachedInfoKey = key
     return this.cachedInfo
   }
 
@@ -152,7 +168,7 @@ export class HarnessModelAdapter implements ModelClient {
       let usage: UsageEntry | undefined
       let terminal: { ok: boolean; failure?: { code?: string; message?: string } } | undefined
       try {
-        const selection = this.host.agentDefaultModel.currentSelection()
+        const selection = this.effectiveSelection()
         const options = toGenerateOptions(effective, selection, this.options.routingSessionId)
         if (attempt > 1) delete options.reasoningEffort
         options.signal = controller.signal

@@ -14,6 +14,7 @@ import type {
   SourceAnchor, SourceView, TaskSnapshot,
 } from '@deepseek-teaching/core/contracts'
 import type { CodeRunResultView } from '@deepseek-teaching/core/render'
+import type { ContextUsageView } from '@deepseek-teaching/core'
 import {
   apiChatSend, apiGet, apiPost, consumeChatStreamResponse, describeError, isNetworkError, toAppError,
 } from '../api.ts'
@@ -26,9 +27,14 @@ import { ChatPanel, QUICK_ACTION_PROMPTS, type QuickAction } from './ChatPanel.t
 import { Onboarding, type WizardResult } from './Onboarding.tsx'
 import type { DraftConfirmEdits } from '../draft-edits.ts'
 import { CourseSetupCard } from './CourseSetupCard.tsx'
+import { loadLayoutPrefs, saveLayoutPrefs } from '../layout-prefs.ts'
+import {
+  COMPRESSION_CONFIRM_TEXT, COMPRESSION_FORCE_TEXT, compressionSuccessMessage,
+  parseCompressionResult,
+} from '../context-compress.ts'
 import { Sidebar } from './Sidebar.tsx'
 import { TeachingArea } from './TeachingArea.tsx'
-import { TopBar } from './TopBar.tsx'
+import { TopBar, type ModelSetRequest } from './TopBar.tsx'
 import type { MountedActivityState } from '@deepseek-teaching/core/render'
 
 /** Extract the student-facing prompt of an activity for attempt records. */
@@ -65,7 +71,12 @@ export function TeachingWorkspace(props: {
   /** Harness directory chooser (native Desktop dialog / Host OS chooser). */
   readonly pickDirectory?: () => Promise<string | null>
 } = {}): React.ReactElement {
-  const [state, dispatch] = React.useReducer(workspaceReducer, INITIAL_WORKSPACE_STATE)
+  const [initialLayout] = useState(() => loadLayoutPrefs())
+  const [state, dispatch] = React.useReducer(workspaceReducer, {
+    ...INITIAL_WORKSPACE_STATE,
+    leftCollapsed: initialLayout.leftCollapsed,
+    rightCollapsed: initialLayout.rightCollapsed,
+  })
   const stateRef = useRef(state)
   stateRef.current = state
   const streamAbort = useRef<AbortController | null>(null)
@@ -77,6 +88,13 @@ export function TeachingWorkspace(props: {
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const [online, setOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine !== false)
+  /** Manual context-compression dialog state. */
+  const [compression, setCompression] = useState<{
+    phase: 'confirm' | 'running' | 'not-compacted' | 'error'
+    reason?: string
+    error?: string
+  } | undefined>(undefined)
+  const [compressing, setCompressing] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ readonly id: string; readonly title: string } | undefined>(undefined)
   /** Pending activity deletion awaiting the shared confirm modal. */
   const [activityDeleteTarget, setActivityDeleteTarget] = useState<LessonActivity | undefined>(undefined)
@@ -112,6 +130,11 @@ export function TeachingWorkspace(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Persist the plugin-column layout choice.
+  useEffect(() => {
+    saveLayoutPrefs({ leftCollapsed: state.leftCollapsed, rightCollapsed: state.rightCollapsed })
+  }, [state.leftCollapsed, state.rightCollapsed])
+
   // A different course restarts the structure-pending flow.
   useEffect(() => {
     setSetup({ phase: 'ready' })
@@ -135,6 +158,27 @@ export function TeachingWorkspace(props: {
 
   // ---- loading ---------------------------------------------------------
 
+  const loadModelCatalog = useCallback(async (): Promise<void> => {
+    try {
+      const catalog = await apiGet('model.catalog')
+      if (mounted.current) dispatch({ type: 'model/catalog', catalog })
+    } catch {
+      // Model catalog is supplementary; the static bootstrap model still shows.
+    }
+  }, [])
+
+  const loadContextUsage = useCallback(async (sessionId: string): Promise<void> => {
+    try {
+      const usage = await apiGet('context.usage', { sessionId: sessionId as never })
+      // Ignore late responses after the student switched sessions again.
+      if (mounted.current && stateRef.current.session?.session.id === sessionId) {
+        dispatch({ type: 'context/usage', usage })
+      }
+    } catch {
+      // Usage is supplementary: never block teaching when unavailable.
+    }
+  }, [])
+
   const bootstrap = useCallback(async (): Promise<void> => {
     dispatch({ type: 'workspace/loading' })
     try {
@@ -142,6 +186,7 @@ export function TeachingWorkspace(props: {
       const { courses } = await apiGet('courses.list')
       if (!mounted.current) return
       dispatch({ type: 'bootstrap/loaded', bootstrap: bootstrapInfo, courses })
+      void loadModelCatalog()
       const firstCourse = courses[0]
       if (firstCourse !== undefined) {
         await selectCourse(firstCourse.course.id)
@@ -150,7 +195,7 @@ export function TeachingWorkspace(props: {
       if (mounted.current) dispatch({ type: 'bootstrap/failed', error: toAppError(error) })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [loadModelCatalog])
 
   const selectCourse = useCallback(async (courseId: string): Promise<void> => {
     try {
@@ -226,11 +271,12 @@ export function TeachingWorkspace(props: {
       if (!mounted.current) return
       dispatch({ type: 'session/loaded', session: view })
       void loadLatestRuns(sessionId)
+      void loadContextUsage(sessionId)
     } catch (error) {
       notify({ kind: 'error', message: `恢复学习会话失败：${describeError(error)}` })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notify, loadLatestRuns])
+  }, [notify, loadLatestRuns, loadContextUsage])
 
   const createSession = useCallback(async (courseId: string): Promise<void> => {
     try {
@@ -320,6 +366,7 @@ export function TeachingWorkspace(props: {
             // Session position/stage changed on the Host; refresh the session in
             // the background so a reload and the sidebar agree, without blocking.
             void refreshLearning(sessionId)
+            void loadContextUsage(sessionId)
           }
         },
         onProtocolError: failure => dispatch({ type: 'chat/local-error', error: failure.appError }),
@@ -965,6 +1012,99 @@ export function TeachingWorkspace(props: {
     setSetup(result.ok ? { phase: 'ready' } : previous => ({ ...previous, busy: false, error: result.error }))
   }, [startAdhocSession])
 
+  /** Apply a model/effort selection and refresh capability + usage views. */
+  const setModelSelection = useCallback(async (
+    request: ModelSetRequest,
+  ): Promise<{ readonly ok: boolean; readonly error?: string }> => {
+    dispatch({ type: 'busy', label: '切换模型…' })
+    try {
+      await apiPost('model.set', request)
+      const [catalog, bootstrapInfo] = await Promise.all([
+        apiGet('model.catalog'),
+        apiGet('bootstrap'),
+      ])
+      if (!mounted.current) return { ok: true }
+      dispatch({ type: 'model/catalog', catalog })
+      dispatch({ type: 'bootstrap/refreshed', bootstrap: bootstrapInfo })
+      const sessionId = stateRef.current.session?.session.id
+      if (sessionId !== undefined) void loadContextUsage(sessionId)
+      notify({
+        kind: 'info',
+        message: `已更新模型选择：${catalog.current.provider}/${catalog.current.model}${catalog.current.reasoningEffort !== undefined ? ` · 推理力度 ${catalog.current.reasoningEffort}` : ''}。`,
+      })
+      return { ok: true }
+    } catch (error) {
+      const message = `切换模型失败：${describeError(error)}`
+      notify({ kind: 'error', message })
+      return { ok: false, error: message }
+    } finally {
+      if (mounted.current) dispatch({ type: 'busy', label: undefined })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notify, loadContextUsage])
+
+  /** Open the manual compression confirmation dialog. */
+  const openCompression = useCallback((): void => {
+    if (stateRef.current.session === undefined) {
+      notify({ kind: 'warning', message: '请先选择学习会话，再压缩上下文。' })
+      return
+    }
+    if (stateRef.current.chat.status === 'streaming' || stateRef.current.chat.status === 'stopping') {
+      notify({ kind: 'warning', message: '当前回答仍在生成，请先停止或等待完成后再压缩上下文。' })
+      return
+    }
+    setCompression({ phase: 'confirm' })
+  }, [notify])
+
+  /** Run one compression attempt (`force` ignores the retention threshold). */
+  const runCompression = useCallback(async (force: boolean): Promise<void> => {
+    const session = stateRef.current.session
+    if (session === undefined) return
+    const sessionId = session.session.id
+    setCompression({ phase: 'running' })
+    setCompressing(true)
+    try {
+      const { task } = await apiPost('context.compress', {
+        sessionId: sessionId as never,
+        ...(force ? { force: true } : {}),
+      })
+      void loadTasks()
+      const snapshot = await awaitTask(task.id, 180_000)
+      if (!mounted.current) return
+      if (snapshot === undefined) {
+        setCompression({ phase: 'error', error: '压缩任务未在限定时间内完成，请稍后重试。' })
+        return
+      }
+      if (snapshot.status !== 'completed' && snapshot.status !== 'partial') {
+        setCompression({
+          phase: 'error',
+          error: `压缩任务未完成（${snapshot.status}）：${snapshot.error?.message ?? '未知原因'}`,
+        })
+        return
+      }
+      const outcome = parseCompressionResult(snapshot.result)
+      if (outcome === undefined) {
+        setCompression({ phase: 'error', error: '压缩任务完成但没有返回可识别结果。' })
+        return
+      }
+      if (!outcome.compacted) {
+        setCompression({ phase: 'not-compacted', reason: outcome.reason ?? '当前对话未达到压缩阈值。' })
+        return
+      }
+      setCompression(undefined)
+      // Reload the session (messages + checkpoint) and the usage snapshot.
+      await selectSession(sessionId)
+      void loadContextUsage(sessionId)
+      notify({ kind: 'info', message: compressionSuccessMessage(outcome) })
+    } catch (error) {
+      if (mounted.current) setCompression({ phase: 'error', error: describeError(error) })
+    } finally {
+      if (mounted.current) setCompressing(false)
+      void loadTasks()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notify, awaitTask, loadTasks, selectSession, loadContextUsage])
+
   // ---- derived ---------------------------------------------------------
 
   const detail = state.courseDetail
@@ -1008,6 +1148,15 @@ export function TeachingWorkspace(props: {
         offline={!online}
         busy={busy}
         tasks={state.tasks}
+        {...(state.modelCatalog !== undefined ? { modelCatalog: state.modelCatalog } : {})}
+        {...(state.contextUsage !== undefined ? { contextUsage: state.contextUsage } : {})}
+        leftCollapsed={state.leftCollapsed}
+        rightCollapsed={state.rightCollapsed}
+        onToggleLeft={() => dispatch({ type: 'ui/collapse', panel: 'left', collapsed: !state.leftCollapsed })}
+        onToggleRight={() => dispatch({ type: 'ui/collapse', panel: 'right', collapsed: !state.rightCollapsed })}
+        onModelSet={setModelSelection}
+        onCompressContext={openCompression}
+        compressing={compressing}
         onLanguage={switchLanguage}
         onCancelTask={taskId => { void cancelTask(taskId) }}
       />
@@ -1052,7 +1201,11 @@ export function TeachingWorkspace(props: {
         />
       )}
       {state.phase === 'ready' && !needsCourseSetup(detail) && (
-        <div className="ai-teaching-body">
+        <div
+          className="ai-teaching-body"
+          data-left-collapsed={state.leftCollapsed}
+          data-right-collapsed={state.rightCollapsed}
+        >
           <Sidebar
             courses={state.courses}
             {...(detail !== undefined ? { courseDetail: detail } : {})}
@@ -1138,6 +1291,65 @@ export function TeachingWorkspace(props: {
               onSaveNotes={saveNotes}
               onEvidenceClick={onEvidenceClick}
             />
+          </div>
+        </div>
+      )}
+      {compression !== undefined && (
+        <div className="ai-modal-overlay" role="dialog" aria-modal="true" aria-label="压缩上下文">
+          <div className="ai-modal ai-compress-modal">
+            <h3>压缩上下文</h3>
+            <p className="ai-muted" style={{ margin: '0 0 8px' }}>{COMPRESSION_CONFIRM_TEXT}</p>
+            {state.contextUsage !== undefined && (
+              <div className="ai-muted" style={{ marginBottom: 8 }}>
+                当前用量：{state.contextUsage.tokensUsed !== undefined ? `${state.contextUsage.tokensUsed} tokens` : '未知'}
+                {state.contextUsage.contextWindow !== undefined ? ` / ${state.contextUsage.contextWindow} 窗口` : ''}
+                {state.contextUsage.percent !== undefined ? `（${Math.round(state.contextUsage.percent)}%）` : ''}
+                {state.contextUsage.compressed !== undefined
+                  ? `；已压缩 ${state.contextUsage.compressed.compactedMessages} 条`
+                  : ''}
+              </div>
+            )}
+            {compression.phase === 'not-compacted' && (
+              <div className="ai-banner" data-kind="info" role="status" style={{ borderRadius: 8, marginBottom: 8 }}>
+                <div>
+                  <div>未达到压缩阈值，本次没有压缩：{compression.reason}</div>
+                  <div className="ai-muted" style={{ marginTop: 4 }}>{COMPRESSION_FORCE_TEXT}</div>
+                </div>
+              </div>
+            )}
+            {compression.phase === 'error' && (
+              <div className="ai-banner" data-kind="error" role="alert" style={{ borderRadius: 8, marginBottom: 8 }}>
+                <span>{compression.error}</span>
+              </div>
+            )}
+            {compression.phase === 'running' && (
+              <div style={{ marginBottom: 8 }}><Spinner label="正在压缩较早对话…（可继续等待或稍后查看结果）" /></div>
+            )}
+            <div className="ai-modal-actions">
+              {compression.phase === 'confirm' && (
+                <button type="button" className="ai-primary-button" onClick={() => { void runCompression(false) }}>
+                  开始压缩
+                </button>
+              )}
+              {compression.phase === 'not-compacted' && (
+                <button type="button" className="ai-primary-button" onClick={() => { void runCompression(true) }}>
+                  强制压缩（忽略阈值）
+                </button>
+              )}
+              {compression.phase === 'error' && (
+                <button type="button" className="ai-primary-button" onClick={() => { void runCompression(false) }}>
+                  重试
+                </button>
+              )}
+              <button
+                type="button"
+                className="ai-small-button"
+                disabled={compression.phase === 'running'}
+                onClick={() => setCompression(undefined)}
+              >
+                取消
+              </button>
+            </div>
           </div>
         </div>
       )}

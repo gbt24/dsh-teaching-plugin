@@ -35,7 +35,7 @@ export interface ModelRequest {
   /** Opaque identity for routing metadata (session affinity), if available. */
   readonly sessionId?: string
   /** Coarse purpose label for accounting. */
-  readonly purpose?: 'chat' | 'course-draft' | 'diagnosis' | 'evaluation' | 'hint' | 'title' | 'export' | 'other'
+  readonly purpose?: 'chat' | 'course-draft' | 'diagnosis' | 'evaluation' | 'hint' | 'title' | 'export' | 'compaction' | 'other'
   /** Language of the expected answer. */
   readonly language?: LanguagePreference
 }

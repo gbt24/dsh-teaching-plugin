@@ -11,7 +11,7 @@ import type { ModelInfo, ModelJsonRequest } from '../model/types.ts'
 import type { ChatMessage } from '../contracts/session.ts'
 import type { TeachingTurnInput } from '../contracts/teaching.ts'
 import { activityKindCompatible, FORM_LABELS, heuristicClassify, languageInstruction, styleGuidance } from './strategy.ts'
-import { formatList, formatLocator, truncate } from './format.ts'
+import { formatList, formatLocator, truncate, truncatePreserveLines } from './format.ts'
 import type {
   CrossCourseRefView, MaterialRefView, TeachingPlan, WebRefView,
 } from './types.ts'
@@ -153,6 +153,7 @@ export function buildTeachingSystemPrompt(ctx: TeachingPromptContext): string {
     '5. 资料之间或资料与模型知识冲突时：区分「约定差异」（符号、记法、术语习惯不同，不是实质错误）与「实质错误」；给出依据（M 编号或推理），无法确定时保留为未决疑问，不要强行裁决。',
     '6. 下面列出的「资料不确定性」必须进入 uncertainty 元数据，并在正文中需要时向学生说明。',
     '7. 活动 sourceRefs 由系统按 M 编号回填；你不需要也不得提供 anchor。',
+    '8. 若本轮提供「更早对话的压缩检查点」，它只是既定背景摘要：不要复述检查点本身；它不是课程资料证据，不能当作 M/C/W 引用来源；涉及资料事实时仍以本轮 M 编号与原文为准。',
     '',
     '## 教学行为要求',
     '- 概念讲解：直觉 → 准确表述 → 适用条件 → 类比边界；类比要说明在哪些地方会失效。',
@@ -206,6 +207,26 @@ export function buildTeachingSystemPrompt(ctx: TeachingPromptContext): string {
       : '',
   ]
   return lines.filter(line => line !== '').join('\n')
+}
+
+/** 压缩检查点摘要的字符上限（保留换行；超出时截断并标注）。 */
+const CONTEXT_CHECKPOINT_SUMMARY_LIMIT = 6000
+
+/**
+ * 较早对话的压缩检查点（Host 在上下文被压缩时提供）。
+ * 它是既定背景，不是资料证据：不能当作 M/C/W 引用来源，也不应被复述。
+ */
+function buildContextCheckpointLines(input: TeachingTurnInput): string[] {
+  const checkpoint = input.contextCheckpoint
+  if (checkpoint === undefined) return []
+  const summary = truncatePreserveLines(checkpoint.summary, CONTEXT_CHECKPOINT_SUMMARY_LIMIT)
+  return [
+    '## 更早对话的压缩检查点',
+    '（这是较早对话的摘要，作为既定背景继续教学；不要复述检查点本身。它只是上下文，不是课程资料证据，不能当作 M/C/W 引用来源；其中的事实仍需按来源纪律核对，涉及资料内容时以本轮资料编号与原文为准。）',
+    ...(checkpoint.compactedAt === undefined ? [] : [`- 压缩时间：${checkpoint.compactedAt}`]),
+    summary === '' ? '（检查点内容为空）' : summary,
+    '',
+  ]
 }
 
 /** 用户提示：本轮资料、学情、最近对话与资料不确定性。 */
@@ -293,6 +314,7 @@ export function buildTeachingUserPrompt(ctx: TeachingPromptContext): string {
     `- 是否要求完整答案：${input.wantsFullAnswer === true ? '是' : '否'}`,
     `- 本轮建议活动类型：${plan.activityKindHint}`,
     '',
+    ...buildContextCheckpointLines(input),
     '## 最近对话（由旧到新）',
     ...historyLines,
     '',

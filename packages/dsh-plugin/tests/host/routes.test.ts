@@ -22,6 +22,7 @@ import { createLearningService, createModelRubricAssessor, rubricFromActivityPay
 import { createRunnerRegistry } from '@deepseek-teaching/core/experiments'
 import { createPortabilityService } from '@deepseek-teaching/core/portability'
 import { createEnvironmentManager } from '@deepseek-teaching/core/environments'
+import { SettingsStore } from '../../src/host/settings.ts'
 import { registerRoutes } from '../../src/host/routes.ts'
 import type { RouteServices } from '../../src/host/routes.ts'
 import { TaskManager } from '../../src/host/tasks.ts'
@@ -122,6 +123,7 @@ async function createHarness(replies: ConstructorParameters<typeof ScriptedModel
   const sessions = new SessionRepository(state)
   const learning = new LearningRepository(state)
   const model = new ScriptedModelClient(replies)
+  const settings = new SettingsStore(state)
   const corpus = createCorpusService({ state, courses, learning, model })
   const teaching = createTeachingService()
   const experiments = createRunnerRegistry({ dataDir: dir })
@@ -168,6 +170,15 @@ async function createHarness(replies: ConstructorParameters<typeof ScriptedModel
     portability,
     createLearningFor: createLearningFor as never,
     takeUsage: () => undefined,
+    lastUsage: () => undefined,
+    settings,
+    defaultModelSelection: () => ({ provider: 'test', model: 'test-model' }),
+    invalidateModelInfo: () => undefined,
+    modelCatalog: {
+      listProviders: async () => [{ id: 'test', name: 'Test' }],
+      listModels: async () => [{ provider: 'test', id: 'test-model', name: 'Test Model' }],
+      resolveModelInfo: async () => ({ contextWindow: 100_000 }),
+    },
     getOcrInfo: async () => ({ available: true, reason: '', languages: ['eng'] }),
     profiles,
     courses,
@@ -626,6 +637,102 @@ describe('teaching host routes', () => {
     assert.equal(confirmed.revision.provenance, 'student-edit')
     assert.equal(confirmed.revision.chapters.length, 1)
     assert.deepEqual(confirmed.revision.chapters[0]?.conceptIds, [first])
+  })
+
+  it('lists models, applies a plugin model override and resets to the host default', async () => {
+    const harness = await createHarness([])
+    const initial = unwrap<{
+      followHost: boolean
+      current: { provider: string; model: string }
+      providers: { id: string; name: string; models: { id: string; name: string }[] }[]
+    }>((await harness.call('model.catalog', { method: 'GET' })).json)
+    assert.equal(initial.followHost, true)
+    assert.equal(initial.current.provider, 'test')
+    assert.equal(initial.providers[0]?.models[0]?.id, 'test-model')
+    const info = unwrap<{ contextWindow: number }>((
+      await harness.call('model.info', { method: 'GET', query: { provider: 'test', model: 'test-model' } })
+    ).json)
+    assert.equal(info.contextWindow, 100_000)
+    const set = unwrap<{ followHost: boolean; selection: { model: string } }>((
+      await harness.call('model.set', { body: { provider: 'test', model: 'test-model' } })
+    ).json)
+    assert.equal(set.followHost, false)
+    assert.equal(set.selection.model, 'test-model')
+    const overridden = unwrap<{ followHost: boolean; override?: { provider: string; model: string } }>((
+      await harness.call('model.catalog', { method: 'GET' })
+    ).json)
+    assert.equal(overridden.followHost, false)
+    assert.equal(overridden.override?.model, 'test-model')
+    const reset = unwrap<{ followHost: boolean }>((
+      await harness.call('model.set', { body: { followHost: true } })
+    ).json)
+    assert.equal(reset.followHost, true)
+  })
+
+  it('force-compacts older messages, exposes context usage and can reset the checkpoint', async () => {
+    const SUMMARY_REPLY = [
+      '## Primary Request and Intent',
+      '- 学习过拟合',
+      '## Course and Sources',
+      '- 测试课程',
+      '## Key Concepts',
+      '- 过拟合',
+      '## Next Step',
+      '- 继续练习',
+    ].join('\n')
+    const harness = await createHarness([
+      { kind: 'text', text: DRAFT_REPLY },
+      { kind: 'text', text: SUMMARY_REPLY },
+    ])
+    const { courseId } = await preparedCourse(harness)
+    const created = unwrap<{ session: { id: string } }>((
+      await harness.call('sessions.create', { body: { courseId } })
+    ).json)
+    const sessionId = created.session.id
+    const session = await harness.services.sessions.get(sessionId)
+    assert.ok(session !== undefined)
+    const messageIds: string[] = []
+    for (let index = 0; index < 10; index += 1) {
+      const message = {
+        id: `msg-compact-${index}`,
+        sessionId,
+        role: index % 2 === 0 ? 'student' : 'teacher',
+        kind: index % 2 === 0 ? 'student-question' : 'teacher-explanation',
+        text: `第 ${index} 条消息：${'过拟合与泛化讨论。'.repeat(20)}`,
+        createdAt: new Date(Date.now() + index * 1000).toISOString(),
+      }
+      await harness.services.sessions.appendMessage(message as never)
+      messageIds.push(message.id)
+    }
+    await harness.services.sessions.save({ ...session, messageIds: messageIds as never, updatedAt: new Date().toISOString() })
+
+    const compressHandle = unwrap<{ task: { id: string } }>((
+      await harness.call('context.compress', { body: { sessionId, force: true } })
+    ).json)
+    await harness.services.tasks.wait(compressHandle.task.id)
+    const task = await harness.services.tasks.get(compressHandle.task.id)
+    assert.equal(task?.status, 'completed')
+    const result = task?.result as { compacted: boolean } | undefined
+    assert.equal(result?.compacted, true)
+    const view = unwrap<{ session: { context?: { compactedMessageIds: string[]; summary: string; tokensAfterEstimate: number } } }>((
+      await harness.call('sessions.get', { method: 'GET', query: { sessionId } })
+    ).json)
+    assert.equal(view.session.context?.compactedMessageIds.length, 8)
+    assert.ok((view.session.context?.summary ?? '').includes('过拟合'))
+    const usage = unwrap<{
+      source: string
+      tokensUsed?: number
+      contextWindow?: number
+      compressed?: { compactedMessages: number }
+    }>((await harness.call('context.usage', { method: 'GET', query: { sessionId } })).json)
+    assert.equal(usage.source, 'estimated')
+    assert.equal(usage.compressed?.compactedMessages, 8)
+    assert.equal(usage.tokensUsed, view.session.context?.tokensAfterEstimate)
+    assert.equal(usage.contextWindow, 100_000)
+    const reset = unwrap<{ session: { context?: unknown } }>((
+      await harness.call('context.reset', { body: { sessionId } })
+    ).json)
+    assert.equal(reset.session.context, undefined)
   })
 
   it('applies draft edits (rename/remove/reorder) and rejects an empty structure', async () => {

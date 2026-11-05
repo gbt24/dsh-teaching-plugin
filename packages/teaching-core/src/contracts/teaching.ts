@@ -42,6 +42,11 @@ export interface TeachingTurnInput {
   readonly currentConceptId?: ConceptId
   /** Recent messages (bounded) for conversational continuity. */
   readonly history: readonly ChatMessage[]
+  /** Optional summary replacing an older, compacted span of the conversation. */
+  readonly contextCheckpoint?: {
+    readonly summary: string
+    readonly compactedAt?: string
+  }
   /** Course-material anchors retrieved for this turn. */
   readonly material: readonly {
     readonly anchor: SourceAnchor

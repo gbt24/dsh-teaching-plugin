@@ -11,6 +11,7 @@ import type { ChatStreamState } from '../state.ts'
 import { EVIDENCE_KIND_LABELS, STAGE_LABELS, formatTime, truncate } from '../helpers.ts'
 import { RenderedMarkdown } from './Markdown.tsx'
 import { Banner } from './Banner.tsx'
+import { compactedMessageIds, compressionBannerText } from '../context-compress.ts'
 
 /** One quick action the student can request during teaching. */
 export type QuickAction = 'skip' | 'hint' | 'full-answer' | 'restyle'
@@ -188,21 +189,41 @@ export function ChatPanel(props: ChatPanelProps): React.ReactElement {
     props.onSend(text)
   }
   const session = props.session
+  const context = session?.session.context
+  const compactionBanner = compressionBannerText(context)
+  const compactedIds = compactedMessageIds(context)
+  const compactedMessages = props.messages.filter(message => compactedIds.has(message.id))
+  const visibleMessages = props.messages.filter(message => !compactedIds.has(message.id))
+  const renderMessage = (message: ChatMessage): React.ReactElement => (
+    <MessageBubble
+      key={message.id}
+      message={message}
+      activities={props.activities}
+      onActivityClick={props.onActivityClick}
+      onEvidenceClick={props.onEvidenceClick}
+    />
+  )
   return (
     <section className="ai-chat-panel" aria-label="教学对话">
       <div className="ai-chat-scroll" ref={scrollRef}>
         {session === undefined && (
           <div className="ai-empty">选择左侧课程与会话，或新建一个学习会话开始。</div>
         )}
-        {props.messages.map(message => (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            activities={props.activities}
-            onActivityClick={props.onActivityClick}
-            onEvidenceClick={props.onEvidenceClick}
-          />
-        ))}
+        {compactionBanner !== undefined && (
+          <div className="ai-compaction-banner" role="status">
+            <span>{compactionBanner}</span>
+            <span className="ai-muted">压缩只影响模型上下文，不删除本机记录。</span>
+          </div>
+        )}
+        {compactedMessages.length > 0 && (
+          <details className="ai-compacted-block">
+            <summary>已压缩的较早消息（{compactedMessages.length} 条，原文仍保留）</summary>
+            <div className="ai-compacted-messages">
+              {compactedMessages.map(renderMessage)}
+            </div>
+          </details>
+        )}
+        {visibleMessages.map(renderMessage)}
         {props.chat.text !== '' && (
           <article className="ai-msg ai-msg-teacher" data-streaming="true">
             <RenderedMarkdown source={props.chat.text} />

@@ -57,6 +57,21 @@ export interface LearningPosition {
   readonly updatedAt: string
 }
 
+/** One compacted-context checkpoint for an older span of the conversation. */
+export interface SessionContextCheckpoint {
+  /** DSH-style structured summary (already framed for the model). */
+  readonly summary: string
+  /** Message ids fully represented by the summary and omitted from the model prompt. */
+  readonly compactedMessageIds: readonly MessageId[]
+  readonly compactedAt: string
+  /** Token estimate before compaction (the prompt it replaced). */
+  readonly tokensBefore: number
+  /** Token estimate after compaction (summary + retained tail). */
+  readonly tokensAfterEstimate: number
+  /** Model that wrote the summary. */
+  readonly model?: { readonly provider: string; readonly model: string }
+}
+
 /** One continuous teaching conversation. */
 export interface TeachingSession {
   readonly id: SessionId
@@ -71,6 +86,8 @@ export interface TeachingSession {
   readonly messageIds: readonly MessageId[]
   /** Concept ids already discussed in this session. */
   readonly coveredConceptIds: readonly ConceptId[]
+  /** Present when older messages were manually compacted for the model prompt. */
+  readonly context?: SessionContextCheckpoint
 }
 
 /** Provenance of one piece of teaching content. */

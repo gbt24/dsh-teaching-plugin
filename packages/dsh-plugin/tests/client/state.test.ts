@@ -5,8 +5,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type {
-  ActivityState, ChatMessage, ChatStreamEvent, CourseDetail, ExperimentRun, LessonActivity,
-  SessionView, TeachingSession,
+  ActivityState, ChatMessage, ChatStreamEvent, ContextUsageView, CourseDetail, ExperimentRun,
+  LessonActivity, SessionView, TeachingSession,
 } from '@deepseek-teaching/core/contracts'
 import {
   INITIAL_WORKSPACE_STATE, applyChatStreamEvent, appendMessage, computeCourseProgress,
@@ -350,4 +350,34 @@ test('session/position applies the Host position after restore or collapse', () 
   const collapsed = workspaceReducer(restored, { type: 'session/position', session: collapsedSession })
   assert.equal(collapsed.selectedActivityId, undefined)
   assert.equal(collapsed.activities.length, 2, 'collapsing keeps history')
+})
+
+
+test('ui/collapse toggles the plugin columns independently', () => {
+  const collapsed = workspaceReducer(INITIAL_WORKSPACE_STATE, { type: 'ui/collapse', panel: 'left', collapsed: true })
+  assert.equal(collapsed.leftCollapsed, true)
+  assert.equal(collapsed.rightCollapsed, false)
+  const both = workspaceReducer(collapsed, { type: 'ui/collapse', panel: 'right', collapsed: true })
+  assert.deepEqual([both.leftCollapsed, both.rightCollapsed], [true, true])
+  const expanded = workspaceReducer(both, { type: 'ui/collapse', panel: 'left', collapsed: false })
+  assert.deepEqual([expanded.leftCollapsed, expanded.rightCollapsed], [false, true])
+})
+
+test('context usage is stored per session and cleared when the session changes', () => {
+  const usage: ContextUsageView = {
+    sessionId: 'sess-1' as never,
+    tokensUsed: 1234,
+    contextWindow: 128000,
+    percent: 1,
+    source: 'reported',
+    model: { provider: 'acme', model: 'teacher-1' },
+  }
+  let state = workspaceReducer(INITIAL_WORKSPACE_STATE, { type: 'context/usage', usage })
+  assert.equal(state.contextUsage?.tokensUsed, 1234)
+  // Loading another session drops the previous session's usage until reloaded.
+  state = workspaceReducer(state, { type: 'session/loaded', session: sessionView({ activityIds: [], positionActivityId: null }) })
+  assert.equal(state.contextUsage, undefined)
+  state = workspaceReducer(state, { type: 'context/usage', usage })
+  state = workspaceReducer(state, { type: 'session/cleared' })
+  assert.equal(state.contextUsage, undefined)
 })

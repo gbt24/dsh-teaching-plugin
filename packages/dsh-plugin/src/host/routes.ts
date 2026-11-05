@@ -11,9 +11,9 @@ import { readFile, readdir, stat } from 'node:fs/promises'
 import { basename, extname, join } from 'node:path'
 import type {
   ActivityState, ApiRequests, AppError, AttemptOutcome, AttemptValidation, BootstrapInfo,
-  ChatMessage, ChatStreamEvent, Concept, Course, CourseDraftView, CourseRevision, CourseSummary,
+  ChatMessage, ChatStreamEvent, Concept, ContextUsageView, Course, CourseDraftView, CourseRevision, CourseSummary,
   CourseLearningRecord, EnvironmentDirectory, ExperimentRun, LearningAttempt, LearningService, LessonActivity,
-  MasteryRecord, ModelCapabilities, ReviewItem, SessionSummary, SessionView,
+  MasteryRecord, ModelCapabilities, ModelCatalogView, ModelInfoView, ModelSelectionView, ReviewItem, SessionSummary, SessionView,
   SourceAnchor, SourceDocument, SourceView, TeachingService, TeachingSession, TeachingTurnInput,
   UsageEntry,
 } from '@deepseek-teaching/core'
@@ -31,6 +31,11 @@ import type { EnvironmentManager } from '@deepseek-teaching/core/environments'
 import { detectRequestedForm } from '@deepseek-teaching/core/teaching'
 import type { TaskManager } from './tasks.ts'
 import type { WebBridge } from './web.ts'
+import type { SettingsStore } from './settings.ts'
+import {
+  buildSummaryInput, estimateCompactedTokens, estimateMessageTokens, estimateTokens,
+  resolveCompactionPolicy, selectCompactionRange, SUMMARY_MAX_TOKENS, TEACHING_COMPACTION_INSTRUCTION,
+} from './context.ts'
 import { toSearchQuery, wantsWebLookup } from './web.ts'
 import type { CorpusServiceApi } from '@deepseek-teaching/core/corpus'
 import {
@@ -65,6 +70,20 @@ export interface RouteServices {
   readonly createLearningFor: (activity?: LessonActivity) => LearningService
   /** Usage of the most recent model call in one session, then cleared. */
   readonly takeUsage: (sessionId: string) => UsageEntry | undefined
+  /** Latest settled model usage per session (not consumed by chat). */
+  readonly lastUsage: (sessionId: string) => UsageEntry | undefined
+  /** Plugin-local settings (model override). */
+  readonly settings: SettingsStore
+  /** Effective deployment default selection from `agentDefaultModel`. */
+  readonly defaultModelSelection: () => { provider: string; model: string; reasoningEffort?: string }
+  /** Clear cached capability info after a selection change. */
+  readonly invalidateModelInfo: () => void
+  /** Host LLM catalog queries (provider/model/efforts/context window). */
+  readonly modelCatalog: {
+    listProviders: () => Promise<readonly { id: string; name: string }[]>
+    listModels: (provider: string) => Promise<readonly { provider?: string; id: string; name?: string; description?: string }[]>
+    resolveModelInfo: (provider: string, model: string) => Promise<Record<string, unknown> | undefined>
+  }
   /** Real host OCR capability (tesseract/language packs), probed once. */
   readonly getOcrInfo: () => Promise<{ readonly available: boolean; readonly reason: string; readonly languages: readonly string[] }>
   readonly profiles: ProfileRepository
@@ -225,6 +244,278 @@ export function registerRoutes(services: RouteServices): void {
       },
       environments: await services.experiments.directory(),
     })
+  })
+
+  /* ------------------------------------------------------------------ */
+  /* Model selection / context usage / compaction                         */
+  /* ------------------------------------------------------------------ */
+
+  const selectionView = (selection: { provider: string; model: string; reasoningEffort?: string }): ModelSelectionView => ({
+    provider: selection.provider,
+    model: selection.model,
+    ...(selection.reasoningEffort === undefined ? {} : { reasoningEffort: selection.reasoningEffort }),
+  })
+
+  const modelInfoView = async (provider: string, model: string): Promise<ModelInfoView> => {
+    const raw = await services.modelCatalog.resolveModelInfo(provider, model)
+    const context = raw?.['context'] as { contextWindow?: unknown } | undefined
+    const window = typeof raw?.['contextWindow'] === 'number'
+      ? raw['contextWindow'] as number
+      : typeof context?.contextWindow === 'number' ? context.contextWindow : undefined
+    const modalities = Array.isArray(raw?.['inputModalities'])
+      ? (raw?.['inputModalities'] as unknown[]).filter((item): item is string => typeof item === 'string')
+      : undefined
+    const reasoningRaw = raw?.['reasoning'] as
+      | { efforts?: unknown; defaultEffort?: unknown }
+      | undefined
+    const efforts = Array.isArray(reasoningRaw?.efforts)
+      ? reasoningRaw.efforts.flatMap(effort => {
+        if (typeof effort !== 'object' || effort === null) return []
+        const record = effort as Record<string, unknown>
+        if (typeof record['id'] !== 'string' || record['id'] === '') return []
+        return [{
+          id: record['id'],
+          name: typeof record['name'] === 'string' ? record['name'] : record['id'],
+          ...(typeof record['description'] === 'string' ? { description: record['description'] } : {}),
+        }]
+      })
+      : []
+    return {
+      provider,
+      model,
+      ...(typeof raw?.['name'] === 'string' ? { name: raw['name'] } : {}),
+      ...(window === undefined ? {} : { contextWindow: window }),
+      ...(modalities === undefined ? {} : { inputModalities: modalities }),
+      ...(efforts.length === 0
+        ? {}
+        : {
+            reasoning: {
+              efforts,
+              ...(typeof reasoningRaw?.defaultEffort === 'string' ? { defaultEffort: reasoningRaw.defaultEffort } : {}),
+            },
+          }),
+    }
+  }
+
+  route('model.catalog', async () => {
+    const override = services.settings.modelOverride()
+    const fallback = services.defaultModelSelection()
+    const providers: ModelCatalogView['providers'][number][] = []
+    const failures: { provider: string; message: string }[] = []
+    for (const provider of await services.modelCatalog.listProviders()) {
+      try {
+        const models = await services.modelCatalog.listModels(provider.id)
+        providers.push({
+          id: provider.id,
+          name: provider.name,
+          models: models
+            .filter(model => typeof model.id === 'string' && model.id !== '')
+            .map(model => ({
+              id: model.id,
+              name: typeof model.name === 'string' && model.name !== '' ? model.name : model.id,
+              ...(typeof model.description === 'string' ? { description: model.description } : {}),
+            })),
+        })
+      } catch (cause) {
+        failures.push({ provider: provider.id, message: cause instanceof Error ? cause.message : String(cause) })
+      }
+    }
+    return envelope({
+      followHost: override === undefined,
+      current: selectionView(override ?? fallback),
+      default: selectionView(fallback),
+      ...(override === undefined ? {} : { override: selectionView(override) }),
+      providers,
+      ...(failures.length === 0 ? {} : { failures }),
+    } satisfies ModelCatalogView)
+  })
+
+  route('model.info', async ({ query }) => {
+    const provider = requireQuery(query, 'provider')
+    const model = requireQuery(query, 'model')
+    return envelope(await modelInfoView(provider, model))
+  })
+
+  route('model.set', async ({ body }) => {
+    const input = body as ApiRequests['model.set']['body']
+    if (input?.followHost === true) {
+      await services.settings.setModelSelection(undefined)
+      services.invalidateModelInfo()
+      return envelope({ selection: selectionView(services.defaultModelSelection()), followHost: true })
+    }
+    if (typeof input?.provider !== 'string' || typeof input?.model !== 'string'
+      || input.provider.trim() === '' || input.model.trim() === '') {
+      throw appError('invalid-input', '缺少 provider 或 model')
+    }
+    const provider = input.provider.trim()
+    const model = input.model.trim()
+    const reasoningEffort = typeof input.reasoningEffort === 'string' && input.reasoningEffort !== ''
+      ? input.reasoningEffort
+      : undefined
+    const info = await modelInfoView(provider, model)
+    if (info.reasoning !== undefined && reasoningEffort !== undefined
+      && !info.reasoning.efforts.some(effort => effort.id === reasoningEffort)) {
+      throw appError('invalid-input', `模型 ${provider}/${model} 不支持思考强度 ${reasoningEffort}`)
+    }
+    await services.settings.setModelSelection({
+      provider,
+      model,
+      ...(reasoningEffort === undefined ? {} : { reasoningEffort }),
+    })
+    services.invalidateModelInfo()
+    return envelope({
+      selection: selectionView({ provider, model, ...(reasoningEffort === undefined ? {} : { reasoningEffort }) }),
+      followHost: false,
+    })
+  })
+
+  route('context.usage', async ({ query }) => {
+    const sessionId = requireQuery(query, 'sessionId')
+    const session = await services.sessions.get(sessionId)
+    if (session === undefined) throw notFoundError('学习会话')
+    const info = await services.model.info()
+    const resolved = info.contextWindow === undefined
+      ? await modelInfoView(info.provider, info.model)
+      : undefined
+    const contextWindow = info.contextWindow ?? resolved?.contextWindow
+    const last = services.lastUsage(session.id)
+    const checkpoint = session.context
+    let tokensUsed: number | undefined
+    let source: ContextUsageView['source'] = 'unknown'
+    let reportedAt: string | undefined
+    let note: string | undefined
+    if (checkpoint !== undefined && (last === undefined || checkpoint.compactedAt > (last.at ?? ''))) {
+      tokensUsed = checkpoint.tokensAfterEstimate
+      source = 'estimated'
+      note = `压缩检查点估算；最近一次请求 ${last?.inputTokens ?? '未知'} tokens`
+    } else if (last?.inputTokens !== undefined) {
+      tokensUsed = last.inputTokens
+      source = 'reported'
+      reportedAt = last.at
+    } else {
+      const messages = await services.sessions.messages(session.id)
+      tokensUsed = estimateMessageTokens(messages) + 2_000
+      source = 'estimated'
+      note = '尚无模型用量报告；按消息字符估算'
+    }
+    const percent = tokensUsed !== undefined && contextWindow !== undefined
+      ? Math.round((tokensUsed / contextWindow) * 1000) / 10
+      : undefined
+    const payload: ContextUsageView = {
+      sessionId: session.id,
+      ...(tokensUsed === undefined ? {} : { tokensUsed }),
+      ...(contextWindow === undefined ? {} : { contextWindow }),
+      ...(percent === undefined ? {} : { percent }),
+      source,
+      ...(reportedAt === undefined ? {} : { reportedAt }),
+      model: selectionView({ provider: info.provider, model: info.model, ...(info.reasoningEffort === undefined ? {} : { reasoningEffort: info.reasoningEffort }) }),
+      ...(checkpoint === undefined
+        ? {}
+        : {
+            compressed: {
+              compactedAt: checkpoint.compactedAt,
+              compactedMessages: checkpoint.compactedMessageIds.length,
+              tokensBefore: checkpoint.tokensBefore,
+              tokensAfterEstimate: checkpoint.tokensAfterEstimate,
+            },
+          }),
+      ...(note === undefined ? {} : { note }),
+    }
+    return envelope(payload)
+  })
+
+  route('context.compress', async ({ body }) => {
+    const input = body as ApiRequests['context.compress']['body']
+    if (typeof input?.sessionId !== 'string') throw appError('invalid-input', '缺少 sessionId')
+    const session = await services.sessions.get(input.sessionId)
+    if (session === undefined) throw notFoundError('学习会话')
+    const force = input.force === true
+    const handle = services.tasks.start({
+      kind: 'context-compact',
+      label: '压缩教学上下文',
+      steps: [
+        { id: 'read', label: '读取对话历史' },
+        { id: 'summarize', label: '生成压缩摘要' },
+        { id: 'save', label: '保存上下文检查点' },
+      ],
+    }, async context => {
+      context.step('read', { status: 'running' })
+      const messages = await services.sessions.messages(session.id)
+      if (messages.length === 0) throw appError('invalid-input', '该学习会话还没有消息，无法压缩')
+      const info = await services.model.info()
+      const resolved = info.contextWindow === undefined
+        ? await modelInfoView(info.provider, info.model)
+        : undefined
+      const policy = resolveCompactionPolicy(info.contextWindow ?? resolved?.contextWindow)
+      const selection = selectCompactionRange(messages, policy, force)
+      if (selection.compacted.length === 0) {
+        context.step('read', { status: 'done', detail: '无需压缩' })
+        context.result({ compacted: false, reason: selection.reason ?? '没有可压缩的历史' })
+        return { compacted: false }
+      }
+      context.step('read', {
+        status: 'done',
+        detail: `${selection.compacted.length} 条消息 / 约 ${selection.tokensBefore} tokens`,
+      })
+      context.step('summarize', { status: 'running' })
+      const completion = await services.model.complete({
+        system: TEACHING_COMPACTION_INSTRUCTION,
+        messages: [{
+          role: 'user',
+          text: `以下是较早的教学对话（原文）：
+
+${buildSummaryInput(selection.compacted)}
+
+请按要求输出压缩检查点。`,
+        }],
+        maxTokens: SUMMARY_MAX_TOKENS,
+        purpose: 'compaction',
+        sessionId: session.id as never,
+        language: 'zh',
+      }, context.signal)
+      const summary = completion.text.trim()
+      if (summary === '') throw appError('uncertain', '压缩摘要为空，未保存')
+      const tokensAfterEstimate = estimateCompactedTokens(summary, selection.retained)
+      if (tokensAfterEstimate >= selection.tokensBefore) {
+        context.step('summarize', { status: 'done', detail: '压缩收益不足' })
+        context.result({
+          compacted: false,
+          reason: `压缩后估算没有减少（${selection.tokensBefore} → ${tokensAfterEstimate} tokens）；摘要比原文长时不保存，避免上下文反而变大`,
+        })
+        return { compacted: false }
+      }
+      context.step('summarize', { status: 'done', detail: `约 ${selection.tokensBefore} → ${tokensAfterEstimate} tokens` })
+      context.step('save', { status: 'running' })
+      const checkpoint = {
+        summary,
+        compactedMessageIds: selection.compacted.map(message => message.id),
+        compactedAt: nowIso(),
+        tokensBefore: selection.tokensBefore,
+        tokensAfterEstimate,
+        model: { provider: info.provider, model: info.model },
+      }
+      const latest = await services.sessions.get(session.id)
+      if (latest === undefined) throw notFoundError('学习会话')
+      const saved = await services.sessions.save({
+        ...latest,
+        context: checkpoint,
+        updatedAt: nowIso(),
+      })
+      context.step('save', { status: 'done' })
+      context.result({ compacted: true, checkpoint })
+      return { compacted: true, checkpoint, session: saved }
+    })
+    return envelope({ task: handle })
+  })
+
+  route('context.reset', async ({ body }) => {
+    const input = body as ApiRequests['context.reset']['body']
+    if (typeof input?.sessionId !== 'string') throw appError('invalid-input', '缺少 sessionId')
+    const session = await services.sessions.get(input.sessionId)
+    if (session === undefined) throw notFoundError('学习会话')
+    const { context: _context, ...rest } = session
+    const saved = await services.sessions.save({ ...rest, updatedAt: nowIso() })
+    return envelope({ session: saved })
   })
 
   /* ------------------------------------------------------------------ */
@@ -873,7 +1164,13 @@ export function registerRoutes(services: RouteServices): void {
     const revision = await services.courses.getRevision(session.courseId, session.courseRevisionId)
     if (course === undefined || revision === undefined) throw notFoundError('课程结构')
     const profile = await services.profiles.get()
-    const history = await services.sessions.messages(session.id)
+    const allHistory = await services.sessions.messages(session.id)
+    const checkpoint = session.context
+    // Older messages replaced by a checkpoint are omitted from the model prompt;
+    // the UI still shows the full persisted history.
+    const history = checkpoint === undefined
+      ? allHistory
+      : allHistory.filter(message => !checkpoint.compactedMessageIds.includes(message.id))
     const student = studentMessage(session.id, input.text.trim())
     await services.sessions.appendMessage(student)
     await services.sessions.save({
@@ -972,6 +1269,9 @@ export function registerRoutes(services: RouteServices): void {
             courseRevision: revision,
             currentConceptId: session.position.conceptId,
             history,
+            ...(checkpoint === undefined
+              ? {}
+              : { contextCheckpoint: { summary: checkpoint.summary, compactedAt: checkpoint.compactedAt } }),
             material,
             crossCourse,
             learning: learningSummary,
@@ -1648,7 +1948,7 @@ function requestSpec(operation: Operation): { method: 'GET' | 'POST' } {
     'bootstrap', 'courses.list', 'courses.get', 'courseDraft.get', 'sources.get',
     'sessions.list', 'sessions.get', 'activity.get', 'attempts.list', 'mastery.list',
     'review.list', 'profile.get', 'environments.list', 'tasks.get', 'tasks.list',
-    'capabilities.get', 'runs.latest',
+    'capabilities.get', 'runs.latest', 'model.catalog', 'model.info', 'context.usage',
   ])
   return { method: getOperations.has(operation) ? 'GET' : 'POST' }
 }
