@@ -241,6 +241,18 @@ export interface ApiRequests {
       readonly stdin?: string
     }
   }
+  /**
+   * Delete one activity record chosen by the student.
+   *
+   * Removes the activity, its student-editable state and its run records. The
+   * learning attempts/mastery evidence and the original course sources are not
+   * touched. If the activity was the session's current one, the session
+   * position is cleared.
+   */
+  'activity.delete': {
+    readonly method: 'POST'
+    readonly body: { readonly activityId: ActivityId; readonly expectedRevision?: number }
+  }
   'attempts.submit': {
     readonly method: 'POST'
     readonly body: {
@@ -283,6 +295,13 @@ export interface ApiRequests {
     readonly body: RunRequest & { readonly clientRunId?: string }
   }
   'experiments.cancel': { readonly method: 'POST'; readonly body: { readonly runId: string } }
+  /**
+   * Latest run per activity for one session (read-only).
+   *
+   * The Host persists every run under `runs/`, so the client can restore real
+   * output after a page refresh instead of showing "尚未运行".
+   */
+  'runs.latest': { readonly method: 'GET'; readonly query: { readonly sessionId: SessionId }; readonly body?: never }
   'tasks.get': { readonly method: 'GET'; readonly query: { readonly taskId: string }; readonly body?: never }
   'tasks.cancel': { readonly method: 'POST'; readonly body: { readonly taskId: string } }
   'tasks.list': { readonly method: 'GET'; readonly query?: Record<string, never>; readonly body?: never }
@@ -346,6 +365,13 @@ export interface ApiResponses {
   'activity.patch': { readonly activity: LessonActivity }
   'activity.state': { readonly state: ActivityState }
   'activity.run': { readonly run: ExperimentRun; readonly validation?: AttemptValidation }
+  'activity.delete': {
+    readonly activityId: ActivityId
+    /** Number of run records removed together with the activity. */
+    readonly removedRuns: number
+    /** True when the deleted activity was the session's current activity. */
+    readonly positionCleared: boolean
+  }
   'attempts.submit': AttemptOutcome
   'attempts.list': { readonly attempts: readonly LearningAttempt[] }
   'mastery.list': { readonly mastery: readonly MasteryRecord[] }
@@ -358,6 +384,8 @@ export interface ApiResponses {
   'environments.prepare': { readonly task: TaskHandle; readonly environment?: EnvironmentRecord }
   'experiments.run': { readonly run: ExperimentRun }
   'experiments.cancel': { readonly run: ExperimentRun }
+  /** One entry per activity, newest run first (at most one per activity). */
+  'runs.latest': { readonly runs: readonly ExperimentRun[] }
   'tasks.get': { readonly task: TaskSnapshot }
   'tasks.cancel': { readonly snapshot: TaskSnapshot }
   'tasks.list': { readonly tasks: readonly TaskSnapshot[] }

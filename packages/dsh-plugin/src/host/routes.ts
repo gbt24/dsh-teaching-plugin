@@ -773,6 +773,12 @@ export function registerRoutes(services: RouteServices): void {
     if (typeof input?.sessionId !== 'string') throw appError('invalid-input', '缺少 sessionId')
     const session = await services.sessions.get(input.sessionId)
     if (session === undefined) throw notFoundError('学习会话')
+    if (input.activityId !== undefined && input.activityId !== null) {
+      const activity = await services.sessions.getActivity(input.activityId)
+      if (activity === undefined || activity.sessionId !== session.id) {
+        throw appError('not-found', '该活动不属于当前学习会话')
+      }
+    }
     const position = {
       stage: (input.stage ?? session.position.stage) as TeachingSession['position']['stage'],
       conceptId: input.conceptId ?? session.position.conceptId,
@@ -1183,6 +1189,88 @@ export function registerRoutes(services: RouteServices): void {
     return envelope({ run })
   })
 
+  /**
+   * Latest persisted run per activity for one session.
+   *
+   * Runs are already written under `runs/`; reading them back keeps real output
+   * visible after a page refresh (the client previously only kept this in
+   * memory). Corrupt/unreadable run files are skipped, not fatal.
+   */
+  route('runs.latest', async ({ query }) => {
+    const sessionId = requireQuery(query, 'sessionId')
+    const session = await services.sessions.get(sessionId)
+    if (session === undefined) throw notFoundError('学习会话')
+    const latest = new Map<string, ExperimentRun>()
+    for (const name of await services.state.list('runs')) {
+      if (!name.endsWith('.json')) continue
+      let run: ExperimentRun | undefined
+      try {
+        run = await services.state.readJson<ExperimentRun>(`runs/${name}`)
+      } catch {
+        continue
+      }
+      if (run === undefined || run.sessionId !== session.id || run.activityId === undefined) continue
+      const previous = latest.get(run.activityId)
+      if (previous === undefined || (run.startedAt ?? '') >= (previous.startedAt ?? '')) {
+        latest.set(run.activityId, run)
+      }
+    }
+    const runs = [...latest.values()].sort((a, b) => (b.startedAt ?? '').localeCompare(a.startedAt ?? ''))
+    return envelope({ runs })
+  })
+
+  /**
+   * Delete one activity chosen by the student (history cleanup).
+   *
+   * Removes the activity record, its editable state and its run records. The
+   * learning attempts/mastery evidence stay untouched (deleting evidence would
+   * silently rewrite mastery); original course sources are never touched. If
+   * the activity was the session's current one, the position is cleared.
+   */
+  route('activity.delete', async ({ body }) => {
+    const input = body as ApiRequests['activity.delete']['body']
+    if (typeof input?.activityId !== 'string') throw appError('invalid-input', '缺少 activityId')
+    const activity = await services.sessions.getActivity(input.activityId)
+    if (activity === undefined) throw notFoundError('活动')
+    if (input.expectedRevision !== undefined && input.expectedRevision !== activity.revision) {
+      return failure({
+        code: 'conflict',
+        message: '活动已被更新，请刷新后重试',
+        details: { expected: input.expectedRevision, actual: activity.revision },
+      })
+    }
+    await services.state.remove(activityFile(services.state.dataDir, activity.id))
+    await services.state.remove(activityStateFile(services.state.dataDir, activity.id))
+    // Future-proof: a later version may persist a per-activity result record.
+    await services.state.remove(`activities/${activity.id}.result.json`)
+    let removedRuns = 0
+    for (const name of await services.state.list('runs')) {
+      if (!name.endsWith('.json')) continue
+      let run: ExperimentRun | undefined
+      try {
+        run = await services.state.readJson<ExperimentRun>(`runs/${name}`)
+      } catch {
+        continue
+      }
+      if (run === undefined || run.activityId !== activity.id) continue
+      await services.state.remove(`runs/${name}`)
+      removedRuns += 1
+    }
+    let positionCleared = false
+    const session = await services.sessions.get(activity.sessionId)
+    if (session !== undefined && session.position.activityId === activity.id) {
+      const { activityId: _removedActivityId, ...restPosition } = session.position
+      await services.sessions.save({
+        ...session,
+        position: { ...restPosition, updatedAt: nowIso() },
+        updatedAt: nowIso(),
+      })
+      positionCleared = true
+    }
+    services.logger('activity deleted', { activityId: activity.id, removedRuns, positionCleared })
+    return envelope({ activityId: activity.id, removedRuns, positionCleared })
+  })
+
   /* ------------------------------------------------------------------ */
   /* Attempts / mastery / review                                          */
   /* ------------------------------------------------------------------ */
@@ -1494,7 +1582,7 @@ function requestSpec(operation: Operation): { method: 'GET' | 'POST' } {
     'bootstrap', 'courses.list', 'courses.get', 'courseDraft.get', 'sources.get',
     'sessions.list', 'sessions.get', 'activity.get', 'attempts.list', 'mastery.list',
     'review.list', 'profile.get', 'environments.list', 'tasks.get', 'tasks.list',
-    'capabilities.get',
+    'capabilities.get', 'runs.latest',
   ])
   return { method: getOperations.has(operation) ? 'GET' : 'POST' }
 }

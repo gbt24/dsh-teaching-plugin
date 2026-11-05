@@ -61240,6 +61240,12 @@ function registerRoutes(services) {
     if (typeof input?.sessionId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 sessionId");
     const session = await services.sessions.get(input.sessionId);
     if (session === void 0) throw notFoundError("\u5B66\u4E60\u4F1A\u8BDD");
+    if (input.activityId !== void 0 && input.activityId !== null) {
+      const activity = await services.sessions.getActivity(input.activityId);
+      if (activity === void 0 || activity.sessionId !== session.id) {
+        throw appError("not-found", "\u8BE5\u6D3B\u52A8\u4E0D\u5C5E\u4E8E\u5F53\u524D\u5B66\u4E60\u4F1A\u8BDD");
+      }
+    }
     const position = {
       stage: input.stage ?? session.position.stage,
       conceptId: input.conceptId ?? session.position.conceptId,
@@ -61615,6 +61621,70 @@ function registerRoutes(services) {
     await services.state.writeJson(runFile(services.state.dataDir, run.id), run);
     return envelope({ run });
   });
+  route("runs.latest", async ({ query }) => {
+    const sessionId2 = requireQuery(query, "sessionId");
+    const session = await services.sessions.get(sessionId2);
+    if (session === void 0) throw notFoundError("\u5B66\u4E60\u4F1A\u8BDD");
+    const latest = /* @__PURE__ */ new Map();
+    for (const name2 of await services.state.list("runs")) {
+      if (!name2.endsWith(".json")) continue;
+      let run;
+      try {
+        run = await services.state.readJson(`runs/${name2}`);
+      } catch {
+        continue;
+      }
+      if (run === void 0 || run.sessionId !== session.id || run.activityId === void 0) continue;
+      const previous = latest.get(run.activityId);
+      if (previous === void 0 || (run.startedAt ?? "") >= (previous.startedAt ?? "")) {
+        latest.set(run.activityId, run);
+      }
+    }
+    const runs = [...latest.values()].sort((a, b) => (b.startedAt ?? "").localeCompare(a.startedAt ?? ""));
+    return envelope({ runs });
+  });
+  route("activity.delete", async ({ body }) => {
+    const input = body;
+    if (typeof input?.activityId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 activityId");
+    const activity = await services.sessions.getActivity(input.activityId);
+    if (activity === void 0) throw notFoundError("\u6D3B\u52A8");
+    if (input.expectedRevision !== void 0 && input.expectedRevision !== activity.revision) {
+      return failure({
+        code: "conflict",
+        message: "\u6D3B\u52A8\u5DF2\u88AB\u66F4\u65B0\uFF0C\u8BF7\u5237\u65B0\u540E\u91CD\u8BD5",
+        details: { expected: input.expectedRevision, actual: activity.revision }
+      });
+    }
+    await services.state.remove(activityFile(services.state.dataDir, activity.id));
+    await services.state.remove(activityStateFile(services.state.dataDir, activity.id));
+    await services.state.remove(`activities/${activity.id}.result.json`);
+    let removedRuns = 0;
+    for (const name2 of await services.state.list("runs")) {
+      if (!name2.endsWith(".json")) continue;
+      let run;
+      try {
+        run = await services.state.readJson(`runs/${name2}`);
+      } catch {
+        continue;
+      }
+      if (run === void 0 || run.activityId !== activity.id) continue;
+      await services.state.remove(`runs/${name2}`);
+      removedRuns += 1;
+    }
+    let positionCleared = false;
+    const session = await services.sessions.get(activity.sessionId);
+    if (session !== void 0 && session.position.activityId === activity.id) {
+      const { activityId: _removedActivityId, ...restPosition } = session.position;
+      await services.sessions.save({
+        ...session,
+        position: { ...restPosition, updatedAt: nowIso() },
+        updatedAt: nowIso()
+      });
+      positionCleared = true;
+    }
+    services.logger("activity deleted", { activityId: activity.id, removedRuns, positionCleared });
+    return envelope({ activityId: activity.id, removedRuns, positionCleared });
+  });
   route("attempts.submit", async ({ body }) => {
     const input = body;
     if (typeof input?.sessionId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 sessionId");
@@ -61904,7 +61974,8 @@ function requestSpec(operation) {
     "environments.list",
     "tasks.get",
     "tasks.list",
-    "capabilities.get"
+    "capabilities.get",
+    "runs.latest"
   ]);
   return { method: getOperations.has(operation) ? "GET" : "POST" };
 }

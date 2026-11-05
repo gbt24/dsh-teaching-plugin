@@ -5,7 +5,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import type {
-  ActivityState, ChatMessage, ChatStreamEvent, CourseDetail, LessonActivity, SessionView,
+  ActivityState, ChatMessage, ChatStreamEvent, CourseDetail, ExperimentRun, LessonActivity,
+  SessionView, TeachingSession,
 } from '@deepseek-teaching/core/contracts'
 import {
   INITIAL_WORKSPACE_STATE, applyChatStreamEvent, appendMessage, computeCourseProgress,
@@ -14,6 +15,53 @@ import {
 } from '../../src/client/state.ts'
 
 const NOW = '2026-11-04T08:00:00.000Z'
+
+function sessionView(options: {
+  readonly activityIds: readonly string[]
+  readonly positionActivityId?: string | null
+}): SessionView {
+  const activities = options.activityIds.map(id => activity(id, 1))
+  return {
+    session: {
+      id: 'sess-1' as never, courseId: 'course-1' as never, courseRevisionId: 'crev-1' as never,
+      title: '会话', createdAt: NOW, updatedAt: NOW, status: 'active',
+      position: {
+        stage: 'teaching',
+        ...(options.positionActivityId === undefined || options.positionActivityId === null
+          ? {}
+          : { activityId: options.positionActivityId as never }),
+        updatedAt: NOW,
+      },
+      messageIds: [], coveredConceptIds: [],
+    },
+    messages: [],
+    activities,
+    states: activities.map(item => ({
+      activityId: item.id, activityRevision: 1, updatedAt: NOW,
+    })) as never,
+    course: {} as never, courseRevision: {} as never,
+    mastery: [], review: [],
+  }
+}
+
+function runFor(activityId: string, status: ExperimentRun['status'] = 'succeeded'): ExperimentRun {
+  return {
+    id: `run-${activityId}` as never,
+    activityId: activityId as never,
+    environmentId: 'env-1' as never,
+    language: 'python',
+    code: 'print(1)',
+    startedAt: NOW,
+    endedAt: NOW,
+    status,
+    stdout: '1\n',
+    stderr: '',
+    exitCode: 0,
+    durationMs: 12,
+    verification: 'exploratory',
+    limits: { timeoutMs: 10000 },
+  }
+}
 
 function message(id: string, role: ChatMessage['role'], text: string): ChatMessage {
   return {
@@ -221,4 +269,85 @@ test('course wizard: opens from the workspace and cancels back without losing da
 test('course wizard: does not open while the workspace is still loading', () => {
   const loading = { ...INITIAL_WORKSPACE_STATE, phase: 'loading' as const }
   assert.equal(workspaceReducer(loading, { type: 'wizard/open' }), loading)
+})
+
+
+test('session load selects exactly position.activityId (no latest-activity fallback)', () => {
+  const positioned = workspaceReducer(INITIAL_WORKSPACE_STATE, {
+    type: 'session/loaded',
+    session: sessionView({ activityIds: ['act-1', 'act-2'], positionActivityId: 'act-2' }),
+  })
+  assert.equal(positioned.selectedActivityId, 'act-2')
+  assert.deepEqual(positioned.latestRuns, {}, 'runs are loaded separately via runs.latest')
+
+  const noPosition = workspaceReducer(INITIAL_WORKSPACE_STATE, {
+    type: 'session/loaded',
+    session: sessionView({ activityIds: ['act-1', 'act-2'] }),
+  })
+  assert.equal(noPosition.selectedActivityId, undefined, 'no fallback to the newest activity')
+  assert.equal(noPosition.activities.length, 2)
+
+  const stalePosition = workspaceReducer(INITIAL_WORKSPACE_STATE, {
+    type: 'session/loaded',
+    session: sessionView({ activityIds: ['act-1'], positionActivityId: 'act-missing' }),
+  })
+  assert.equal(stalePosition.selectedActivityId, undefined, 'missing position activity clears selection')
+})
+
+test('runs/loaded keys persisted runs by activity id and merges', () => {
+  let state = workspaceReducer(INITIAL_WORKSPACE_STATE, {
+    type: 'runs/loaded',
+    runs: [runFor('act-1'), runFor('act-2', 'failed')],
+  })
+  assert.equal(state.latestRuns['act-1']?.status, 'succeeded')
+  assert.equal(state.latestRuns['act-2']?.status, 'failed')
+  state = workspaceReducer(state, { type: 'runs/loaded', runs: [runFor('act-1', 'cancelled')] })
+  assert.equal(state.latestRuns['act-1']?.status, 'cancelled')
+  const withoutActivity = { ...runFor('act-x'), activityId: undefined } as unknown as ExperimentRun
+  state = workspaceReducer(state, { type: 'runs/loaded', runs: [withoutActivity] })
+  assert.equal(Object.keys(state.latestRuns).length, 2, 'runs without activityId are ignored')
+})
+
+test('activity/removed removes the activity, its state/run and clears selection only when selected', () => {
+  let state = workspaceReducer(INITIAL_WORKSPACE_STATE, {
+    type: 'session/loaded',
+    session: sessionView({ activityIds: ['act-1', 'act-2'], positionActivityId: 'act-2' }),
+  })
+  state = workspaceReducer(state, { type: 'runs/loaded', runs: [runFor('act-1'), runFor('act-2')] })
+  state = workspaceReducer(state, { type: 'activity/state', state: { activityId: 'act-2' as never, activityRevision: 1, code: 'print(1)', updatedAt: NOW } })
+  // Removing the non-selected activity keeps the current one.
+  state = workspaceReducer(state, { type: 'activity/removed', activityId: 'act-1', positionCleared: false })
+  assert.deepEqual(state.activities.map(item => item.id), ['act-2'])
+  assert.equal(state.session?.activities.length, 1)
+  assert.equal(state.latestRuns['act-1'], undefined)
+  assert.equal(state.selectedActivityId, 'act-2')
+  // Removing the current activity clears the selection and its state/run.
+  state = workspaceReducer(state, { type: 'activity/removed', activityId: 'act-2', positionCleared: true })
+  assert.equal(state.activities.length, 0)
+  assert.equal(state.session?.activities.length, 0)
+  assert.equal(state.selectedActivityId, undefined)
+  assert.deepEqual(state.activityStates, {})
+  assert.deepEqual(state.latestRuns, {})
+})
+
+test('session/position applies the Host position after restore or collapse', () => {
+  const loaded = workspaceReducer(INITIAL_WORKSPACE_STATE, {
+    type: 'session/loaded',
+    session: sessionView({ activityIds: ['act-1', 'act-2'], positionActivityId: 'act-1' }),
+  })
+  const restoredSession: TeachingSession = {
+    ...loaded.session!.session,
+    position: { ...loaded.session!.session.position, activityId: 'act-2' as never, updatedAt: NOW },
+  }
+  const restored = workspaceReducer(loaded, { type: 'session/position', session: restoredSession })
+  assert.equal(restored.selectedActivityId, 'act-2')
+  assert.equal(restored.session?.session.position.activityId, 'act-2')
+
+  const collapsedSession: TeachingSession = {
+    ...restoredSession,
+    position: { stage: 'teaching', updatedAt: NOW },
+  }
+  const collapsed = workspaceReducer(restored, { type: 'session/position', session: collapsedSession })
+  assert.equal(collapsed.selectedActivityId, undefined)
+  assert.equal(collapsed.activities.length, 2, 'collapsing keeps history')
 })

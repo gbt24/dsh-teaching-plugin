@@ -1,19 +1,24 @@
 /**
- * Persistent teaching area: the current activity, source reader, experiment
- * results and notes. The activity body is rendered by the shared vanilla
- * renderer (`@deepseek-teaching/core/render`) so the in-app view and the future
- * offline export share one implementation.
+ * Persistent teaching area: the current activity (exactly
+ * `session.position.activityId`), the collapsed history of completed
+ * activities, the experiment/run view and notes.
+ *
+ * The activity body is rendered by the shared vanilla renderer
+ * (`@deepseek-teaching/core/render`) so the in-app view and the offline export
+ * share one implementation; the React components here own the navigation
+ * (current vs history) and Host persistence only.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type {
   ActivityState, CodeRunPayload, CodeRunResultView, CourseDetail, EnvironmentDirectory,
-  EvidenceReference, LessonActivity, MountedActivityState, SessionView, SourceAnchor, SourceView,
+  EvidenceReference, ExperimentRun, LessonActivity, MountedActivityState, SessionView,
+  SourceAnchor, SourceView,
 } from './activity-types.ts'
 import {
   mountActivity, validateActivityPayload,
 } from '@deepseek-teaching/core/render'
 import type { TeachingTab } from '../state.ts'
-import { truncate } from '../helpers.ts'
+import { formatDay, formatTime, truncate } from '../helpers.ts'
 import { Spinner } from './Banner.tsx'
 
 /** Callback bundle the area hands to the vanilla renderer. */
@@ -40,18 +45,25 @@ export interface ActivityInteractionCallbacks {
 /** Props of the persistent teaching area. */
 export interface TeachingAreaProps extends ActivityInteractionCallbacks {
   readonly activities: readonly LessonActivity[]
-  readonly selectedActivityId?: string
+  /** The current activity: exactly `session.position.activityId`. */
+  readonly currentActivityId?: string
   readonly selectedDocumentId?: string
   readonly activityStates: Readonly<Record<string, ActivityState>>
+  /** Latest persisted run per activity id (`runs.latest`). */
+  readonly latestRuns: Readonly<Record<string, ExperimentRun>>
   readonly selectedTab: TeachingTab
   readonly courseDetail?: CourseDetail
   readonly session?: SessionView
   readonly environments?: EnvironmentDirectory
-  readonly runResults: Readonly<Record<string, CodeRunResultView>>
   readonly notes: string
   readonly busy: boolean
   readonly onSelectTab: (tab: TeachingTab) => void
-  readonly onSelectActivity: (activityId: string) => void
+  /** Restore a historical activity as the current one (POST sessions.position). */
+  readonly onRestoreActivity: (activityId: string) => void
+  /** Collapse the current activity (POST sessions.position {activityId:null}). */
+  readonly onCollapseActivity: () => void
+  /** Ask the workspace to confirm + delete an activity. */
+  readonly onRequestDeleteActivity: (activity: LessonActivity) => void
   readonly onOpenSource: (documentId: string) => void
   readonly onRefreshSource: (documentId: string) => void
   readonly loadSource: (documentId: string, offset?: number, limit?: number) => Promise<SourceView>
@@ -59,6 +71,107 @@ export interface TeachingAreaProps extends ActivityInteractionCallbacks {
   readonly onNotesChange: (text: string) => void
   readonly onSaveNotes: () => void
   readonly onEvidenceClick: (reference: EvidenceReference) => void
+}
+
+/** Student-facing activity-kind labels. */
+const KIND_LABELS: Readonly<Record<LessonActivity['kind'], string>> = {
+  explanation: '讲解',
+  'static-figure': '图',
+  'interactive-graph': '交互图',
+  animation: '动画',
+  derivation: '推导',
+  'code-run': '代码实验',
+  quiz: '练习',
+  'reading-task': '阅读任务',
+  'proof-task': '证明任务',
+  'open-question': '开放问题',
+  'experiment-note': '实验记录',
+}
+
+/** Labels for persisted run states. */
+const RUN_STATUS_LABELS: Readonly<Record<ExperimentRun['status'], string>> = {
+  queued: '排队中',
+  running: '运行中',
+  succeeded: '成功',
+  failed: '失败',
+  cancelled: '已取消',
+  'timed-out': '超时',
+}
+
+/** Format the created time of a historical activity. */
+function createdLabel(iso: string): string {
+  return `${formatDay(iso)} ${formatTime(iso)}`
+}
+
+/** A collapsible section with a count; collapsed by default. */
+function CollapsibleSection(props: {
+  readonly title: string
+  readonly count: number
+  readonly defaultOpen?: boolean
+  readonly children: React.ReactNode
+}): React.ReactElement {
+  const [open, setOpen] = useState(props.defaultOpen === true)
+  return (
+    <div className="ai-collapsible">
+      <button
+        type="button"
+        className="ai-collapsible-head"
+        aria-expanded={open}
+        aria-label={`${props.title}（${props.count}）`}
+        onClick={() => setOpen(!open)}
+      >
+        <span className="ai-collapsible-arrow" aria-hidden="true">{open ? '▾' : '▸'}</span>
+        <span>{props.title}（{props.count}）</span>
+      </button>
+      {open && <div className="ai-collapsible-body">{props.children}</div>}
+    </div>
+  )
+}
+
+/** One persisted run: summary line + optionally expanded output. */
+function RunSummary(props: {
+  readonly run: ExperimentRun | undefined
+  readonly expanded: boolean
+  readonly onToggle?: () => void
+  readonly emptyText?: string
+}): React.ReactElement {
+  const run = props.run
+  if (run === undefined) {
+    return <div className="ai-muted">{props.emptyText ?? '尚未运行。'}</div>
+  }
+  return (
+    <div className="ai-run-summary">
+      <div className="ai-row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <span className="ai-badge" data-run-status={run.status}>{RUN_STATUS_LABELS[run.status]}</span>
+        {run.exitCode !== undefined ? <span className="ai-muted">退出码 {run.exitCode}</span> : null}
+        {run.durationMs !== undefined ? <span className="ai-muted">{run.durationMs}ms</span> : null}
+        <span className="ai-muted">校验：{run.verification}</span>
+        {props.onToggle !== undefined && (
+          <button type="button" className="ai-link-button" aria-expanded={props.expanded} onClick={props.onToggle}>
+            {props.expanded ? '收起输出' : '展开输出'}
+          </button>
+        )}
+      </div>
+      {props.expanded && (
+        <div style={{ marginTop: 4 }}>
+          {run.stdout !== '' && (
+            <>
+              <div className="ai-muted">stdout</div>
+              <pre className="ai-run-output">{run.stdout}</pre>
+            </>
+          )}
+          {run.stderr !== '' && (
+            <>
+              <div className="ai-muted">stderr</div>
+              <pre className="ai-run-output ai-run-output-error">{run.stderr}</pre>
+            </>
+          )}
+          {run.stdout === '' && run.stderr === '' && <div className="ai-muted">（没有输出）</div>}
+          <div className="ai-muted">运行 {run.id} · {formatTime(run.startedAt)}</div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 /** React wrapper that owns one mount of the vanilla activity renderer. */
@@ -117,58 +230,114 @@ function ActivityView(props: {
   return <div ref={host} />
 }
 
-/** Tab body: the persistent current activity. */
+/** One row in the activity history list. */
+function ActivityHistoryRow(props: {
+  readonly activity: LessonActivity
+  readonly run?: ExperimentRun
+  readonly onRestore: () => void
+  readonly onDelete: () => void
+  readonly busy: boolean
+}): React.ReactElement {
+  const { activity } = props
+  return (
+    <div className="ai-history-row">
+      <div className="ai-history-main">
+        <div className="ai-history-title">{activity.title}</div>
+        <div className="ai-history-meta">
+          <span className="ai-badge">{KIND_LABELS[activity.kind] ?? activity.kind}</span>
+          <span>{createdLabel(activity.createdAt)}</span>
+          {activity.payload.type === 'code-run' && (
+            <span>最近运行：{props.run === undefined ? '尚未运行' : RUN_STATUS_LABELS[props.run.status]}</span>
+          )}
+        </div>
+      </div>
+      <div className="ai-row">
+        <button type="button" className="ai-small-button" disabled={props.busy} onClick={props.onRestore}>
+          恢复为当前
+        </button>
+        <button type="button" className="ai-danger-button" disabled={props.busy} onClick={props.onDelete}>
+          删除
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** Tab body: only the current activity + collapsed history. */
 function ActivityTab(props: {
   readonly activities: readonly LessonActivity[]
-  readonly selectedActivityId?: string
-  readonly selectedDocumentId?: string
+  readonly currentActivityId?: string
   readonly activityStates: Readonly<Record<string, ActivityState>>
+  readonly latestRuns: Readonly<Record<string, ExperimentRun>>
   readonly callbacks: ActivityInteractionCallbacks
-  readonly onSelectActivity: (activityId: string) => void
+  readonly busy: boolean
+  readonly onRestoreActivity: (activityId: string) => void
+  readonly onCollapseActivity: () => void
+  readonly onRequestDeleteActivity: (activity: LessonActivity) => void
 }): React.ReactElement {
-  const selected = props.activities.find(activity => activity.id === props.selectedActivityId)
-    ?? props.activities[props.activities.length - 1]
-  const sorted = [...props.activities].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  const [showAll, setShowAll] = useState(false)
+  const current = props.activities.find(activity => activity.id === props.currentActivityId)
+  const history = props.activities
+    .filter(activity => activity.id !== current?.id)
+    .slice()
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const visibleHistory = showAll ? history : history.slice(0, 10)
   return (
     <div>
-      {sorted.length > 1 && (
-        <div className="ai-activity-list" role="tablist" aria-label="教学活动">
-          {sorted.map(activity => (
+      {current === undefined && (
+        <div className="ai-empty">
+          当前没有进行中的活动。可以在下方「历史活动」中恢复一个继续操作，或继续对话让教师创建新的活动。
+        </div>
+      )}
+      {current !== undefined && (
+        <div className="ai-current-activity">
+          <div className="ai-current-head">
+            <div className="ai-current-title">{current.title}</div>
             <button
-              key={activity.id}
               type="button"
               className="ai-small-button"
-              data-active={activity.id === selected?.id}
-              onClick={() => props.onSelectActivity(activity.id)}
-              title={activity.goal}
+              disabled={props.busy}
+              onClick={props.onCollapseActivity}
+              aria-label="收起当前活动"
             >
-              {truncate(activity.title, 18)}
+              收起当前活动
             </button>
-          ))}
-        </div>
-      )}
-      {selected === undefined && (
-        <div className="ai-empty">
-          教学区域还空着。继续对话，教师会在这里创建可交互的活动、图形、推导或代码实验；追问时它会保留并可继续操作。
-        </div>
-      )}
-      {selected !== undefined && (
-        <>
+          </div>
           <ActivityView
-            key={`${selected.id}:${selected.revision}`}
-            activity={selected}
-            {...(props.activityStates[selected.id] !== undefined ? { state: props.activityStates[selected.id] } : {})}
+            key={`${current.id}:${current.revision}`}
+            activity={current}
+            {...(props.activityStates[current.id] !== undefined ? { state: props.activityStates[current.id] } : {})}
             callbacks={props.callbacks}
           />
           <div className="ai-muted" style={{ marginTop: 6 }}>
-            修订 v{selected.revision} · 更新于 {selected.updatedAt.slice(11, 16)}
-            {selected.status === 'archived' ? ' · 已归档' : ''}
-            {selected.revisionHistory !== undefined && selected.revisionHistory.length > 0
-              ? ` · 历史 ${selected.revisionHistory.length} 个修订`
+            修订 v{current.revision} · 更新于 {formatTime(current.updatedAt)}
+            {current.status === 'archived' ? ' · 已归档' : ''}
+            {current.revisionHistory !== undefined && current.revisionHistory.length > 0
+              ? ` · 历史 ${current.revisionHistory.length} 个修订`
               : ''}
           </div>
-        </>
+        </div>
       )}
+      <div style={{ marginTop: 12 }}>
+        <CollapsibleSection title="历史活动" count={history.length}>
+          {history.length === 0 && <div className="ai-muted">还没有历史活动。</div>}
+          {visibleHistory.map(activity => (
+            <ActivityHistoryRow
+              key={activity.id}
+              activity={activity}
+              {...(props.latestRuns[activity.id] !== undefined ? { run: props.latestRuns[activity.id] } : {})}
+              busy={props.busy}
+              onRestore={() => props.onRestoreActivity(activity.id)}
+              onDelete={() => props.onRequestDeleteActivity(activity)}
+            />
+          ))}
+          {!showAll && history.length > 10 && (
+            <button type="button" className="ai-link-button" onClick={() => setShowAll(true)}>
+              显示全部（{history.length}）
+            </button>
+          )}
+        </CollapsibleSection>
+      </div>
     </div>
   )
 }
@@ -248,16 +417,37 @@ function SourcesTab(props: {
   )
 }
 
-/** Tab body: environments and recent real run results. */
+/** Tab body: current experiment, collapsed experiment history, environment. */
 function ExperimentsTab(props: {
-  readonly environments?: EnvironmentDirectory
   readonly activities: readonly LessonActivity[]
-  readonly runResults: Readonly<Record<string, CodeRunResultView>>
+  readonly currentActivityId?: string
+  readonly latestRuns: Readonly<Record<string, ExperimentRun>>
+  readonly environments?: EnvironmentDirectory
+  readonly busy: boolean
   readonly onLoadEnvironments: () => void
+  readonly onRestoreActivity: (activityId: string) => void
+  readonly onRequestDeleteActivity: (activity: LessonActivity) => void
 }): React.ReactElement {
-  const codeActivities = props.activities.filter(
-    (activity): activity is LessonActivity & { payload: CodeRunPayload } => activity.payload.type === 'code-run',
-  )
+  const [showAll, setShowAll] = useState(false)
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
+  const toggleExpanded = (id: string): void => {
+    setExpanded((previous) => {
+      const next = new Set(previous)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+  const isCode = (activity: LessonActivity): activity is LessonActivity & { payload: CodeRunPayload } =>
+    activity.payload.type === 'code-run'
+  const current = props.activities.find(activity => activity.id === props.currentActivityId)
+  const currentExperiment = current !== undefined && isCode(current) ? current : undefined
+  const history = props.activities
+    .filter((activity): activity is LessonActivity & { payload: CodeRunPayload } =>
+      isCode(activity) && activity.id !== currentExperiment?.id)
+    .slice()
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  const visibleHistory = showAll ? history : history.slice(0, 5)
   return (
     <div>
       <div className="ai-row" style={{ marginBottom: 6 }}>
@@ -302,56 +492,92 @@ function ExperimentsTab(props: {
           )}
         </>
       )}
-      <div className="ai-row" style={{ margin: '10px 0 6px' }}>
-        <strong>本次会话的代码实验</strong>
+
+      <div className="ai-row" style={{ margin: '14px 0 6px' }}>
+        <strong>当前实验</strong>
       </div>
-      {codeActivities.length === 0 && <div className="ai-empty">当前会话还没有代码活动。</div>}
-      {codeActivities.map(activity => {
-        const result = props.runResults[activity.id]
-        return (
-          <div className="ai-env-row" key={activity.id}>
-            <div>{activity.title} <span className="ai-badge">{activity.payload.type === 'code-run' ? activity.payload.language : ''}</span></div>
-            {result === undefined && <div className="ai-muted">尚未运行；在“当前活动”中运行后这里显示真实输出。</div>}
-            {result !== undefined && (
-              <div className="ai-muted">
-                状态：{result.status}
-                {result.exitCode !== undefined ? ` · 退出码 ${result.exitCode}` : ''}
-                {result.durationMs !== undefined ? ` · ${result.durationMs}ms` : ''}
-                {result.verification !== undefined ? ` · 校验：${result.verification}` : ''}
-                {result.runId !== undefined ? ` · 运行 ${result.runId}` : ''}
-              </div>
-            )}
-            {result !== undefined && result.stdout !== '' && (
-              <pre style={{ maxHeight: 140, overflow: 'auto', fontSize: 11 }}>{result.stdout}</pre>
-            )}
-            {result !== undefined && result.stderr !== '' && (
-              <pre style={{ maxHeight: 140, overflow: 'auto', fontSize: 11, color: 'var(--dsw-alias-state-error-primary, #b91c1c)' }}>{result.stderr}</pre>
-            )}
+      {currentExperiment === undefined && (
+        <div className="ai-empty">
+          当前活动不是代码实验。可在「历史实验」中恢复一个代码实验，或在对话/当前活动中运行代码。
+        </div>
+      )}
+      {currentExperiment !== undefined && (
+        <div className="ai-current-experiment">
+          <div className="ai-history-title">
+            {currentExperiment.title} <span className="ai-badge">{currentExperiment.payload.language}</span>
           </div>
-        )
-      })}
+          <RunSummary
+            run={props.latestRuns[currentExperiment.id]}
+            expanded={expanded.has(currentExperiment.id)}
+            onToggle={() => toggleExpanded(currentExperiment.id)}
+            emptyText="尚未运行；在「当前活动」中运行后这里显示真实输出（刷新后仍保留）。"
+          />
+        </div>
+      )}
+
+      <div style={{ marginTop: 12 }}>
+        <CollapsibleSection title="历史实验" count={history.length}>
+          {history.length === 0 && <div className="ai-muted">还没有其他代码实验。</div>}
+          {visibleHistory.map(activity => (
+            <div className="ai-history-row" key={activity.id}>
+              <div className="ai-history-main">
+                <div className="ai-history-title">{activity.title} <span className="ai-badge">{activity.payload.language}</span></div>
+                <div className="ai-history-meta">{createdLabel(activity.createdAt)}</div>
+                <RunSummary
+                  run={props.latestRuns[activity.id]}
+                  expanded={expanded.has(activity.id)}
+                  onToggle={() => toggleExpanded(activity.id)}
+                />
+              </div>
+              <div className="ai-row">
+                <button
+                  type="button"
+                  className="ai-small-button"
+                  disabled={props.busy}
+                  onClick={() => props.onRestoreActivity(activity.id)}
+                >
+                  恢复为当前
+                </button>
+                <button
+                  type="button"
+                  className="ai-danger-button"
+                  disabled={props.busy}
+                  onClick={() => props.onRequestDeleteActivity(activity)}
+                >
+                  删除
+                </button>
+              </div>
+            </div>
+          ))}
+          {!showAll && history.length > 5 && (
+            <button type="button" className="ai-link-button" onClick={() => setShowAll(true)}>
+              显示全部（{history.length}）
+            </button>
+          )}
+        </CollapsibleSection>
+      </div>
     </div>
   )
 }
 
-/** Tab body: notes bound to the selected activity + stored course notes. */
+/** Tab body: notes bound to the current activity + stored course notes. */
 function NotesTab(props: {
   readonly activities: readonly LessonActivity[]
-  readonly selectedActivityId?: string
+  readonly currentActivityId?: string
   readonly notes: string
   readonly busy: boolean
   readonly courseDetail?: CourseDetail
   readonly onNotesChange: (text: string) => void
   readonly onSaveNotes: () => void
 }): React.ReactElement {
-  const selected = props.activities.find(activity => activity.id === props.selectedActivityId)
+  const selected = props.activities.find(activity => activity.id === props.currentActivityId)
   const stored = props.courseDetail?.learning.notes ?? []
   return (
     <div className="ai-notes-area">
       <div className="ai-muted" style={{ marginBottom: 4 }}>
         {selected !== undefined
           ? `笔记绑定到当前活动「${selected.title}」，随活动状态保存到 Host。`
-          : '选择一个活动后可记录笔记。'}
+          : '当前没有进行中的活动；可先在历史活动中恢复一个活动再记录笔记。'}
       </div>
       <textarea
         value={props.notes}
@@ -416,7 +642,6 @@ export function TeachingArea(props: TeachingAreaProps): React.ReactElement {
             onClick={() => props.onSelectTab(key)}
           >
             {label}
-            {key === 'activity' && props.activities.length > 0 ? ` (${props.activities.length})` : ''}
           </button>
         ))}
       </div>
@@ -424,10 +649,14 @@ export function TeachingArea(props: TeachingAreaProps): React.ReactElement {
         {tab === 'activity' && (
           <ActivityTab
             activities={props.activities}
-            {...(props.selectedActivityId !== undefined ? { selectedActivityId: props.selectedActivityId } : {})}
+            {...(props.currentActivityId !== undefined ? { currentActivityId: props.currentActivityId } : {})}
             activityStates={props.activityStates}
+            latestRuns={props.latestRuns}
             callbacks={callbacks}
-            onSelectActivity={props.onSelectActivity}
+            busy={props.busy}
+            onRestoreActivity={props.onRestoreActivity}
+            onCollapseActivity={props.onCollapseActivity}
+            onRequestDeleteActivity={props.onRequestDeleteActivity}
           />
         )}
         {tab === 'sources' && (
@@ -443,14 +672,18 @@ export function TeachingArea(props: TeachingAreaProps): React.ReactElement {
           <ExperimentsTab
             {...(props.environments !== undefined ? { environments: props.environments } : {})}
             activities={props.activities}
-            runResults={props.runResults}
+            {...(props.currentActivityId !== undefined ? { currentActivityId: props.currentActivityId } : {})}
+            latestRuns={props.latestRuns}
+            busy={props.busy}
             onLoadEnvironments={props.onLoadEnvironments}
+            onRestoreActivity={props.onRestoreActivity}
+            onRequestDeleteActivity={props.onRequestDeleteActivity}
           />
         )}
         {tab === 'notes' && (
           <NotesTab
             activities={props.activities}
-            {...(props.selectedActivityId !== undefined ? { selectedActivityId: props.selectedActivityId } : {})}
+            {...(props.currentActivityId !== undefined ? { currentActivityId: props.currentActivityId } : {})}
             notes={props.notes}
             busy={props.busy}
             {...(props.courseDetail !== undefined ? { courseDetail: props.courseDetail } : {})}

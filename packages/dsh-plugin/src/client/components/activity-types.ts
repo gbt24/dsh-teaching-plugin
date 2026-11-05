@@ -7,7 +7,7 @@
  */
 export type {
   ActivityState, CodeRunPayload, CourseDetail, EnvironmentDirectory, EvidenceReference,
-  LessonActivity, SessionView, SourceAnchor, SourceView,
+  ExperimentRun, LessonActivity, SessionView, SourceAnchor, SourceView,
 } from '@deepseek-teaching/core/contracts'
 export type {
   CodeRunResultView, MountedActivityState,

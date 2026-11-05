@@ -271,6 +271,38 @@ window.__ModuleLoader__.load({
     .ai-course-row .ai-course-button{flex:1;min-width:0}
     .ai-course-delete{border:1px solid var(--dsw-alias-border-l2,#d9d9d9);background:transparent;color:var(--dsw-alias-label-secondary,#888);border-radius:6px;cursor:pointer;padding:0 6px;font-size:12px}
     .ai-course-delete:hover{color:#c0392b;border-color:#c0392b}
+    .ai-current-activity { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25));
+      border-radius: 10px; padding: 10px 12px; background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.05)); }
+    .ai-current-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .ai-current-title { flex: 1; font-weight: 600; font-size: 14px; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; }
+    .ai-collapsible { border-top: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.2));
+      padding-top: 8px; margin-top: 8px; }
+    .ai-collapsible-head { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left;
+      border: none; background: transparent; color: inherit; cursor: pointer; font: inherit;
+      font-size: 12px; font-weight: 600; padding: 3px 0; }
+    .ai-collapsible-head:hover { color: var(--dsw-alias-state-business-primary, #2563eb); }
+    .ai-collapsible-arrow { width: 12px; display: inline-block; opacity: 0.7; }
+    .ai-collapsible-body { display: flex; flex-direction: column; gap: 6px; padding: 6px 0 2px; }
+    .ai-history-row { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between;
+      border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.2)); border-radius: 8px;
+      padding: 7px 9px; background: var(--dsw-alias-bg-base, transparent); }
+    .ai-history-main { flex: 1; min-width: 0; }
+    .ai-history-title { font-size: 13px; font-weight: 600; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; }
+    .ai-history-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+      font-size: 11px; opacity: 0.72; margin-top: 2px; }
+    .ai-current-experiment { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25));
+      border-radius: 10px; padding: 10px 12px; background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.05)); }
+    .ai-run-summary { margin-top: 4px; }
+    .ai-run-output { margin: 2px 0; padding: 8px; border-radius: 6px; max-height: 220px; overflow: auto;
+      background: var(--dsw-alias-markdown-code-block, rgba(127,127,127,0.1)); font-size: 11px;
+      white-space: pre-wrap; word-break: break-word; }
+    .ai-run-output-error { color: var(--dsw-alias-state-error-primary, #b91c1c);
+      background: rgba(239,68,68,0.08); }
+    .ai-badge[data-run-status="succeeded"] { color: var(--dsw-alias-state-success-primary, #16a34a); border-color: currentColor; }
+    .ai-badge[data-run-status="failed"], .ai-badge[data-run-status="timed-out"] { color: var(--dsw-alias-state-error-primary, #b91c1c); border-color: currentColor; }
+    .ai-badge[data-run-status="cancelled"] { color: var(--dsw-alias-state-warn-primary, #b45309); border-color: currentColor; }
     .ai-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:60}
     .ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
     .ai-modal h3{margin:0 0 8px;font-size:15px}
@@ -535,6 +567,7 @@ window.__ModuleLoader__.load({
       messages: [],
       activities: [],
       activityStates: {},
+      latestRuns: {},
       mastery: [],
       review: [],
       chat: { status: "idle", text: "", evidence: [] },
@@ -562,13 +595,6 @@ window.__ModuleLoader__.load({
         merged.push(ref);
       }
       return merged;
-    }
-    function latestActivity(activities) {
-      let latest;
-      for (const activity of activities) {
-        if (latest === void 0 || activity.updatedAt > latest.updatedAt) latest = activity;
-      }
-      return latest;
     }
     function applyChatStreamEvent(state, event) {
       const chat = state.chat;
@@ -690,6 +716,7 @@ window.__ModuleLoader__.load({
             messages: [],
             activities: [],
             activityStates: {},
+            latestRuns: {},
             mastery: [],
             review: [],
             selectedActivityId: void 0,
@@ -702,7 +729,7 @@ window.__ModuleLoader__.load({
           const activityStates = {};
           for (const activityState of action.session.states) activityStates[activityState.activityId] = activityState;
           const positionActivityId = action.session.session.position.activityId;
-          const selected = action.session.activities.some((activity) => activity.id === positionActivityId) ? positionActivityId : latestActivity(action.session.activities)?.id;
+          const selected = action.session.activities.some((activity) => activity.id === positionActivityId) ? positionActivityId : void 0;
           return {
             ...state,
             phase: "ready",
@@ -710,6 +737,7 @@ window.__ModuleLoader__.load({
             messages: [...action.session.messages],
             activities: [...action.session.activities],
             activityStates,
+            latestRuns: {},
             mastery: [...action.session.mastery],
             review: [...action.session.review],
             selectedActivityId: selected,
@@ -725,6 +753,7 @@ window.__ModuleLoader__.load({
             messages: [],
             activities: [],
             activityStates: {},
+            latestRuns: {},
             mastery: [],
             review: [],
             selectedActivityId: void 0,
@@ -745,6 +774,47 @@ window.__ModuleLoader__.load({
           const next = { ...state.activityStates };
           for (const activityState of action.states) next[activityState.activityId] = activityState;
           return { ...state, activityStates: next };
+        }
+        case "activity/removed": {
+          const activities = state.activities.filter((activity) => activity.id !== action.activityId);
+          const remainingStates = {};
+          for (const [id, activityState] of Object.entries(state.activityStates)) {
+            if (id !== action.activityId) remainingStates[id] = activityState;
+          }
+          const remainingRuns = {};
+          for (const [id, run] of Object.entries(state.latestRuns)) {
+            if (id !== action.activityId) remainingRuns[id] = run;
+          }
+          return {
+            ...state,
+            activities,
+            session: state.session === void 0 ? state.session : {
+              ...state.session,
+              activities: state.session.activities.filter((activity) => activity.id !== action.activityId)
+            },
+            activityStates: remainingStates,
+            latestRuns: remainingRuns,
+            selectedActivityId: state.selectedActivityId === action.activityId ? void 0 : state.selectedActivityId
+          };
+        }
+        case "runs/loaded": {
+          const next = { ...state.latestRuns };
+          for (const run of action.runs) {
+            if (run.activityId === void 0) continue;
+            next[run.activityId] = run;
+          }
+          return { ...state, latestRuns: next };
+        }
+        case "session/position": {
+          if (state.session === void 0) return state;
+          const positionActivityId = action.session.position.activityId;
+          const selected = state.activities.some((activity) => activity.id === positionActivityId) ? positionActivityId : void 0;
+          return {
+            ...state,
+            session: { ...state.session, session: action.session },
+            selectedActivityId: selected,
+            ...selected !== void 0 ? { selectedTab: "activity" } : {}
+          };
         }
         case "learning/updated":
           return {
@@ -18976,6 +19046,96 @@ window.__ModuleLoader__.load({
     // packages/dsh-plugin/src/client/components/TeachingArea.tsx
     var import_react8 = require("react");
     var import_jsx_runtime8 = require("react/jsx-runtime");
+    var KIND_LABELS = {
+      explanation: "\u8BB2\u89E3",
+      "static-figure": "\u56FE",
+      "interactive-graph": "\u4EA4\u4E92\u56FE",
+      animation: "\u52A8\u753B",
+      derivation: "\u63A8\u5BFC",
+      "code-run": "\u4EE3\u7801\u5B9E\u9A8C",
+      quiz: "\u7EC3\u4E60",
+      "reading-task": "\u9605\u8BFB\u4EFB\u52A1",
+      "proof-task": "\u8BC1\u660E\u4EFB\u52A1",
+      "open-question": "\u5F00\u653E\u95EE\u9898",
+      "experiment-note": "\u5B9E\u9A8C\u8BB0\u5F55"
+    };
+    var RUN_STATUS_LABELS = {
+      queued: "\u6392\u961F\u4E2D",
+      running: "\u8FD0\u884C\u4E2D",
+      succeeded: "\u6210\u529F",
+      failed: "\u5931\u8D25",
+      cancelled: "\u5DF2\u53D6\u6D88",
+      "timed-out": "\u8D85\u65F6"
+    };
+    function createdLabel(iso) {
+      return `${formatDay(iso)} ${formatTime(iso)}`;
+    }
+    function CollapsibleSection(props) {
+      const [open2, setOpen] = (0, import_react8.useState)(props.defaultOpen === true);
+      return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-collapsible", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+          "button",
+          {
+            type: "button",
+            className: "ai-collapsible-head",
+            "aria-expanded": open2,
+            "aria-label": `${props.title}\uFF08${props.count}\uFF09`,
+            onClick: () => setOpen(!open2),
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-collapsible-arrow", "aria-hidden": "true", children: open2 ? "\u25BE" : "\u25B8" }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { children: [
+                props.title,
+                "\uFF08",
+                props.count,
+                "\uFF09"
+              ] })
+            ]
+          }
+        ),
+        open2 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-collapsible-body", children: props.children })
+      ] });
+    }
+    function RunSummary(props) {
+      const run = props.run;
+      if (run === void 0) {
+        return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", children: props.emptyText ?? "\u5C1A\u672A\u8FD0\u884C\u3002" });
+      }
+      return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-run-summary", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-row", style: { gap: 8, flexWrap: "wrap" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-badge", "data-run-status": run.status, children: RUN_STATUS_LABELS[run.status] }),
+          run.exitCode !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "ai-muted", children: [
+            "\u9000\u51FA\u7801 ",
+            run.exitCode
+          ] }) : null,
+          run.durationMs !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "ai-muted", children: [
+            run.durationMs,
+            "ms"
+          ] }) : null,
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "ai-muted", children: [
+            "\u6821\u9A8C\uFF1A",
+            run.verification
+          ] }),
+          props.onToggle !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "ai-link-button", "aria-expanded": props.expanded, onClick: props.onToggle, children: props.expanded ? "\u6536\u8D77\u8F93\u51FA" : "\u5C55\u5F00\u8F93\u51FA" })
+        ] }),
+        props.expanded && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { style: { marginTop: 4 }, children: [
+          run.stdout !== "" && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", children: "stdout" }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("pre", { className: "ai-run-output", children: run.stdout })
+          ] }),
+          run.stderr !== "" && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", children: "stderr" }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("pre", { className: "ai-run-output ai-run-output-error", children: run.stderr })
+          ] }),
+          run.stdout === "" && run.stderr === "" && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", children: "\uFF08\u6CA1\u6709\u8F93\u51FA\uFF09" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-muted", children: [
+            "\u8FD0\u884C ",
+            run.id,
+            " \xB7 ",
+            formatTime(run.startedAt)
+          ] })
+        ] })
+      ] });
+    }
     function ActivityView(props) {
       const host = (0, import_react8.useRef)(null);
       const callbacksRef = (0, import_react8.useRef)(props.callbacks);
@@ -19023,42 +19183,85 @@ window.__ModuleLoader__.load({
       }, [activity.id, activity.revision]);
       return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { ref: host });
     }
+    function ActivityHistoryRow(props) {
+      const { activity } = props;
+      return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-history-row", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-history-main", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-history-title", children: activity.title }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-history-meta", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-badge", children: KIND_LABELS[activity.kind] ?? activity.kind }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: createdLabel(activity.createdAt) }),
+            activity.payload.type === "code-run" && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { children: [
+              "\u6700\u8FD1\u8FD0\u884C\uFF1A",
+              props.run === void 0 ? "\u5C1A\u672A\u8FD0\u884C" : RUN_STATUS_LABELS[props.run.status]
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-row", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: props.onRestore, children: "\u6062\u590D\u4E3A\u5F53\u524D" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: "ai-danger-button", disabled: props.busy, onClick: props.onDelete, children: "\u5220\u9664" })
+        ] })
+      ] });
+    }
     function ActivityTab(props) {
-      const selected = props.activities.find((activity) => activity.id === props.selectedActivityId) ?? props.activities[props.activities.length - 1];
-      const sorted = [...props.activities].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      const [showAll, setShowAll] = (0, import_react8.useState)(false);
+      const current = props.activities.find((activity) => activity.id === props.currentActivityId);
+      const history = props.activities.filter((activity) => activity.id !== current?.id).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      const visibleHistory = showAll ? history : history.slice(0, 10);
       return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { children: [
-        sorted.length > 1 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-activity-list", role: "tablist", "aria-label": "\u6559\u5B66\u6D3B\u52A8", children: sorted.map((activity) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-          "button",
-          {
-            type: "button",
-            className: "ai-small-button",
-            "data-active": activity.id === selected?.id,
-            onClick: () => props.onSelectActivity(activity.id),
-            title: activity.goal,
-            children: truncate(activity.title, 18)
-          },
-          activity.id
-        )) }),
-        selected === void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-empty", children: "\u6559\u5B66\u533A\u57DF\u8FD8\u7A7A\u7740\u3002\u7EE7\u7EED\u5BF9\u8BDD\uFF0C\u6559\u5E08\u4F1A\u5728\u8FD9\u91CC\u521B\u5EFA\u53EF\u4EA4\u4E92\u7684\u6D3B\u52A8\u3001\u56FE\u5F62\u3001\u63A8\u5BFC\u6216\u4EE3\u7801\u5B9E\u9A8C\uFF1B\u8FFD\u95EE\u65F6\u5B83\u4F1A\u4FDD\u7559\u5E76\u53EF\u7EE7\u7EED\u64CD\u4F5C\u3002" }),
-        selected !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+        current === void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-empty", children: "\u5F53\u524D\u6CA1\u6709\u8FDB\u884C\u4E2D\u7684\u6D3B\u52A8\u3002\u53EF\u4EE5\u5728\u4E0B\u65B9\u300C\u5386\u53F2\u6D3B\u52A8\u300D\u4E2D\u6062\u590D\u4E00\u4E2A\u7EE7\u7EED\u64CD\u4F5C\uFF0C\u6216\u7EE7\u7EED\u5BF9\u8BDD\u8BA9\u6559\u5E08\u521B\u5EFA\u65B0\u7684\u6D3B\u52A8\u3002" }),
+        current !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-current-activity", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-current-head", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-current-title", children: current.title }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-small-button",
+                disabled: props.busy,
+                onClick: props.onCollapseActivity,
+                "aria-label": "\u6536\u8D77\u5F53\u524D\u6D3B\u52A8",
+                children: "\u6536\u8D77\u5F53\u524D\u6D3B\u52A8"
+              }
+            )
+          ] }),
           /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
             ActivityView,
             {
-              activity: selected,
-              ...props.activityStates[selected.id] !== void 0 ? { state: props.activityStates[selected.id] } : {},
+              activity: current,
+              ...props.activityStates[current.id] !== void 0 ? { state: props.activityStates[current.id] } : {},
               callbacks: props.callbacks
             },
-            `${selected.id}:${selected.revision}`
+            `${current.id}:${current.revision}`
           ),
           /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-muted", style: { marginTop: 6 }, children: [
             "\u4FEE\u8BA2 v",
-            selected.revision,
+            current.revision,
             " \xB7 \u66F4\u65B0\u4E8E ",
-            selected.updatedAt.slice(11, 16),
-            selected.status === "archived" ? " \xB7 \u5DF2\u5F52\u6863" : "",
-            selected.revisionHistory !== void 0 && selected.revisionHistory.length > 0 ? ` \xB7 \u5386\u53F2 ${selected.revisionHistory.length} \u4E2A\u4FEE\u8BA2` : ""
+            formatTime(current.updatedAt),
+            current.status === "archived" ? " \xB7 \u5DF2\u5F52\u6863" : "",
+            current.revisionHistory !== void 0 && current.revisionHistory.length > 0 ? ` \xB7 \u5386\u53F2 ${current.revisionHistory.length} \u4E2A\u4FEE\u8BA2` : ""
           ] })
-        ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { marginTop: 12 }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(CollapsibleSection, { title: "\u5386\u53F2\u6D3B\u52A8", count: history.length, children: [
+          history.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", children: "\u8FD8\u6CA1\u6709\u5386\u53F2\u6D3B\u52A8\u3002" }),
+          visibleHistory.map((activity) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+            ActivityHistoryRow,
+            {
+              activity,
+              ...props.latestRuns[activity.id] !== void 0 ? { run: props.latestRuns[activity.id] } : {},
+              busy: props.busy,
+              onRestore: () => props.onRestoreActivity(activity.id),
+              onDelete: () => props.onRequestDeleteActivity(activity)
+            },
+            activity.id
+          )),
+          !showAll && history.length > 10 && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "ai-link-button", onClick: () => setShowAll(true), children: [
+            "\u663E\u793A\u5168\u90E8\uFF08",
+            history.length,
+            "\uFF09"
+          ] })
+        ] }) })
       ] });
     }
     function SourcesTab(props) {
@@ -19139,9 +19342,21 @@ window.__ModuleLoader__.load({
       ] });
     }
     function ExperimentsTab(props) {
-      const codeActivities = props.activities.filter(
-        (activity) => activity.payload.type === "code-run"
-      );
+      const [showAll, setShowAll] = (0, import_react8.useState)(false);
+      const [expanded, setExpanded] = (0, import_react8.useState)(/* @__PURE__ */ new Set());
+      const toggleExpanded = (id) => {
+        setExpanded((previous) => {
+          const next = new Set(previous);
+          if (next.has(id)) next.delete(id);
+          else next.add(id);
+          return next;
+        });
+      };
+      const isCode = (activity) => activity.payload.type === "code-run";
+      const current = props.activities.find((activity) => activity.id === props.currentActivityId);
+      const currentExperiment = current !== void 0 && isCode(current) ? current : void 0;
+      const history = props.activities.filter((activity) => isCode(activity) && activity.id !== currentExperiment?.id).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      const visibleHistory = showAll ? history : history.slice(0, 5);
       return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-row", style: { marginBottom: 6 }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("strong", { children: "\u5B9E\u9A8C\u73AF\u5883" }),
@@ -19187,36 +19402,79 @@ window.__ModuleLoader__.load({
           ] }, record.id)),
           props.environments.gaps.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("ul", { className: "ai-warning-list", children: props.environments.gaps.map((gap) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("li", { children: gap }, gap)) })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-row", style: { margin: "10px 0 6px" }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("strong", { children: "\u672C\u6B21\u4F1A\u8BDD\u7684\u4EE3\u7801\u5B9E\u9A8C" }) }),
-        codeActivities.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-empty", children: "\u5F53\u524D\u4F1A\u8BDD\u8FD8\u6CA1\u6709\u4EE3\u7801\u6D3B\u52A8\u3002" }),
-        codeActivities.map((activity) => {
-          const result = props.runResults[activity.id];
-          return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-env-row", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { children: [
-              activity.title,
-              " ",
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-badge", children: activity.payload.type === "code-run" ? activity.payload.language : "" })
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-row", style: { margin: "14px 0 6px" }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("strong", { children: "\u5F53\u524D\u5B9E\u9A8C" }) }),
+        currentExperiment === void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-empty", children: "\u5F53\u524D\u6D3B\u52A8\u4E0D\u662F\u4EE3\u7801\u5B9E\u9A8C\u3002\u53EF\u5728\u300C\u5386\u53F2\u5B9E\u9A8C\u300D\u4E2D\u6062\u590D\u4E00\u4E2A\u4EE3\u7801\u5B9E\u9A8C\uFF0C\u6216\u5728\u5BF9\u8BDD/\u5F53\u524D\u6D3B\u52A8\u4E2D\u8FD0\u884C\u4EE3\u7801\u3002" }),
+        currentExperiment !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-current-experiment", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-history-title", children: [
+            currentExperiment.title,
+            " ",
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-badge", children: currentExperiment.payload.language })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+            RunSummary,
+            {
+              run: props.latestRuns[currentExperiment.id],
+              expanded: expanded.has(currentExperiment.id),
+              onToggle: () => toggleExpanded(currentExperiment.id),
+              emptyText: "\u5C1A\u672A\u8FD0\u884C\uFF1B\u5728\u300C\u5F53\u524D\u6D3B\u52A8\u300D\u4E2D\u8FD0\u884C\u540E\u8FD9\u91CC\u663E\u793A\u771F\u5B9E\u8F93\u51FA\uFF08\u5237\u65B0\u540E\u4ECD\u4FDD\u7559\uFF09\u3002"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { style: { marginTop: 12 }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(CollapsibleSection, { title: "\u5386\u53F2\u5B9E\u9A8C", count: history.length, children: [
+          history.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", children: "\u8FD8\u6CA1\u6709\u5176\u4ED6\u4EE3\u7801\u5B9E\u9A8C\u3002" }),
+          visibleHistory.map((activity) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-history-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-history-main", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-history-title", children: [
+                activity.title,
+                " ",
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: "ai-badge", children: activity.payload.language })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-history-meta", children: createdLabel(activity.createdAt) }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+                RunSummary,
+                {
+                  run: props.latestRuns[activity.id],
+                  expanded: expanded.has(activity.id),
+                  onToggle: () => toggleExpanded(activity.id)
+                }
+              )
             ] }),
-            result === void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", children: "\u5C1A\u672A\u8FD0\u884C\uFF1B\u5728\u201C\u5F53\u524D\u6D3B\u52A8\u201D\u4E2D\u8FD0\u884C\u540E\u8FD9\u91CC\u663E\u793A\u771F\u5B9E\u8F93\u51FA\u3002" }),
-            result !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-muted", children: [
-              "\u72B6\u6001\uFF1A",
-              result.status,
-              result.exitCode !== void 0 ? ` \xB7 \u9000\u51FA\u7801 ${result.exitCode}` : "",
-              result.durationMs !== void 0 ? ` \xB7 ${result.durationMs}ms` : "",
-              result.verification !== void 0 ? ` \xB7 \u6821\u9A8C\uFF1A${result.verification}` : "",
-              result.runId !== void 0 ? ` \xB7 \u8FD0\u884C ${result.runId}` : ""
-            ] }),
-            result !== void 0 && result.stdout !== "" && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("pre", { style: { maxHeight: 140, overflow: "auto", fontSize: 11 }, children: result.stdout }),
-            result !== void 0 && result.stderr !== "" && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("pre", { style: { maxHeight: 140, overflow: "auto", fontSize: 11, color: "var(--dsw-alias-state-error-primary, #b91c1c)" }, children: result.stderr })
-          ] }, activity.id);
-        })
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-row", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: "ai-small-button",
+                  disabled: props.busy,
+                  onClick: () => props.onRestoreActivity(activity.id),
+                  children: "\u6062\u590D\u4E3A\u5F53\u524D"
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: "ai-danger-button",
+                  disabled: props.busy,
+                  onClick: () => props.onRequestDeleteActivity(activity),
+                  children: "\u5220\u9664"
+                }
+              )
+            ] })
+          ] }, activity.id)),
+          !showAll && history.length > 5 && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("button", { type: "button", className: "ai-link-button", onClick: () => setShowAll(true), children: [
+            "\u663E\u793A\u5168\u90E8\uFF08",
+            history.length,
+            "\uFF09"
+          ] })
+        ] }) })
       ] });
     }
     function NotesTab(props) {
-      const selected = props.activities.find((activity) => activity.id === props.selectedActivityId);
+      const selected = props.activities.find((activity) => activity.id === props.currentActivityId);
       const stored = props.courseDetail?.learning.notes ?? [];
       return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "ai-notes-area", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", style: { marginBottom: 4 }, children: selected !== void 0 ? `\u7B14\u8BB0\u7ED1\u5B9A\u5230\u5F53\u524D\u6D3B\u52A8\u300C${selected.title}\u300D\uFF0C\u968F\u6D3B\u52A8\u72B6\u6001\u4FDD\u5B58\u5230 Host\u3002` : "\u9009\u62E9\u4E00\u4E2A\u6D3B\u52A8\u540E\u53EF\u8BB0\u5F55\u7B14\u8BB0\u3002" }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "ai-muted", style: { marginBottom: 4 }, children: selected !== void 0 ? `\u7B14\u8BB0\u7ED1\u5B9A\u5230\u5F53\u524D\u6D3B\u52A8\u300C${selected.title}\u300D\uFF0C\u968F\u6D3B\u52A8\u72B6\u6001\u4FDD\u5B58\u5230 Host\u3002` : "\u5F53\u524D\u6CA1\u6709\u8FDB\u884C\u4E2D\u7684\u6D3B\u52A8\uFF1B\u53EF\u5148\u5728\u5386\u53F2\u6D3B\u52A8\u4E2D\u6062\u590D\u4E00\u4E2A\u6D3B\u52A8\u518D\u8BB0\u5F55\u7B14\u8BB0\u3002" }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
           "textarea",
           {
@@ -19269,7 +19527,7 @@ window.__ModuleLoader__.load({
           ["sources", "\u6765\u6E90"],
           ["experiments", "\u5B9E\u9A8C/\u8FD0\u884C\u7ED3\u679C"],
           ["notes", "\u7B14\u8BB0"]
-        ].map(([key, label]) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+        ].map(([key, label]) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
           "button",
           {
             type: "button",
@@ -19278,10 +19536,7 @@ window.__ModuleLoader__.load({
             "aria-selected": tab === key,
             "data-active": tab === key,
             onClick: () => props.onSelectTab(key),
-            children: [
-              label,
-              key === "activity" && props.activities.length > 0 ? ` (${props.activities.length})` : ""
-            ]
+            children: label
           },
           key
         )) }),
@@ -19290,10 +19545,14 @@ window.__ModuleLoader__.load({
             ActivityTab,
             {
               activities: props.activities,
-              ...props.selectedActivityId !== void 0 ? { selectedActivityId: props.selectedActivityId } : {},
+              ...props.currentActivityId !== void 0 ? { currentActivityId: props.currentActivityId } : {},
               activityStates: props.activityStates,
+              latestRuns: props.latestRuns,
               callbacks,
-              onSelectActivity: props.onSelectActivity
+              busy: props.busy,
+              onRestoreActivity: props.onRestoreActivity,
+              onCollapseActivity: props.onCollapseActivity,
+              onRequestDeleteActivity: props.onRequestDeleteActivity
             }
           ),
           tab === "sources" && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
@@ -19311,15 +19570,19 @@ window.__ModuleLoader__.load({
             {
               ...props.environments !== void 0 ? { environments: props.environments } : {},
               activities: props.activities,
-              runResults: props.runResults,
-              onLoadEnvironments: props.onLoadEnvironments
+              ...props.currentActivityId !== void 0 ? { currentActivityId: props.currentActivityId } : {},
+              latestRuns: props.latestRuns,
+              busy: props.busy,
+              onLoadEnvironments: props.onLoadEnvironments,
+              onRestoreActivity: props.onRestoreActivity,
+              onRequestDeleteActivity: props.onRequestDeleteActivity
             }
           ),
           tab === "notes" && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
             NotesTab,
             {
               activities: props.activities,
-              ...props.selectedActivityId !== void 0 ? { selectedActivityId: props.selectedActivityId } : {},
+              ...props.currentActivityId !== void 0 ? { currentActivityId: props.currentActivityId } : {},
               notes: props.notes,
               busy: props.busy,
               ...props.courseDetail !== void 0 ? { courseDetail: props.courseDetail } : {},
@@ -19422,8 +19685,9 @@ window.__ModuleLoader__.load({
       const activeRuns = (0, import_react10.useRef)({});
       const saveTimers = (0, import_react10.useRef)({});
       const [online, setOnline] = (0, import_react10.useState)(() => typeof navigator === "undefined" ? true : navigator.onLine !== false);
-      const [runResults, setRunResults] = (0, import_react10.useState)({});
       const [deleteTarget, setDeleteTarget] = (0, import_react10.useState)(void 0);
+      const [activityDeleteTarget, setActivityDeleteTarget] = (0, import_react10.useState)(void 0);
+      const [deleteActivityBusy, setDeleteActivityBusy] = (0, import_react10.useState)(false);
       const [goalsEditor, setGoalsEditor] = (0, import_react10.useState)(void 0);
       const [savingGoals, setSavingGoals] = (0, import_react10.useState)(false);
       const [deleteSources, setDeleteSources] = (0, import_react10.useState)(false);
@@ -19522,15 +19786,25 @@ window.__ModuleLoader__.load({
           setDeleting(false);
         }
       }, [deleteTarget, deleteSources, state.courseDetail, selectCourse, notify]);
+      const loadLatestRuns = (0, import_react10.useCallback)(async (sessionId) => {
+        try {
+          const { runs } = await apiGet("runs.latest", { sessionId });
+          if (mounted.current && stateRef.current.session?.session.id === sessionId) {
+            dispatch({ type: "runs/loaded", runs });
+          }
+        } catch {
+        }
+      }, []);
       const selectSession = (0, import_react10.useCallback)(async (sessionId) => {
         try {
           const view = await apiGet("sessions.get", { sessionId });
           if (!mounted.current) return;
           dispatch({ type: "session/loaded", session: view });
+          void loadLatestRuns(sessionId);
         } catch (error) {
           notify({ kind: "error", message: `\u6062\u590D\u5B66\u4E60\u4F1A\u8BDD\u5931\u8D25\uFF1A${describeError(error)}` });
         }
-      }, [notify]);
+      }, [notify, loadLatestRuns]);
       const createSession = (0, import_react10.useCallback)(async (courseId) => {
         try {
           await apiPost("sessions.create", { courseId });
@@ -19718,7 +19992,7 @@ window.__ModuleLoader__.load({
             verification: run.verification,
             ...run.resourceNote !== void 0 ? { resourceNote: run.resourceNote } : {}
           };
-          if (mounted.current) setRunResults((previous) => ({ ...previous, [activity.id]: view }));
+          if (mounted.current) dispatch({ type: "runs/loaded", runs: [run] });
           return view;
         } catch (error) {
           const view = {
@@ -19727,7 +20001,6 @@ window.__ModuleLoader__.load({
             stderr: "",
             errorMessage: `\u8FD0\u884C\u672A\u5F00\u59CB\uFF1A${describeError(error)}`
           };
-          if (mounted.current) setRunResults((previous) => ({ ...previous, [activity.id]: view }));
           return view;
         } finally {
           delete activeRuns.current[clientRunId];
@@ -19751,6 +20024,69 @@ window.__ModuleLoader__.load({
           }
         }).catch((error) => notify({ kind: "warning", message: `\u53D6\u6D88\u8FD0\u884C\u5931\u8D25\uFF1A${describeError(error)}` }));
       }, [notify]);
+      const applyActivityPosition = (0, import_react10.useCallback)(async (activityId) => {
+        const session = stateRef.current.session;
+        if (session === void 0) return false;
+        try {
+          const { session: updated } = await apiPost("sessions.position", {
+            sessionId: session.session.id,
+            activityId: activityId === null ? null : activityId
+          });
+          if (!mounted.current) return false;
+          dispatch({ type: "session/position", session: updated });
+          return true;
+        } catch (error) {
+          notify({ kind: "error", message: `\u66F4\u65B0\u5F53\u524D\u6D3B\u52A8\u5931\u8D25\uFF1A${describeError(error)}` });
+          return false;
+        }
+      }, [notify]);
+      const restoreActivity = (0, import_react10.useCallback)((activityId) => {
+        void (async () => {
+          if (await applyActivityPosition(activityId)) {
+            dispatch({ type: "ui/tab", tab: "activity" });
+            notify({ kind: "info", message: "\u5DF2\u6062\u590D\u4E3A\u5F53\u524D\u6D3B\u52A8\uFF1B\u4E4B\u540E\u7684\u6559\u5B66\u8FFD\u95EE\u4F1A\u7EE7\u7EED\u57FA\u4E8E\u5B83\u3002" });
+          }
+        })();
+      }, [applyActivityPosition, notify]);
+      const collapseActivity = (0, import_react10.useCallback)(() => {
+        void (async () => {
+          if (await applyActivityPosition(null)) {
+            notify({ kind: "info", message: "\u5DF2\u6536\u8D77\u5F53\u524D\u6D3B\u52A8\uFF1B\u53EF\u5728\u300C\u5386\u53F2\u6D3B\u52A8\u300D\u4E2D\u6062\u590D\u7EE7\u7EED\u64CD\u4F5C\u3002" });
+          }
+        })();
+      }, [applyActivityPosition, notify]);
+      const requestDeleteActivity = (0, import_react10.useCallback)((activity) => {
+        setActivityDeleteTarget(activity);
+      }, []);
+      const confirmDeleteActivity = (0, import_react10.useCallback)(async () => {
+        const target = activityDeleteTarget;
+        if (target === void 0) return;
+        setDeleteActivityBusy(true);
+        try {
+          const result = await apiPost("activity.delete", {
+            activityId: target.id,
+            expectedRevision: target.revision
+          });
+          if (!mounted.current) return;
+          dispatch({ type: "activity/removed", activityId: target.id, positionCleared: result.positionCleared });
+          setActivityDeleteTarget(void 0);
+          notify({
+            kind: "info",
+            message: `\u5DF2\u5220\u9664\u6D3B\u52A8\u300C${target.title}\u300D${result.removedRuns > 0 ? `\u53CA\u5176 ${result.removedRuns} \u6761\u8FD0\u884C\u8BB0\u5F55` : ""}\u3002\u5B66\u4E60\u5C1D\u8BD5\u4E0E\u638C\u63E1\u8BB0\u5F55\u4FDD\u7559\uFF0C\u539F\u59CB\u8D44\u6599\u672A\u88AB\u4FEE\u6539\u3002`
+          });
+        } catch (error) {
+          notify({ kind: "error", message: `\u5220\u9664\u6D3B\u52A8\u5931\u8D25\uFF1A${describeError(error)}` });
+        } finally {
+          setDeleteActivityBusy(false);
+        }
+      }, [activityDeleteTarget, notify]);
+      const onChatActivityClick = (0, import_react10.useCallback)((activityId) => {
+        if (activityId === stateRef.current.selectedActivityId) {
+          dispatch({ type: "ui/tab", tab: "activity" });
+          return;
+        }
+        restoreActivity(activityId);
+      }, [restoreActivity]);
       const onHelpExposure = (0, import_react10.useCallback)((activity, help) => {
         const previous = helpByActivity.current[activity.id];
         const merged = {
@@ -20219,7 +20555,7 @@ window.__ModuleLoader__.load({
                   void stopGeneration();
                 },
                 onQuickAction: quickAction,
-                onActivityClick: (activityId) => dispatch({ type: "ui/select-activity", activityId }),
+                onActivityClick: onChatActivityClick,
                 onEvidenceClick,
                 onRetry: retryLast,
                 onDismissError: () => dispatch({ type: "error/clear" })
@@ -20229,21 +20565,23 @@ window.__ModuleLoader__.load({
               TeachingArea,
               {
                 activities: state.activities,
-                ...state.selectedActivityId !== void 0 ? { selectedActivityId: state.selectedActivityId } : {},
+                ...state.selectedActivityId !== void 0 ? { currentActivityId: state.selectedActivityId } : {},
                 ...state.selectedSourceDocumentId !== void 0 ? { selectedDocumentId: state.selectedSourceDocumentId } : {},
                 activityStates: state.activityStates,
+                latestRuns: state.latestRuns,
                 selectedTab: state.selectedTab,
                 ...detail !== void 0 ? { courseDetail: detail } : {},
                 ...state.session !== void 0 ? { session: state.session } : {},
                 ...state.environments !== void 0 ? { environments: state.environments } : {},
-                runResults,
                 notes: notesDraft,
                 busy,
                 onSelectTab: (tab) => {
                   dispatch({ type: "ui/tab", tab });
                   if (tab === "experiments" && state.environments === void 0) loadEnvironments();
                 },
-                onSelectActivity: (activityId) => dispatch({ type: "ui/select-activity", activityId }),
+                onRestoreActivity: restoreActivity,
+                onCollapseActivity: collapseActivity,
+                onRequestDeleteActivity: requestDeleteActivity,
                 onStateChange: persistActivityState,
                 onRunCode,
                 onCancelRun,
@@ -20291,6 +20629,43 @@ window.__ModuleLoader__.load({
           /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-modal-actions", children: [
             /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-small-button", disabled: savingGoals, onClick: () => setGoalsEditor(void 0), children: "\u53D6\u6D88" }),
             /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-primary-button", disabled: savingGoals, onClick: () => void saveGoals(), children: savingGoals ? "\u4FDD\u5B58\u4E2D\u2026" : "\u4FDD\u5B58\u76EE\u6807" })
+          ] })
+        ] }) }),
+        activityDeleteTarget !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u5220\u9664\u6D3B\u52A8\u786E\u8BA4", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-modal", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("h3", { children: [
+            "\u5220\u9664\u6D3B\u52A8\u300C",
+            activityDeleteTarget.title,
+            "\u300D\uFF1F"
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("p", { className: "ai-muted", style: { margin: "0 0 10px" }, children: [
+            "\u5C06\u5220\u9664\u8BE5\u6D3B\u52A8\u7684\u5B9A\u4E49\u4E0E\u7F16\u8F91\u72B6\u6001",
+            activityDeleteTarget.kind === "code-run" ? "\u3001\u8FD0\u884C\u8BB0\u5F55" : "",
+            "\u3002",
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("strong", { children: "\u5B66\u4E60\u5C1D\u8BD5\u4E0E\u638C\u63E1\u8BB0\u5F55\u4FDD\u7559\uFF0C\u4F60\u7684\u539F\u59CB\u8D44\u6599\u6587\u4EF6\u4E0D\u4F1A\u88AB\u4FEE\u6539\u3002" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-modal-actions", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-small-button",
+                disabled: deleteActivityBusy,
+                onClick: () => setActivityDeleteTarget(void 0),
+                children: "\u53D6\u6D88"
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-danger-button",
+                disabled: deleteActivityBusy,
+                onClick: () => {
+                  void confirmDeleteActivity();
+                },
+                children: deleteActivityBusy ? "\u5220\u9664\u4E2D\u2026" : "\u786E\u8BA4\u5220\u9664"
+              }
+            )
           ] })
         ] }) }),
         deleteTarget !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u5220\u9664\u8BFE\u7A0B\u786E\u8BA4", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-modal", children: [

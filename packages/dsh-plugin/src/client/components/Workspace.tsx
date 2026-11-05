@@ -76,8 +76,10 @@ export function TeachingWorkspace(props: {
   const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const [online, setOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine !== false)
-  const [runResults, setRunResults] = useState<Record<string, CodeRunResultView>>({})
   const [deleteTarget, setDeleteTarget] = useState<{ readonly id: string; readonly title: string } | undefined>(undefined)
+  /** Pending activity deletion awaiting the shared confirm modal. */
+  const [activityDeleteTarget, setActivityDeleteTarget] = useState<LessonActivity | undefined>(undefined)
+  const [deleteActivityBusy, setDeleteActivityBusy] = useState(false)
   const [goalsEditor, setGoalsEditor] = useState<{ readonly courseId: string; readonly goals: string; readonly background: string } | undefined>(undefined)
   const [savingGoals, setSavingGoals] = useState(false)
   const [deleteSources, setDeleteSources] = useState(false)
@@ -203,16 +205,31 @@ export function TeachingWorkspace(props: {
   }, [deleteTarget, deleteSources, state.courseDetail, selectCourse, notify])
 
 
+  /** Load the latest persisted run per activity for the experiments tab. */
+  const loadLatestRuns = useCallback(async (sessionId: string): Promise<void> => {
+    try {
+      const { runs } = await apiGet('runs.latest', { sessionId: sessionId as never })
+      // Ignore late responses after the student switched sessions again.
+      if (mounted.current && stateRef.current.session?.session.id === sessionId) {
+        dispatch({ type: 'runs/loaded', runs })
+      }
+    } catch {
+      // Runs are supplementary: a failure must not block the teaching session.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const selectSession = useCallback(async (sessionId: string): Promise<void> => {
     try {
       const view = await apiGet('sessions.get', { sessionId: sessionId as never })
       if (!mounted.current) return
       dispatch({ type: 'session/loaded', session: view })
+      void loadLatestRuns(sessionId)
     } catch (error) {
       notify({ kind: 'error', message: `恢复学习会话失败：${describeError(error)}` })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notify])
+  }, [notify, loadLatestRuns])
 
   const createSession = useCallback(async (courseId: string): Promise<void> => {
     try {
@@ -432,7 +449,9 @@ export function TeachingWorkspace(props: {
         verification: run.verification,
         ...(run.resourceNote !== undefined ? { resourceNote: run.resourceNote } : {}),
       }
-      if (mounted.current) setRunResults(previous => ({ ...previous, [activity.id]: view }))
+      // Persisted run: the experiments tab and reloads read this map, not the
+      // transient renderer output.
+      if (mounted.current) dispatch({ type: 'runs/loaded', runs: [run] })
       return view
     } catch (error) {
       const view: CodeRunResultView = {
@@ -441,7 +460,6 @@ export function TeachingWorkspace(props: {
         stderr: '',
         errorMessage: `运行未开始：${describeError(error)}`,
       }
-      if (mounted.current) setRunResults(previous => ({ ...previous, [activity.id]: view }))
       return view
     } finally {
       delete activeRuns.current[clientRunId]
@@ -470,6 +488,79 @@ export function TeachingWorkspace(props: {
       })
       .catch((error: unknown) => notify({ kind: 'warning', message: `取消运行失败：${describeError(error)}` }))
   }, [notify])
+
+  /** Persist the current activity in `session.position` (null collapses it). */
+  const applyActivityPosition = useCallback(async (activityId: string | null): Promise<boolean> => {
+    const session = stateRef.current.session
+    if (session === undefined) return false
+    try {
+      const { session: updated } = await apiPost('sessions.position', {
+        sessionId: session.session.id,
+        activityId: (activityId === null ? null : activityId) as never,
+      })
+      if (!mounted.current) return false
+      dispatch({ type: 'session/position', session: updated })
+      return true
+    } catch (error) {
+      notify({ kind: 'error', message: `更新当前活动失败：${describeError(error)}` })
+      return false
+    }
+  }, [notify])
+
+  /** Restore a historical activity as the current one. */
+  const restoreActivity = useCallback((activityId: string): void => {
+    void (async () => {
+      if (await applyActivityPosition(activityId)) {
+        dispatch({ type: 'ui/tab', tab: 'activity' })
+        notify({ kind: 'info', message: '已恢复为当前活动；之后的教学追问会继续基于它。' })
+      }
+    })()
+  }, [applyActivityPosition, notify])
+
+  /** Collapse the current activity; it stays available in history. */
+  const collapseActivity = useCallback((): void => {
+    void (async () => {
+      if (await applyActivityPosition(null)) {
+        notify({ kind: 'info', message: '已收起当前活动；可在「历史活动」中恢复继续操作。' })
+      }
+    })()
+  }, [applyActivityPosition, notify])
+
+  const requestDeleteActivity = useCallback((activity: LessonActivity): void => {
+    setActivityDeleteTarget(activity)
+  }, [])
+
+  const confirmDeleteActivity = useCallback(async (): Promise<void> => {
+    const target = activityDeleteTarget
+    if (target === undefined) return
+    setDeleteActivityBusy(true)
+    try {
+      const result = await apiPost('activity.delete', {
+        activityId: target.id,
+        expectedRevision: target.revision,
+      })
+      if (!mounted.current) return
+      dispatch({ type: 'activity/removed', activityId: target.id, positionCleared: result.positionCleared })
+      setActivityDeleteTarget(undefined)
+      notify({
+        kind: 'info',
+        message: `已删除活动「${target.title}」${result.removedRuns > 0 ? `及其 ${result.removedRuns} 条运行记录` : ''}。学习尝试与掌握记录保留，原始资料未被修改。`,
+      })
+    } catch (error) {
+      notify({ kind: 'error', message: `删除活动失败：${describeError(error)}` })
+    } finally {
+      setDeleteActivityBusy(false)
+    }
+  }, [activityDeleteTarget, notify])
+
+  /** Chat activity chips restore non-current activities before selecting. */
+  const onChatActivityClick = useCallback((activityId: string): void => {
+    if (activityId === stateRef.current.selectedActivityId) {
+      dispatch({ type: 'ui/tab', tab: 'activity' })
+      return
+    }
+    restoreActivity(activityId)
+  }, [restoreActivity])
 
   const onHelpExposure = useCallback((activity: LessonActivity, help: {
     readonly level: 0 | 1 | 2 | 3 | 'full-answer'
@@ -991,28 +1082,30 @@ export function TeachingWorkspace(props: {
               onSend={text => { void sendMessage(text) }}
               onStop={() => { void stopGeneration() }}
               onQuickAction={quickAction}
-              onActivityClick={activityId => dispatch({ type: 'ui/select-activity', activityId })}
+              onActivityClick={onChatActivityClick}
               onEvidenceClick={onEvidenceClick}
               onRetry={retryLast}
               onDismissError={() => dispatch({ type: 'error/clear' })}
             />
             <TeachingArea
               activities={state.activities}
-              {...(state.selectedActivityId !== undefined ? { selectedActivityId: state.selectedActivityId } : {})}
+              {...(state.selectedActivityId !== undefined ? { currentActivityId: state.selectedActivityId } : {})}
               {...(state.selectedSourceDocumentId !== undefined ? { selectedDocumentId: state.selectedSourceDocumentId } : {})}
               activityStates={state.activityStates}
+              latestRuns={state.latestRuns}
               selectedTab={state.selectedTab}
               {...(detail !== undefined ? { courseDetail: detail } : {})}
               {...(state.session !== undefined ? { session: state.session } : {})}
               {...(state.environments !== undefined ? { environments: state.environments } : {})}
-              runResults={runResults}
               notes={notesDraft}
               busy={busy}
               onSelectTab={tab => {
                 dispatch({ type: 'ui/tab', tab })
                 if (tab === 'experiments' && state.environments === undefined) loadEnvironments()
               }}
-              onSelectActivity={activityId => dispatch({ type: 'ui/select-activity', activityId })}
+              onRestoreActivity={restoreActivity}
+              onCollapseActivity={collapseActivity}
+              onRequestDeleteActivity={requestDeleteActivity}
               onStateChange={persistActivityState}
               onRunCode={onRunCode}
               onCancelRun={onCancelRun}
@@ -1057,6 +1150,35 @@ export function TeachingWorkspace(props: {
               <button type="button" className="ai-small-button" disabled={savingGoals} onClick={() => setGoalsEditor(undefined)}>取消</button>
               <button type="button" className="ai-primary-button" disabled={savingGoals} onClick={() => void saveGoals()}>
                 {savingGoals ? '保存中…' : '保存目标'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {activityDeleteTarget !== undefined && (
+        <div className="ai-modal-overlay" role="dialog" aria-modal="true" aria-label="删除活动确认">
+          <div className="ai-modal">
+            <h3>删除活动「{activityDeleteTarget.title}」？</h3>
+            <p className="ai-muted" style={{ margin: '0 0 10px' }}>
+              将删除该活动的定义与编辑状态{activityDeleteTarget.kind === 'code-run' ? '、运行记录' : ''}。
+              <strong>学习尝试与掌握记录保留，你的原始资料文件不会被修改。</strong>
+            </p>
+            <div className="ai-modal-actions">
+              <button
+                type="button"
+                className="ai-small-button"
+                disabled={deleteActivityBusy}
+                onClick={() => setActivityDeleteTarget(undefined)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="ai-danger-button"
+                disabled={deleteActivityBusy}
+                onClick={() => { void confirmDeleteActivity() }}
+              >
+                {deleteActivityBusy ? '删除中…' : '确认删除'}
               </button>
             </div>
           </div>

@@ -8,8 +8,9 @@
  */
 import type {
   ActivityState, AppError, BootstrapInfo, ChatMessage, ChatStreamEvent, CourseDetail,
-  CourseDraftView, CourseSummary, EnvironmentDirectory, EvidenceReference, LearningStage,
-  LessonActivity, MasteryRecord, ReviewItem, SessionSummary, SessionView, TaskSnapshot,
+  CourseDraftView, CourseSummary, EnvironmentDirectory, EvidenceReference, ExperimentRun,
+  LearningStage, LessonActivity, MasteryRecord, ReviewItem, SessionSummary, SessionView,
+  TaskSnapshot, TeachingSession,
 } from '@deepseek-teaching/core/contracts'
 
 /** Lifecycle of the whole panel. */
@@ -49,6 +50,8 @@ export interface WorkspaceState {
   readonly activities: readonly LessonActivity[]
   /** Student-editable activity state keyed by activity id. */
   readonly activityStates: Readonly<Record<string, ActivityState>>
+  /** Latest persisted run per activity id (from `runs.latest`). */
+  readonly latestRuns: Readonly<Record<string, ExperimentRun>>
   readonly mastery: readonly MasteryRecord[]
   readonly review: readonly ReviewItem[]
   readonly chat: ChatStreamState
@@ -71,6 +74,7 @@ export const INITIAL_WORKSPACE_STATE: WorkspaceState = {
   messages: [],
   activities: [],
   activityStates: {},
+  latestRuns: {},
   mastery: [],
   review: [],
   chat: { status: 'idle', text: '', evidence: [] },
@@ -92,6 +96,9 @@ export type WorkspaceAction =
   | { readonly type: 'activity/upserted'; readonly activity: LessonActivity }
   | { readonly type: 'activity/state'; readonly state: ActivityState }
   | { readonly type: 'activity/states'; readonly states: readonly ActivityState[] }
+  | { readonly type: 'activity/removed'; readonly activityId: string; readonly positionCleared?: boolean }
+  | { readonly type: 'runs/loaded'; readonly runs: readonly ExperimentRun[] }
+  | { readonly type: 'session/position'; readonly session: TeachingSession }
   | { readonly type: 'learning/updated'; readonly mastery?: readonly MasteryRecord[]; readonly review?: readonly ReviewItem[] }
   | { readonly type: 'chat/stream-event'; readonly event: ChatStreamEvent }
   | { readonly type: 'chat/cancel-requested' }
@@ -280,6 +287,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         messages: [],
         activities: [],
         activityStates: {},
+        latestRuns: {},
         mastery: [],
         review: [],
         selectedActivityId: undefined,
@@ -291,10 +299,13 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
     case 'session/loaded': {
       const activityStates: Record<string, ActivityState> = {}
       for (const activityState of action.session.states) activityStates[activityState.activityId] = activityState
+      // The current activity is exactly `session.position.activityId`; there is
+      // deliberately no "latest activity" fallback, so a collapsed current
+      // activity stays collapsed after refresh.
       const positionActivityId = action.session.session.position.activityId
       const selected = action.session.activities.some(activity => activity.id === positionActivityId)
         ? positionActivityId
-        : latestActivity(action.session.activities)?.id
+        : undefined
       return {
         ...state,
         phase: 'ready',
@@ -302,6 +313,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         messages: [...action.session.messages],
         activities: [...action.session.activities],
         activityStates,
+        latestRuns: {},
         mastery: [...action.session.mastery],
         review: [...action.session.review],
         selectedActivityId: selected,
@@ -317,6 +329,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         messages: [],
         activities: [],
         activityStates: {},
+        latestRuns: {},
         mastery: [],
         review: [],
         selectedActivityId: undefined,
@@ -337,6 +350,49 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       const next: Record<string, ActivityState> = { ...state.activityStates }
       for (const activityState of action.states) next[activityState.activityId] = activityState
       return { ...state, activityStates: next }
+    }
+    case 'activity/removed': {
+      const activities = state.activities.filter(activity => activity.id !== action.activityId)
+      const remainingStates: Record<string, ActivityState> = {}
+      for (const [id, activityState] of Object.entries(state.activityStates)) {
+        if (id !== action.activityId) remainingStates[id] = activityState
+      }
+      const remainingRuns: Record<string, ExperimentRun> = {}
+      for (const [id, run] of Object.entries(state.latestRuns)) {
+        if (id !== action.activityId) remainingRuns[id] = run
+      }
+      return {
+        ...state,
+        activities,
+        session: state.session === undefined ? state.session : {
+          ...state.session,
+          activities: state.session.activities.filter(activity => activity.id !== action.activityId),
+        },
+        activityStates: remainingStates,
+        latestRuns: remainingRuns,
+        selectedActivityId: state.selectedActivityId === action.activityId ? undefined : state.selectedActivityId,
+      }
+    }
+    case 'runs/loaded': {
+      const next: Record<string, ExperimentRun> = { ...state.latestRuns }
+      for (const run of action.runs) {
+        if (run.activityId === undefined) continue
+        next[run.activityId] = run
+      }
+      return { ...state, latestRuns: next }
+    }
+    case 'session/position': {
+      if (state.session === undefined) return state
+      const positionActivityId = action.session.position.activityId
+      const selected = state.activities.some(activity => activity.id === positionActivityId)
+        ? positionActivityId
+        : undefined
+      return {
+        ...state,
+        session: { ...state.session, session: action.session },
+        selectedActivityId: selected,
+        ...(selected !== undefined ? { selectedTab: 'activity' as const } : {}),
+      }
     }
     case 'learning/updated':
       return {

@@ -412,4 +412,132 @@ describe('teaching host routes', () => {
     assert.equal((stale.json as { error: { code: string } }).error.code, 'conflict')
   })
 
+  it('serves the newest persisted run per activity and scopes runs to the session', async () => {
+    const harness = await createHarness([{ kind: 'text', text: DRAFT_REPLY }])
+    const { courseId } = await preparedCourse(harness)
+    const session = unwrap<{ session: { id: string } }>((
+      await harness.call('sessions.create', { body: { courseId } })
+    ).json)
+    const other = unwrap<{ session: { id: string } }>((
+      await harness.call('sessions.create', { body: { courseId } })
+    ).json)
+    const first = { ...quizActivity(session.session.id, courseId), id: 'act-run-a' }
+    const second = { ...quizActivity(session.session.id, courseId), id: 'act-run-b' }
+    await harness.services.sessions.saveActivity(first as never)
+    await harness.services.sessions.saveActivity(second as never)
+    function runRecord(id: string, sessionId: string, activityId: string, startedAt: string): Record<string, unknown> {
+      return {
+        id, sessionId, activityId, environmentId: 'env-python', language: 'python',
+        code: 'print(1)', startedAt, endedAt: startedAt, status: 'succeeded',
+        stdout: '1\n', stderr: '', exitCode: 0, durationMs: 10,
+        verification: 'objective', limits: { timeoutMs: 10_000 },
+      }
+    }
+    const runs = [
+      runRecord('run-a-1', session.session.id, 'act-run-a', '2026-11-04T08:00:00.000Z'),
+      runRecord('run-a-2', session.session.id, 'act-run-a', '2026-11-04T08:05:00.000Z'),
+      runRecord('run-b-1', session.session.id, 'act-run-b', '2026-11-04T08:02:00.000Z'),
+      runRecord('run-other', other.session.id, 'act-run-a', '2026-11-04T09:00:00.000Z'),
+    ]
+    for (const run of runs) await harness.services.state.writeJson(`runs/${String(run.id)}.json`, run)
+    const latest = unwrap<{ runs: { id: string; activityId: string }[] }>((
+      await harness.call('runs.latest', { method: 'GET', query: { sessionId: session.session.id } })
+    ).json)
+    assert.equal(latest.runs.length, 2)
+    assert.equal(latest.runs.find(run => run.activityId === 'act-run-a')?.id, 'run-a-2')
+    assert.equal(latest.runs.find(run => run.activityId === 'act-run-b')?.id, 'run-b-1')
+    assert.ok(!latest.runs.some(run => run.id === 'run-other'), 'other sessions must not leak runs')
+    const missing = await harness.call('runs.latest', { method: 'GET', query: { sessionId: 'sess-nope' } })
+    assert.equal((missing.json as { error: { code: string } }).error.code, 'not-found')
+  })
+
+  it('deletes one activity with its state and runs, keeping attempts and clearing the position', async () => {
+    const harness = await createHarness([{ kind: 'text', text: DRAFT_REPLY }])
+    const { courseId } = await preparedCourse(harness)
+    const session = unwrap<{ session: { id: string } }>((
+      await harness.call('sessions.create', { body: { courseId } })
+    ).json)
+    const sessionId = session.session.id
+    const activity = { ...quizActivity(sessionId, courseId), id: 'act-delete-1' }
+    await harness.services.sessions.saveActivity(activity as never)
+    await harness.services.sessions.saveActivityState({
+      activityId: activity.id, activityRevision: 1, code: 'print(1)', updatedAt: new Date().toISOString(),
+    } as never)
+    const attempt = await harness.call('attempts.submit', {
+      body: {
+        sessionId,
+        activityId: activity.id,
+        activityRevision: 1,
+        prompt: '选择',
+        answerText: '（选择 B）',
+        helpLevel: 0,
+        answerRevealed: false,
+        selectedOptionIds: ['B'],
+      },
+    })
+    assert.equal((attempt.json as { ok: boolean }).ok, true, 'attempt is recorded before deletion')
+    const positioned = await harness.call('sessions.position', { body: { sessionId, activityId: activity.id } })
+    assert.equal((positioned.json as { ok: boolean }).ok, true)
+    await harness.services.state.writeJson('runs/run-del-1.json', {
+      id: 'run-del-1', sessionId, activityId: activity.id, environmentId: 'env-python',
+      language: 'python', code: 'print(1)', startedAt: '2026-11-04T08:00:00.000Z',
+      status: 'succeeded', stdout: '1\n', stderr: '', exitCode: 0, durationMs: 10,
+      verification: 'objective', limits: { timeoutMs: 10_000 },
+    })
+    const deleted = unwrap<{ activityId: string; removedRuns: number; positionCleared: boolean }>((
+      await harness.call('activity.delete', { body: { activityId: activity.id } })
+    ).json)
+    assert.equal(deleted.activityId, activity.id)
+    assert.equal(deleted.removedRuns, 1)
+    assert.equal(deleted.positionCleared, true)
+    const gone = await harness.call('activity.get', { method: 'GET', query: { activityId: activity.id } })
+    assert.equal((gone.json as { error: { code: string } }).error.code, 'not-found')
+    const runsAfter = unwrap<{ runs: unknown[] }>((
+      await harness.call('runs.latest', { method: 'GET', query: { sessionId } })
+    ).json)
+    assert.equal(runsAfter.runs.length, 0)
+    const view = unwrap<{ session: { position: { activityId?: string } }; activities: unknown[] }>((
+      await harness.call('sessions.get', { method: 'GET', query: { sessionId } })
+    ).json)
+    assert.equal(view.session.position.activityId, undefined)
+    assert.equal(view.activities.length, 0)
+    const attempts = unwrap<{ attempts: unknown[] }>((
+      await harness.call('attempts.list', { method: 'GET', query: { sessionId } })
+    ).json)
+    assert.equal(attempts.attempts.length, 1, 'learning evidence survives activity deletion')
+    const missing = await harness.call('activity.delete', { body: { activityId: 'act-nope' } })
+    assert.equal((missing.json as { error: { code: string } }).error.code, 'not-found')
+    const staleTarget = { ...quizActivity(sessionId, courseId), id: 'act-delete-2' }
+    await harness.services.sessions.saveActivity(staleTarget as never)
+    const stale = await harness.call('activity.delete', {
+      body: { activityId: staleTarget.id, expectedRevision: 99 },
+    })
+    assert.equal((stale.json as { error: { code: string } }).error.code, 'conflict')
+  })
+
+  it('rejects positions pointing at activities from another session and clears on null', async () => {
+    const harness = await createHarness([{ kind: 'text', text: DRAFT_REPLY }])
+    const { courseId } = await preparedCourse(harness)
+    const first = unwrap<{ session: { id: string } }>((
+      await harness.call('sessions.create', { body: { courseId } })
+    ).json)
+    const second = unwrap<{ session: { id: string } }>((
+      await harness.call('sessions.create', { body: { courseId } })
+    ).json)
+    const activity = { ...quizActivity(first.session.id, courseId), id: 'act-position-1' }
+    await harness.services.sessions.saveActivity(activity as never)
+    const foreign = await harness.call('sessions.position', {
+      body: { sessionId: second.session.id, activityId: activity.id },
+    })
+    assert.equal((foreign.json as { error: { code: string } }).error.code, 'not-found')
+    const accepted = unwrap<{ session: { position: { activityId?: string } } }>((
+      await harness.call('sessions.position', { body: { sessionId: first.session.id, activityId: activity.id } })
+    ).json)
+    assert.equal(accepted.session.position.activityId, activity.id)
+    const cleared = unwrap<{ session: { position: { activityId?: string } } }>((
+      await harness.call('sessions.position', { body: { sessionId: first.session.id, activityId: null } })
+    ).json)
+    assert.equal(cleared.session.position.activityId, undefined)
+  })
+
 })
