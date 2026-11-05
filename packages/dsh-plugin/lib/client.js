@@ -322,6 +322,28 @@ window.__ModuleLoader__.load({
     .ai-badge[data-chapter-role="appendix"] { border-style: dashed; opacity: 0.85; }
     .ai-badge[data-chapter-role="tool"] { color: var(--dsw-alias-state-warn-primary, #b45309);
       border-color: currentColor; opacity: 1; }
+    .ai-sidebar-chapters { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+    .ai-chapter-group { border-radius: 6px; }
+    .ai-chapter-toggle { display: flex; align-items: center; gap: 5px; width: 100%; text-align: left;
+      border: none; background: transparent; color: inherit; cursor: pointer; font: inherit;
+      font-size: 12px; padding: 4px 6px; border-radius: 6px; }
+    .ai-chapter-toggle:hover { background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08)); }
+    .ai-chapter-toggle-static { cursor: default; }
+    .ai-chapter-toggle-static:hover { background: transparent; }
+    .ai-sidebar-chapters .ai-chapter-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ai-chapter-progress { margin-left: auto; font-size: 10px; opacity: 0.62; white-space: nowrap; }
+    .ai-chapter-concept-rows { display: flex; flex-direction: column; gap: 1px; padding-left: 6px; }
+    .ai-chapter-empty { font-size: 11px; padding: 2px 6px 4px 18px; }
+    .ai-edit-rows { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+    .ai-edit-row { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between;
+      border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); border-radius: 8px;
+      padding: 6px 8px; background: var(--dsw-alias-bg-base, transparent); }
+    .ai-edit-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .ai-edit-title { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px;
+      padding: 4px 8px; border-radius: 6px; border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3));
+      background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.06)); color: inherit; }
+    .ai-edit-title:focus { outline: 2px solid var(--dsw-alias-state-business-primary, #2563eb); outline-offset: 1px; }
+    .ai-edit-summary { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ai-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:60}
     .ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
     .ai-modal h3{margin:0 0 8px;font-size:15px}
@@ -18518,6 +18540,142 @@ window.__ModuleLoader__.load({
 
     // packages/dsh-plugin/src/client/components/DraftReview.tsx
     var import_react4 = require("react");
+
+    // packages/dsh-plugin/src/client/draft-edits.ts
+    function groupConceptsByChapters(revision) {
+      const chapters = revision.chapters ?? [];
+      const sequenceIndex = /* @__PURE__ */ new Map();
+      revision.sequence.forEach((conceptId, index) => sequenceIndex.set(conceptId, index));
+      const conceptById = new Map(revision.concepts.map((concept) => [concept.id, concept]));
+      const groupedIds = /* @__PURE__ */ new Set();
+      const groups = chapters.map((chapter) => {
+        const concepts = chapter.conceptIds.map((conceptId, localIndex) => {
+          const concept = conceptById.get(conceptId);
+          if (concept !== void 0) groupedIds.add(conceptId);
+          return {
+            concept,
+            order: sequenceIndex.get(conceptId) ?? Number.MAX_SAFE_INTEGER + localIndex
+          };
+        }).filter((entry) => entry.concept !== void 0).sort((a, b) => a.order - b.order).map((entry) => entry.concept);
+        return { chapter, concepts };
+      });
+      const ungrouped = revision.sequence.map((conceptId) => conceptById.get(conceptId)).filter((concept) => concept !== void 0 && !groupedIds.has(concept.id));
+      for (const concept of revision.concepts) {
+        if (!groupedIds.has(concept.id) && !ungrouped.some((item) => item.id === concept.id)) {
+          ungrouped.push(concept);
+        }
+      }
+      return { hasChapters: chapters.length > 0, chapters: groups, ungrouped };
+    }
+    function orderedConceptIds(revision) {
+      const { chapters, ungrouped } = groupConceptsByChapters(revision);
+      return [
+        ...chapters.flatMap((group) => group.concepts.map((concept) => concept.id)),
+        ...ungrouped.map((concept) => concept.id)
+      ];
+    }
+    function keptConceptIds(revision, state) {
+      const removed = new Set(state.removed);
+      const existing = new Set(revision.concepts.map((concept) => concept.id));
+      const ordered = state.order.filter((id) => existing.has(id) && !removed.has(id));
+      for (const concept of revision.concepts) {
+        const id = concept.id;
+        if (!existing.has(id)) continue;
+        if (removed.has(id) || ordered.includes(id)) continue;
+        ordered.push(id);
+      }
+      return ordered;
+    }
+    function moveConcept(revision, state, conceptId, direction) {
+      const removed = new Set(state.removed);
+      const order = state.order.filter((id) => !removed.has(id));
+      const chapters = revision.chapters ?? [];
+      let segmentStart = 0;
+      let segmentEnd = order.length;
+      if (chapters.length > 0) {
+        const chapter = chapters.find((item) => item.conceptIds.some((id) => id === conceptId));
+        if (chapter !== void 0) {
+          const first = chapter.conceptIds.map((id) => order.indexOf(id)).filter((index2) => index2 >= 0);
+          const last = first.length === 0 ? -1 : Math.max(...first);
+          segmentStart = first.length === 0 ? 0 : Math.min(...first);
+          segmentEnd = last + 1;
+          while (segmentStart > 0 && chapter.conceptIds.some((id) => id === order[segmentStart - 1])) segmentStart -= 1;
+          while (segmentEnd < order.length && chapter.conceptIds.some((id) => id === order[segmentEnd])) segmentEnd += 1;
+        } else {
+          const ungroupedIds = new Set(
+            groupConceptsByChapters(revision).ungrouped.map((concept) => concept.id)
+          );
+          const first = order.findIndex((id) => ungroupedIds.has(id));
+          const last = order.map((id, index2) => ungroupedIds.has(id) ? index2 : -1).filter((index2) => index2 >= 0).pop();
+          segmentStart = first < 0 ? order.length : first;
+          segmentEnd = last === void 0 ? order.length : last + 1;
+        }
+      }
+      const index = order.indexOf(conceptId);
+      if (index < segmentStart || index >= segmentEnd) return order;
+      const target = direction === "up" ? index - 1 : index + 1;
+      if (target < segmentStart || target >= segmentEnd) return order;
+      const next = [...order];
+      const current = next[index];
+      const swapped = next[target];
+      if (current === void 0 || swapped === void 0) return order;
+      next[index] = swapped;
+      next[target] = current;
+      return next;
+    }
+    function chapterCoverage(concepts, seenConceptIds) {
+      const isSeen = (id) => Array.isArray(seenConceptIds) ? seenConceptIds.includes(id) : seenConceptIds.has(id);
+      return {
+        covered: concepts.filter((concept) => isSeen(concept.id)).length,
+        total: concepts.length
+      };
+    }
+    function chapterContainingConcept(revision, conceptId) {
+      if (conceptId === void 0) return void 0;
+      return revision.chapters?.find((chapter) => chapter.conceptIds.some((id) => id === conceptId))?.id;
+    }
+    function defaultOpenChapterId(revision, currentConceptId) {
+      return chapterContainingConcept(revision, currentConceptId) ?? revision.chapters?.[0]?.id;
+    }
+    function canMoveConcept(revision, state, conceptId, direction) {
+      const next = moveConcept(revision, state, conceptId, direction);
+      const keptBefore = state.order.filter((id) => !state.removed.includes(id));
+      if (next.length !== keptBefore.length) return true;
+      return next.some((id, index) => id !== keptBefore[index]);
+    }
+    function changedTitles(revision, state, keptIds) {
+      const changed = {};
+      for (const concept of revision.concepts) {
+        const id = concept.id;
+        if (!keptIds.has(id)) continue;
+        const raw = state.titles[id];
+        if (raw === void 0) continue;
+        const title = raw.trim();
+        if (title === "" || title === concept.title) continue;
+        changed[id] = title;
+      }
+      return Object.keys(changed).length === 0 ? void 0 : changed;
+    }
+    function buildDraftEdits(revision, state) {
+      const kept = keptConceptIds(revision, state);
+      const keptSet = new Set(kept);
+      const existingIds = revision.concepts.map((concept) => concept.id);
+      const removedIds = existingIds.filter((id) => state.removed.includes(id) && !keptSet.has(id));
+      const displayedBaseline = orderedConceptIds(revision).filter((id) => keptSet.has(id));
+      const reordered = kept.length !== displayedBaseline.length || kept.some((id, index) => id !== displayedBaseline[index]);
+      const structuralChange = removedIds.length > 0 || reordered;
+      const titles = changedTitles(revision, state, keptSet);
+      const goalsChanged = state.goals !== void 0 && (state.goals.length !== revision.goals.length || state.goals.some((goal, index) => goal !== revision.goals[index]));
+      if (!structuralChange && titles === void 0 && !goalsChanged) return void 0;
+      return {
+        ...state.goals !== void 0 && goalsChanged ? { goals: state.goals } : {},
+        ...structuralChange ? { sequence: kept.map((id) => id) } : {},
+        ...titles !== void 0 ? { conceptTitles: titles } : {},
+        ...removedIds.length > 0 ? { removeConceptIds: removedIds.map((id) => id) } : {}
+      };
+    }
+
+    // packages/dsh-plugin/src/client/components/DraftReview.tsx
     var import_jsx_runtime4 = require("react/jsx-runtime");
     var ORIGIN_LABELS = {
       "kb-structure": "\u7ED3\u6784\u6765\u6E90\uFF1A\u77E5\u8BC6\u5E93\uFF08\u76F4\u63A5\u8BFB\u53D6\uFF0C\u672A\u91CD\u65B0\u751F\u6210\uFF09",
@@ -18529,26 +18687,6 @@ window.__ModuleLoader__.load({
       appendix: "\u9644\u5F55",
       tool: "\u8DE8\u7AE0\u5DE5\u5177"
     };
-    function groupChapterConcepts(revision) {
-      const chapters = revision.chapters ?? [];
-      const sequenceIndex = /* @__PURE__ */ new Map();
-      revision.sequence.forEach((conceptId, index) => sequenceIndex.set(conceptId, index));
-      const conceptById = new Map(revision.concepts.map((concept) => [concept.id, concept]));
-      const groupedIds = /* @__PURE__ */ new Set();
-      const groups = chapters.map((chapter) => {
-        const chapterConcepts = chapter.conceptIds.map((conceptId, localIndex) => {
-          const concept = conceptById.get(conceptId);
-          if (concept !== void 0) groupedIds.add(conceptId);
-          return {
-            concept,
-            order: sequenceIndex.get(conceptId) ?? Number.MAX_SAFE_INTEGER + localIndex
-          };
-        }).filter((entry) => entry.concept !== void 0).sort((a, b) => a.order - b.order).map((entry) => entry.concept);
-        return { chapter, concepts: chapterConcepts };
-      });
-      const ungrouped = revision.sequence.map((conceptId) => conceptById.get(conceptId)).filter((concept) => concept !== void 0 && !groupedIds.has(concept.id));
-      return { groups, ungrouped };
-    }
     function ConceptItem(props) {
       const { concept } = props;
       return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("li", { children: [
@@ -18577,18 +18715,140 @@ window.__ModuleLoader__.load({
         ] })
       ] });
     }
+    function originalEditState(revision) {
+      return { order: orderedConceptIds(revision), titles: {}, removed: [] };
+    }
+    function ConceptEditRow(props) {
+      const { concept, revision, state } = props;
+      const id = concept.id;
+      const currentTitle = state.titles[id] ?? concept.title;
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-edit-row", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-edit-main", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+            "input",
+            {
+              className: "ai-edit-title",
+              value: currentTitle,
+              disabled: props.busy,
+              "aria-label": `\u7F16\u8F91\u6982\u5FF5\u6807\u9898 ${concept.title}`,
+              onChange: (event) => props.onChangeTitle(id, event.target.value)
+            }
+          ),
+          concept.summary !== "" && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted ai-edit-summary", children: concept.summary })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+            "button",
+            {
+              type: "button",
+              className: "ai-small-button",
+              disabled: props.busy || !canMoveConcept(revision, state, id, "up"),
+              onClick: () => props.onMove(id, "up"),
+              "aria-label": `\u4E0A\u79FB\u6982\u5FF5 ${currentTitle}`,
+              title: "\u4E0A\u79FB",
+              children: "\u2191"
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+            "button",
+            {
+              type: "button",
+              className: "ai-small-button",
+              disabled: props.busy || !canMoveConcept(revision, state, id, "down"),
+              onClick: () => props.onMove(id, "down"),
+              "aria-label": `\u4E0B\u79FB\u6982\u5FF5 ${currentTitle}`,
+              title: "\u4E0B\u79FB",
+              children: "\u2193"
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+            "button",
+            {
+              type: "button",
+              className: "ai-danger-button",
+              disabled: props.busy,
+              onClick: () => props.onRemove(id),
+              "aria-label": `\u5220\u9664\u6982\u5FF5 ${currentTitle}`,
+              title: "\u5220\u9664",
+              children: "\u2715"
+            }
+          )
+        ] })
+      ] });
+    }
     function DraftReview(props) {
       const { draft } = props;
       const revision = draft.revision;
+      const conceptCount = revision.concepts.length;
       const origin = draft.origin;
       const structureNotes = draft.structureNotes ?? [];
+      const [editing, setEditing] = (0, import_react4.useState)(false);
+      const [order, setOrder] = (0, import_react4.useState)(() => orderedConceptIds(revision));
+      const [titles, setTitles] = (0, import_react4.useState)({});
+      const [removed, setRemoved] = (0, import_react4.useState)([]);
+      (0, import_react4.useEffect)(() => {
+        setEditing(false);
+        setOrder(orderedConceptIds(revision));
+        setTitles({});
+        setRemoved([]);
+      }, [revision.id, revision.version]);
+      const editState = { order, titles, removed };
+      const kept = keptConceptIds(revision, editState);
+      const keptSet = new Set(kept);
+      const conceptById = new Map(revision.concepts.map((concept) => [concept.id, concept]));
+      const groups = groupConceptsByChapters(revision);
       const chapters = revision.chapters ?? [];
-      const { groups, ungrouped } = groupChapterConcepts(revision);
+      const canConfirm = !props.busy && kept.length > 0;
+      const beginEditing = () => {
+        const original = originalEditState(revision);
+        setOrder(original.order);
+        setTitles(original.titles);
+        setRemoved(original.removed);
+        setEditing(true);
+      };
+      const resetChanges = () => {
+        const original = originalEditState(revision);
+        setOrder(original.order);
+        setTitles(original.titles);
+        setRemoved(original.removed);
+      };
+      const cancelEditing = () => {
+        resetChanges();
+        setEditing(false);
+      };
+      const changeTitle = (conceptId, title) => {
+        setTitles((previous) => ({ ...previous, [conceptId]: title }));
+      };
+      const removeConcept = (conceptId) => {
+        setRemoved((previous) => previous.includes(conceptId) ? previous : [...previous, conceptId]);
+      };
+      const move = (conceptId, direction) => {
+        setOrder(moveConcept(revision, editState, conceptId, direction));
+      };
+      const confirm = () => {
+        const edits = editing ? buildDraftEdits(revision, editState) : void 0;
+        void props.onConfirm(edits);
+      };
+      const sectionConcepts = (ids) => order.filter((id) => ids.includes(id) && keptSet.has(id)).map((id) => conceptById.get(id)).filter((concept) => concept !== void 0);
+      const renderEditorRows = (ids) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-edit-rows", children: sectionConcepts(ids).map((concept) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+        ConceptEditRow,
+        {
+          revision,
+          concept,
+          state: editState,
+          busy: props.busy,
+          onChangeTitle: changeTitle,
+          onMove: move,
+          onRemove: removeConcept
+        },
+        concept.id
+      )) });
       return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-draft-review", children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("h3", { style: { margin: "0 0 6px", fontSize: 14 }, children: [
           "\u8BFE\u7A0B\u7ED3\u6784\u8349\u6848\uFF08v",
           revision.version,
-          "\uFF09"
+          "\uFF09",
+          editing ? " \xB7 \u7F16\u8F91\u4E2D" : ""
         ] }),
         (origin !== void 0 || structureNotes.length > 0) && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-draft-origin", children: [
           origin !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-badge", "data-origin": origin, "aria-label": ORIGIN_LABELS[origin], children: ORIGIN_LABELS[origin] }),
@@ -18598,33 +18858,59 @@ window.__ModuleLoader__.load({
           "\u6765\u6E90\u8986\u76D6\uFF1A",
           draft.coverage.length,
           " \u4EFD\u8D44\u6599 \xB7 \u6982\u5FF5 ",
-          revision.concepts.length,
+          editing ? kept.length : conceptCount,
           " \u4E2A \xB7 \u5B66\u4E60\u987A\u5E8F ",
-          revision.sequence.length,
+          editing ? kept.length : revision.sequence.length,
           " \u6B65",
-          chapters.length > 0 ? ` \xB7 \u7AE0\u8282 ${chapters.length} \u4E2A` : ""
+          chapters.length > 0 ? ` \xB7 \u7AE0\u8282 ${chapters.length} \u4E2A` : "",
+          editing && removed.length > 0 ? ` \xB7 \u5DF2\u79FB\u9664 ${removed.length} \u4E2A` : ""
+        ] }),
+        !editing && conceptCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", style: { margin: "6px 0 2px" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+            "button",
+            {
+              type: "button",
+              className: "ai-small-button",
+              disabled: props.busy,
+              onClick: beginEditing,
+              "aria-label": "\u7F16\u8F91\u8BFE\u7A0B\u7ED3\u6784",
+              children: "\u7F16\u8F91\u7ED3\u6784"
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-muted", children: "\u53EF\u6539\u540D\u3001\u5220\u9664\u6216\u8C03\u6574\u7AE0\u8282\u5185\u987A\u5E8F\uFF1B\u786E\u8BA4\u65F6\u4E00\u5E76\u5E94\u7528\u3002" })
+        ] }),
+        editing && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", style: { margin: "6px 0 2px" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: cancelEditing, children: "\u53D6\u6D88\u7F16\u8F91" }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: resetChanges, children: "\u91CD\u7F6E\u4FEE\u6539" }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-muted", children: "\u4FEE\u6539\u5728\u70B9\u51FB\u300C\u786E\u8BA4\u7ED3\u6784\u5E76\u5F00\u59CB\u5B66\u4E60\u300D\u65F6\u63D0\u4EA4\uFF1B\u4E0D\u4F1A\u6539\u52A8\u539F\u59CB\u8D44\u6599\u3002" })
         ] }),
         draft.warnings.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ul", { className: "ai-warning-list", children: draft.warnings.map((warning) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("li", { children: warning }, warning)) }),
         chapters.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-chapter-list", children: [
-          groups.map((group) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "ai-chapter", "aria-label": `\u7AE0\u8282 ${group.chapter.title}`, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ChapterHead, { chapter: group.chapter, conceptCount: group.concepts.length }),
-            group.concepts.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted", children: "\uFF08\u8BE5\u7AE0\u8282\u6682\u65F6\u6CA1\u6709\u53EF\u5C55\u793A\u7684\u6982\u5FF5\uFF09" }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: group.concepts.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ConceptItem, { concept }, concept.id)) })
+          groups.chapters.map((group) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "ai-chapter", "aria-label": `\u7AE0\u8282 ${group.chapter.title}`, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+              ChapterHead,
+              {
+                chapter: group.chapter,
+                conceptCount: editing ? sectionConcepts(group.chapter.conceptIds.map((id) => id)).length : group.concepts.length
+              }
+            ),
+            editing ? sectionConcepts(group.chapter.conceptIds.map((id) => id)).length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted", children: "\uFF08\u8BE5\u7AE0\u8282\u6682\u65F6\u6CA1\u6709\u53EF\u7F16\u8F91\u7684\u6982\u5FF5\uFF09" }) : renderEditorRows(group.chapter.conceptIds.map((id) => id)) : group.concepts.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted", children: "\uFF08\u8BE5\u7AE0\u8282\u6682\u65F6\u6CA1\u6709\u53EF\u5C55\u793A\u7684\u6982\u5FF5\uFF09" }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: group.concepts.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ConceptItem, { concept }, concept.id)) })
           ] }, group.chapter.id)),
-          ungrouped.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "ai-chapter", "aria-label": "\u672A\u5206\u7EC4\u6982\u5FF5", children: [
+          (editing ? sectionConcepts(groups.ungrouped.map((concept) => concept.id)).length : groups.ungrouped.length) > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "ai-chapter", "aria-label": "\u672A\u5206\u7EC4\u6982\u5FF5", children: [
             /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-chapter-head", children: [
               /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", style: { alignItems: "baseline", gap: 8 }, children: [
                 /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-chapter-title", children: "\u672A\u5206\u7EC4\u6982\u5FF5" }),
                 /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "ai-muted", children: [
                   "\u6982\u5FF5 ",
-                  ungrouped.length,
+                  editing ? sectionConcepts(groups.ungrouped.map((concept) => concept.id)).length : groups.ungrouped.length,
                   " \u4E2A"
                 ] })
               ] }),
               /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-chapter-summary", children: "\u8FD9\u4E9B\u6982\u5FF5\u672A\u5F52\u5165\u4EFB\u4F55\u7AE0\u8282\uFF0C\u4ECD\u4F1A\u6309\u5B66\u4E60\u987A\u5E8F\u51FA\u73B0\u3002" })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: ungrouped.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ConceptItem, { concept }, concept.id)) })
+            editing ? renderEditorRows(groups.ungrouped.map((concept) => concept.id)) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: groups.ungrouped.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ConceptItem, { concept }, concept.id)) })
           ] })
-        ] }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist", children: revision.sequence.map((conceptId) => {
+        ] }) : editing ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-edit-rows", children: renderEditorRows(kept) }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist", children: revision.sequence.map((conceptId) => {
           const concept = revision.concepts.find((item) => item.id === conceptId);
           return concept === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ConceptItem, { concept }, concept.id);
         }) }),
@@ -18632,6 +18918,7 @@ window.__ModuleLoader__.load({
           "\u8D44\u6599\uFF1A",
           draft.coverage.map((item) => `${item.title}\uFF08${item.status}\uFF0C${item.usedUnits} \u5355\u5143${item.issues > 0 ? `\uFF0C${item.issues} \u4E2A\u95EE\u9898` : ""}\uFF09`).join("\uFF1B")
         ] }),
+        editing && kept.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-banner", "data-kind": "warning", role: "status", style: { margin: "8px 0", borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: "\u81F3\u5C11\u4FDD\u7559\u4E00\u4E2A\u6982\u5FF5\u624D\u80FD\u786E\u8BA4\u7ED3\u6784\u3002\u8BF7\u300C\u53D6\u6D88\u7F16\u8F91\u300D\u300C\u91CD\u7F6E\u4FEE\u6539\u300D\uFF0C\u6216\u76F4\u63A5\u91CD\u65B0\u751F\u6210\u8349\u6848\u3002" }) }),
         props.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { margin: "8px 0", borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: props.error }) }),
         props.busy && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: { marginTop: 6 }, children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Spinner, { label: "\u6B63\u5728\u5904\u7406\u2026" }) }),
         /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", style: { marginTop: 10 }, children: [
@@ -18640,8 +18927,9 @@ window.__ModuleLoader__.load({
             {
               type: "button",
               className: "ai-primary-button",
-              disabled: props.busy || revision.concepts.length === 0,
-              onClick: () => void props.onConfirm(),
+              disabled: !canConfirm,
+              onClick: confirm,
+              title: editing ? "\u63D0\u4EA4\u4FEE\u6539\u5E76\u786E\u8BA4\u8BFE\u7A0B\u7ED3\u6784" : void 0,
               children: "\u786E\u8BA4\u7ED3\u6784\u5E76\u5F00\u59CB\u5B66\u4E60"
             }
           ),
@@ -18649,7 +18937,7 @@ window.__ModuleLoader__.load({
           /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: () => void props.onAdhoc(), children: "\u5148\u968F\u4FBF\u95EE\u95EE\uFF08\u968F\u95EE\u968F\u5B66\uFF09" }),
           props.onBack !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-link-button", disabled: props.busy, onClick: props.onBack, children: "\u8FD4\u56DE\u8865\u5145\u8D44\u6599" })
         ] }),
-        revision.concepts.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted", style: { marginTop: 6 }, children: "\u8349\u6848\u8FD8\u6CA1\u6709\u6982\u5FF5\uFF1A\u8BF7\u5148\u5BFC\u5165\u53EF\u8BFB\u8D44\u6599\u540E\u91CD\u65B0\u751F\u6210\uFF0C\u6216\u76F4\u63A5\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7528\u6700\u5C0F\u7ED3\u6784\u5F00\u59CB\u3002" })
+        conceptCount === 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted", style: { marginTop: 6 }, children: "\u8349\u6848\u8FD8\u6CA1\u6709\u6982\u5FF5\uFF1A\u8BF7\u5148\u5BFC\u5165\u53EF\u8BFB\u8D44\u6599\u540E\u91CD\u65B0\u751F\u6210\uFF0C\u6216\u76F4\u63A5\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7528\u6700\u5C0F\u7ED3\u6784\u5F00\u59CB\u3002" })
       ] });
     }
 
@@ -18742,11 +19030,11 @@ window.__ModuleLoader__.load({
           setDraftError(result.error ?? "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5931\u8D25");
         }
       };
-      const confirmDraft = async (revisionId) => {
+      const confirmDraft = async (revisionId, edits) => {
         if (courseId === void 0 || revisionId === "") return;
         setDraftError(void 0);
         setActionBusy("\u786E\u8BA4\u8BFE\u7A0B\u7ED3\u6784\u2026");
-        const result = await props.onConfirmDraft(courseId, revisionId);
+        const result = await props.onConfirmDraft(courseId, revisionId, edits);
         setActionBusy(void 0);
         if (!result.ok) setDraftError(result.error ?? "\u786E\u8BA4\u8BFE\u7A0B\u7ED3\u6784\u5931\u8D25");
       };
@@ -18869,7 +19157,7 @@ window.__ModuleLoader__.load({
               draft: props.draft,
               busy,
               ...draftError !== void 0 ? { error: draftError } : {},
-              onConfirm: () => props.draft === void 0 ? void 0 : confirmDraft(props.draft.revision.id),
+              onConfirm: (edits) => props.draft === void 0 ? void 0 : confirmDraft(props.draft.revision.id, edits),
               onRegenerate: () => void generateDraft(),
               onAdhoc: () => void startAdhoc(),
               onBack: () => setStep("import")
@@ -18922,7 +19210,7 @@ window.__ModuleLoader__.load({
             draft: props.draft,
             busy: props.busy,
             error: props.error,
-            onConfirm: () => props.onConfirm(props.draft?.revision.id ?? ""),
+            onConfirm: (edits) => props.onConfirm(props.draft?.revision.id ?? "", edits),
             onRegenerate: props.onGenerate,
             onAdhoc: props.onAdhoc
           }
@@ -18960,14 +19248,58 @@ window.__ModuleLoader__.load({
       ordered.push(...byId.values());
       return ordered;
     }
+    var SIDEBAR_CHAPTER_ROLE_LABELS = {
+      chapter: "",
+      appendix: "\u9644\u5F55",
+      tool: "\u8DE8\u7AE0\u5DE5\u5177"
+    };
     function Sidebar(props) {
       const detail = props.courseDetail;
       const concepts = orderedConcepts(detail);
       const masteryByConcept = new Map(props.mastery.map((record) => [record.conceptId, record]));
       const currentConceptId = props.session?.session.position.conceptId;
+      const revision = detail?.activeRevision ?? detail?.draftRevision;
+      const structure = revision === void 0 ? void 0 : groupConceptsByChapters(revision);
+      const hasChapters = structure?.hasChapters === true;
+      const seenConceptIds = /* @__PURE__ */ new Set();
+      for (const conceptId of props.session?.session.coveredConceptIds ?? []) seenConceptIds.add(conceptId);
+      for (const record of props.mastery) {
+        if (record.level !== "unseen") seenConceptIds.add(record.conceptId);
+      }
+      const [openChapterIds, setOpenChapterIds] = (0, import_react7.useState)(/* @__PURE__ */ new Set());
+      (0, import_react7.useEffect)(() => {
+        if (!hasChapters || revision === void 0) {
+          setOpenChapterIds(/* @__PURE__ */ new Set());
+          return;
+        }
+        const target = defaultOpenChapterId(revision, currentConceptId);
+        setOpenChapterIds(new Set(target === void 0 ? [] : [target]));
+      }, [revision?.id, currentConceptId]);
       const activeCourseId = detail?.course.id ?? props.courses[0]?.course.id;
       const language = detail?.activeRevision?.language ?? detail?.draftRevision?.language ?? "zh";
       const goal = detail?.activeRevision?.goals[0] ?? detail?.draftRevision?.goals[0];
+      const renderConceptRow = (concept) => {
+        const record = masteryByConcept.get(concept.id);
+        const level = record?.level ?? "unseen";
+        const current = concept.id === currentConceptId;
+        return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+          "button",
+          {
+            type: "button",
+            className: "ai-concept-row",
+            "data-current": current,
+            onClick: () => props.onConceptClick(concept),
+            title: concept.summary,
+            "aria-label": `\u5B66\u4E60\u6982\u5FF5 ${concept.title}`,
+            disabled: props.busy,
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-grow", style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: concept.title }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-badge", "data-level": level, children: MASTERY_LABELS[level] })
+            ]
+          },
+          concept.id
+        );
+      };
       return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("nav", { className: "ai-teaching-sidebar", "aria-label": "\u8BFE\u7A0B\u5BFC\u822A", children: [
         /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-sidebar-section", children: [
           /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-sidebar-heading-row", children: [
@@ -19039,36 +19371,76 @@ window.__ModuleLoader__.load({
           ] })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-sidebar-section", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("h3", { className: "ai-sidebar-heading", children: [
-            "\u6982\u5FF5\u8FDB\u5EA6\uFF08",
-            props.progress.covered,
-            "/",
-            props.progress.total,
-            "\uFF09"
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-sidebar-heading-row", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("h3", { className: "ai-sidebar-heading", children: [
+              "\u6982\u5FF5\u8FDB\u5EA6\uFF08",
+              props.progress.covered,
+              "/",
+              props.progress.total,
+              "\uFF09"
+            ] }),
+            hasChapters && structure !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "ai-row", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: "ai-link-button",
+                  onClick: () => setOpenChapterIds(new Set(structure.chapters.map((group) => group.chapter.id))),
+                  children: "\u5C55\u5F00\u5168\u90E8"
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-link-button", onClick: () => setOpenChapterIds(/* @__PURE__ */ new Set()), children: "\u6536\u8D77\u5168\u90E8" })
+            ] })
           ] }),
           concepts.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-muted", children: detail === void 0 ? "\u5C1A\u672A\u9009\u62E9\u8BFE\u7A0B" : "\u8BFE\u7A0B\u7ED3\u6784\u5C1A\u672A\u786E\u8BA4\uFF0C\u786E\u8BA4\u540E\u663E\u793A\u6982\u5FF5" }),
-          concepts.map((concept) => {
-            const record = masteryByConcept.get(concept.id);
-            const level = record?.level ?? "unseen";
-            const current = concept.id === currentConceptId;
-            return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
-              "button",
-              {
-                type: "button",
-                className: "ai-concept-row",
-                "data-current": current,
-                onClick: () => props.onConceptClick(concept),
-                title: concept.summary,
-                "aria-label": `\u5B66\u4E60\u6982\u5FF5 ${concept.title}`,
-                disabled: props.busy,
-                children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-grow", style: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: concept.title }),
-                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-badge", "data-level": level, children: MASTERY_LABELS[level] })
-                ]
-              },
-              concept.id
-            );
-          }),
+          hasChapters && structure !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-sidebar-chapters", children: [
+            structure.chapters.map((group) => {
+              const open2 = openChapterIds.has(group.chapter.id);
+              const coverage = chapterCoverage(group.concepts, seenConceptIds);
+              const showRole = group.chapter.role !== void 0 && group.chapter.role !== "chapter";
+              return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-chapter-group", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "ai-chapter-toggle",
+                    "aria-expanded": open2,
+                    "aria-label": `\u7AE0\u8282 ${group.chapter.title}`,
+                    onClick: () => setOpenChapterIds((previous) => {
+                      const next = new Set(previous);
+                      if (next.has(group.chapter.id)) next.delete(group.chapter.id);
+                      else next.add(group.chapter.id);
+                      return next;
+                    }),
+                    children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-collapsible-arrow", "aria-hidden": "true", children: open2 ? "\u25BE" : "\u25B8" }),
+                      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-chapter-title", children: group.chapter.title }),
+                      showRole && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-badge", "data-chapter-role": group.chapter.role, children: SIDEBAR_CHAPTER_ROLE_LABELS[group.chapter.role] }),
+                      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "ai-chapter-progress", children: [
+                        "\u5DF2\u63A5\u89E6 ",
+                        coverage.covered,
+                        "/",
+                        coverage.total
+                      ] })
+                    ]
+                  }
+                ),
+                open2 && (group.concepts.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-muted ai-chapter-empty", children: "\uFF08\u672C\u7AE0\u6682\u65E0\u6982\u5FF5\uFF09" }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-chapter-concept-rows", children: group.concepts.map((concept) => renderConceptRow(concept)) }))
+              ] }, group.chapter.id);
+            }),
+            structure.ungrouped.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-chapter-group", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-chapter-toggle ai-chapter-toggle-static", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-collapsible-arrow", "aria-hidden": "true", children: "\xB7" }),
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-chapter-title", children: "\u672A\u5206\u7EC4\u6982\u5FF5" }),
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "ai-chapter-progress", children: [
+                  structure.ungrouped.length,
+                  " \u4E2A \xB7 \u5DF2\u63A5\u89E6 ",
+                  chapterCoverage(structure.ungrouped, seenConceptIds).covered
+                ] })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-chapter-concept-rows", children: structure.ungrouped.map((concept) => renderConceptRow(concept)) })
+            ] })
+          ] }) : concepts.map((concept) => renderConceptRow(concept)),
           props.session !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-muted", style: { marginTop: 4 }, children: [
             "\u5F53\u524D\u9636\u6BB5\uFF1A",
             STAGE_LABELS[props.session.session.position.stage]
@@ -20440,11 +20812,15 @@ window.__ModuleLoader__.load({
           void loadTasks();
         }
       }, [loadTasks, awaitTask]);
-      const confirmDraft = (0, import_react10.useCallback)(async (courseId, revisionId) => {
+      const confirmDraft = (0, import_react10.useCallback)(async (courseId, revisionId, edits) => {
         if (revisionId === "") return { ok: false, error: "\u8349\u6848\u7248\u672C\u65E0\u6548\uFF0C\u8BF7\u91CD\u65B0\u751F\u6210\u8349\u6848\u3002" };
         dispatch({ type: "busy", label: "\u786E\u8BA4\u8BFE\u7A0B\u7ED3\u6784\u2026" });
         try {
-          await apiPost("courseDraft.confirm", { courseId, revisionId });
+          await apiPost("courseDraft.confirm", {
+            courseId,
+            revisionId,
+            ...edits === void 0 ? {} : { edits }
+          });
           const { sessions } = await refreshCourse(courseId);
           const first = sessions[0];
           if (first !== void 0) await selectSession(first.id);
@@ -20495,9 +20871,9 @@ window.__ModuleLoader__.load({
         if (result.ok && result.draft !== void 0) setSetup({ phase: "draft", draft: result.draft });
         else setSetup({ phase: "error", error: result.error ?? "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5931\u8D25" });
       }, [generateDraft]);
-      const confirmSetupDraft = (0, import_react10.useCallback)(async (courseId, revisionId) => {
+      const confirmSetupDraft = (0, import_react10.useCallback)(async (courseId, revisionId, edits) => {
         setSetup((previous) => ({ ...previous, busy: true, error: void 0 }));
-        const result = await confirmDraft(courseId, revisionId);
+        const result = await confirmDraft(courseId, revisionId, edits);
         if (!mounted.current) return;
         setSetup(result.ok ? { phase: "ready" } : (previous) => ({ ...previous, busy: false, error: result.error }));
       }, [confirmDraft]);
@@ -20588,8 +20964,8 @@ window.__ModuleLoader__.load({
             onLoadDraft: () => {
               void loadSetupDraft(detail.course.id);
             },
-            onConfirm: (revisionId) => {
-              void confirmSetupDraft(detail.course.id, revisionId);
+            onConfirm: (revisionId, edits) => {
+              void confirmSetupDraft(detail.course.id, revisionId, edits);
             },
             onAdhoc: () => {
               void adhocSetup(detail.course.id);

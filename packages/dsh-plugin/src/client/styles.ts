@@ -281,6 +281,28 @@ export const TEACHING_CSS = `
 .ai-badge[data-chapter-role="appendix"] { border-style: dashed; opacity: 0.85; }
 .ai-badge[data-chapter-role="tool"] { color: var(--dsw-alias-state-warn-primary, #b45309);
   border-color: currentColor; opacity: 1; }
+.ai-sidebar-chapters { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+.ai-chapter-group { border-radius: 6px; }
+.ai-chapter-toggle { display: flex; align-items: center; gap: 5px; width: 100%; text-align: left;
+  border: none; background: transparent; color: inherit; cursor: pointer; font: inherit;
+  font-size: 12px; padding: 4px 6px; border-radius: 6px; }
+.ai-chapter-toggle:hover { background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08)); }
+.ai-chapter-toggle-static { cursor: default; }
+.ai-chapter-toggle-static:hover { background: transparent; }
+.ai-sidebar-chapters .ai-chapter-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-chapter-progress { margin-left: auto; font-size: 10px; opacity: 0.62; white-space: nowrap; }
+.ai-chapter-concept-rows { display: flex; flex-direction: column; gap: 1px; padding-left: 6px; }
+.ai-chapter-empty { font-size: 11px; padding: 2px 6px 4px 18px; }
+.ai-edit-rows { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.ai-edit-row { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); border-radius: 8px;
+  padding: 6px 8px; background: var(--dsw-alias-bg-base, transparent); }
+.ai-edit-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ai-edit-title { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px;
+  padding: 4px 8px; border-radius: 6px; border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3));
+  background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.06)); color: inherit; }
+.ai-edit-title:focus { outline: 2px solid var(--dsw-alias-state-business-primary, #2563eb); outline-offset: 1px; }
+.ai-edit-summary { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ai-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:60}
 .ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
 .ai-modal h3{margin:0 0 8px;font-size:15px}

@@ -628,6 +628,81 @@ describe('teaching host routes', () => {
     assert.deepEqual(confirmed.revision.chapters[0]?.conceptIds, [first])
   })
 
+  it('applies draft edits (rename/remove/reorder) and rejects an empty structure', async () => {
+    const harness = await createHarness([])
+    async function draftWith(concepts: { id: ReturnType<typeof newConceptId>; title: string }[], chapters: unknown[]) {
+      const created = unwrap<{ course: { id: string } }>((
+        await harness.call('courses.create', { body: { title: '编辑测试课程' } })
+      ).json)
+      const courseId = created.course.id
+      const revision = {
+        id: newCourseRevisionId(),
+        courseId,
+        version: 2,
+        createdAt: new Date().toISOString(),
+        state: 'draft',
+        provenance: 'kb-structure',
+        goals: ['测试'],
+        language: 'zh',
+        sources: [],
+        concepts: concepts.map(concept => ({
+          ...concept, summary: `${concept.title} 摘要`, prerequisites: [], sourceAnchors: [],
+        })),
+        sequence: concepts.map(concept => concept.id),
+        chapters,
+        changeSummary: '测试草案',
+        basedOn: [],
+      }
+      await harness.services.courses.saveRevision(revision as never)
+      const course = await harness.services.courses.get(courseId)
+      await harness.services.courses.save({ ...course!, draftRevisionId: revision.id as never })
+      return { courseId, revision }
+    }
+
+    const first = newConceptId()
+    const second = newConceptId()
+    const third = newConceptId()
+    const { courseId, revision } = await draftWith(
+      [{ id: first, title: '概念 A' }, { id: second, title: '概念 B' }, { id: third, title: '概念 C' }],
+      [
+        { id: 'chapter-1', title: '第 1 章', conceptIds: [first] },
+        { id: 'chapter-2', title: '第 2 章', conceptIds: [second] },
+        { id: 'chapter-3', title: '第 3 章', conceptIds: [third] },
+      ],
+    )
+    const edited = unwrap<{
+      revision: {
+        concepts: { id: string; title: string }[]
+        sequence: string[]
+        chapters: { id: string; conceptIds: string[] }[]
+      }
+    }>((await harness.call('courseDraft.confirm', {
+      body: {
+        courseId,
+        revisionId: revision.id,
+        edits: {
+          removeConceptIds: [second],
+          conceptTitles: { [first]: '  概念 A（改）  ' },
+          sequence: [third, first],
+        },
+      },
+    })).json)
+    assert.deepEqual(edited.revision.concepts.map(concept => concept.title), ['概念 A（改）', '概念 C'])
+    assert.deepEqual(edited.revision.sequence, [third, first])
+    assert.deepEqual(edited.revision.chapters.map(chapter => chapter.id), ['chapter-1', 'chapter-3'])
+    assert.deepEqual(edited.revision.chapters[0]?.conceptIds, [first])
+
+    // A confirm that removes every concept is rejected instead of creating an unusable course.
+    const only = newConceptId()
+    const empty = await draftWith([{ id: only, title: '唯一概念' }], [
+      { id: 'chapter-1', title: '第 1 章', conceptIds: [only] },
+    ])
+    const rejected = await harness.call('courseDraft.confirm', {
+      body: { courseId: empty.courseId, revisionId: empty.revision.id, edits: { removeConceptIds: [only] } },
+    })
+    assert.equal((rejected.json as { error: { code: string } }).error.code, 'invalid-input')
+  })
+
   it('rejects positions pointing at activities from another session and clears on null', async () => {
     const harness = await createHarness([{ kind: 'text', text: DRAFT_REPLY }])
     const { courseId } = await preparedCourse(harness)

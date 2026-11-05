@@ -2,14 +2,20 @@
  * Course-structure draft review, shared by the first-run wizard and the
  * workspace "structure pending" card. It shows the proposed chapters/concepts,
  * how the structure was produced (knowledge-base read vs LLM-wiki generation vs
- * AI draft), the review warnings and the three valid next actions.
+ * AI draft), the review warnings and the valid next actions.
  *
- * Chapters are optional: revisions created before the v2 structure keep the
- * flat ordered list view. Phase 1 is read-only (no structure editing yet).
+ * Phase 2: the student can rename concepts, remove them and reorder them within
+ * their chapter; confirming applies those edits through `courseDraft.confirm`.
+ * Chapters are optional: revisions created before the v2 structure keep the flat
+ * ordered list view.
  */
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import type { CourseChapter, CourseDraftView, CourseRevision } from '@deepseek-teaching/core/contracts'
 import { Spinner } from './Banner.tsx'
+import {
+  buildDraftEdits, canMoveConcept, groupConceptsByChapters, keptConceptIds, moveConcept,
+  orderedConceptIds, type DraftConfirmEdits, type DraftEditState,
+} from '../draft-edits.ts'
 
 export interface DraftReviewProps {
   readonly draft: CourseDraftView
@@ -17,7 +23,8 @@ export interface DraftReviewProps {
   readonly busy: boolean
   /** Explicit failure from the last action; shown without blocking retry. */
   readonly error?: string
-  readonly onConfirm: () => void | Promise<void>
+  /** Confirm the draft; when the student edited the structure, `edits` carries the changes. */
+  readonly onConfirm: (edits?: DraftConfirmEdits) => void | Promise<void>
   readonly onRegenerate: () => void | Promise<void>
   readonly onAdhoc: () => void | Promise<void>
   /** Return to the material-import step (wizard only). */
@@ -38,49 +45,7 @@ const CHAPTER_ROLE_LABELS: Readonly<Record<'chapter' | 'appendix' | 'tool', stri
   tool: '跨章工具',
 }
 
-/**
- * Group chapter concepts by the revision sequence order.
- *
- * Concepts not listed in `sequence` keep their chapter-local order; concepts
- * that belong to no chapter are returned as "ungrouped" so nothing silently
- * disappears from the review. Old revisions without `chapters` keep the flat
- * `sequence` list (handled by the caller).
- */
-function groupChapterConcepts(revision: CourseRevision): {
-  readonly groups: readonly {
-    readonly chapter: CourseChapter
-    readonly concepts: readonly CourseRevision['concepts'][number][]
-  }[]
-  readonly ungrouped: readonly CourseRevision['concepts'][number][]
-} {
-  const chapters = revision.chapters ?? []
-  const sequenceIndex = new Map<string, number>()
-  revision.sequence.forEach((conceptId, index) => sequenceIndex.set(conceptId as string, index))
-  const conceptById = new Map(revision.concepts.map(concept => [concept.id as string, concept]))
-  const groupedIds = new Set<string>()
-  const groups = chapters.map(chapter => {
-    const chapterConcepts = chapter.conceptIds
-      .map((conceptId, localIndex) => {
-        const concept = conceptById.get(conceptId as string)
-        if (concept !== undefined) groupedIds.add(conceptId as string)
-        return {
-          concept,
-          order: sequenceIndex.get(conceptId as string) ?? Number.MAX_SAFE_INTEGER + localIndex,
-        }
-      })
-      .filter((entry): entry is { concept: CourseRevision['concepts'][number]; order: number } => entry.concept !== undefined)
-      .sort((a, b) => a.order - b.order)
-      .map(entry => entry.concept)
-    return { chapter, concepts: chapterConcepts }
-  })
-  const ungrouped = revision.sequence
-    .map(conceptId => conceptById.get(conceptId as string))
-    .filter((concept): concept is CourseRevision['concepts'][number] =>
-      concept !== undefined && !groupedIds.has(concept.id as string))
-  return { groups, ungrouped }
-}
-
-/** One concept line in the chapter or flat fallback list. */
+/** One concept line in the read-only chapter or flat fallback list. */
 function ConceptItem(props: { readonly concept: CourseRevision['concepts'][number] }): React.ReactElement {
   const { concept } = props
   return (
@@ -117,17 +82,165 @@ function ChapterHead(props: { readonly chapter: CourseChapter; readonly conceptC
   )
 }
 
-/** Draft preview with the three valid next actions. */
+/** The empty edit state derived from the current revision. */
+function originalEditState(revision: CourseRevision): {
+  readonly order: readonly string[]
+  readonly titles: Record<string, string>
+  readonly removed: readonly string[]
+} {
+  return { order: orderedConceptIds(revision), titles: {}, removed: [] }
+}
+
+/** One editable concept row (title input + move/remove actions). */
+function ConceptEditRow(props: {
+  readonly revision: CourseRevision
+  readonly concept: CourseRevision['concepts'][number]
+  readonly state: DraftEditState
+  readonly busy: boolean
+  readonly onChangeTitle: (conceptId: string, title: string) => void
+  readonly onMove: (conceptId: string, direction: 'up' | 'down') => void
+  readonly onRemove: (conceptId: string) => void
+}): React.ReactElement {
+  const { concept, revision, state } = props
+  const id = concept.id as string
+  const currentTitle = state.titles[id] ?? concept.title
+  return (
+    <div className="ai-edit-row">
+      <div className="ai-edit-main">
+        <input
+          className="ai-edit-title"
+          value={currentTitle}
+          disabled={props.busy}
+          aria-label={`编辑概念标题 ${concept.title}`}
+          onChange={event => props.onChangeTitle(id, event.target.value)}
+        />
+        {concept.summary !== '' && <div className="ai-muted ai-edit-summary">{concept.summary}</div>}
+      </div>
+      <div className="ai-row">
+        <button
+          type="button"
+          className="ai-small-button"
+          disabled={props.busy || !canMoveConcept(revision, state, id, 'up')}
+          onClick={() => props.onMove(id, 'up')}
+          aria-label={`上移概念 ${currentTitle}`}
+          title="上移"
+        >
+          ↑
+        </button>
+        <button
+          type="button"
+          className="ai-small-button"
+          disabled={props.busy || !canMoveConcept(revision, state, id, 'down')}
+          onClick={() => props.onMove(id, 'down')}
+          aria-label={`下移概念 ${currentTitle}`}
+          title="下移"
+        >
+          ↓
+        </button>
+        <button
+          type="button"
+          className="ai-danger-button"
+          disabled={props.busy}
+          onClick={() => props.onRemove(id)}
+          aria-label={`删除概念 ${currentTitle}`}
+          title="删除"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** Draft preview with the valid next actions and optional structure editing. */
 export function DraftReview(props: DraftReviewProps): React.ReactElement {
   const { draft } = props
   const revision = draft.revision
+  const conceptCount = revision.concepts.length
   const origin = draft.origin
   const structureNotes = draft.structureNotes ?? []
+
+  const [editing, setEditing] = useState(false)
+  const [order, setOrder] = useState<readonly string[]>(() => orderedConceptIds(revision))
+  const [titles, setTitles] = useState<Record<string, string>>({})
+  const [removed, setRemoved] = useState<readonly string[]>([])
+
+  // A different draft revision (regenerated draft) restarts any pending edit.
+  useEffect(() => {
+    setEditing(false)
+    setOrder(orderedConceptIds(revision))
+    setTitles({})
+    setRemoved([])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revision.id, revision.version])
+
+  const editState: DraftEditState = { order, titles, removed }
+  const kept = keptConceptIds(revision, editState)
+  const keptSet = new Set(kept)
+  const conceptById = new Map(revision.concepts.map(concept => [concept.id as string, concept]))
+  const groups = groupConceptsByChapters(revision)
   const chapters = revision.chapters ?? []
-  const { groups, ungrouped } = groupChapterConcepts(revision)
+  const canConfirm = !props.busy && kept.length > 0
+
+  /** Enter edit mode with a clean copy of the current structure. */
+  const beginEditing = (): void => {
+    const original = originalEditState(revision)
+    setOrder(original.order)
+    setTitles(original.titles)
+    setRemoved(original.removed)
+    setEditing(true)
+  }
+  const resetChanges = (): void => {
+    const original = originalEditState(revision)
+    setOrder(original.order)
+    setTitles(original.titles)
+    setRemoved(original.removed)
+  }
+  const cancelEditing = (): void => {
+    resetChanges()
+    setEditing(false)
+  }
+  const changeTitle = (conceptId: string, title: string): void => {
+    setTitles(previous => ({ ...previous, [conceptId]: title }))
+  }
+  const removeConcept = (conceptId: string): void => {
+    setRemoved(previous => previous.includes(conceptId) ? previous : [...previous, conceptId])
+  }
+  const move = (conceptId: string, direction: 'up' | 'down'): void => {
+    setOrder(moveConcept(revision, editState, conceptId, direction))
+  }
+  const confirm = (): void => {
+    const edits = editing ? buildDraftEdits(revision, editState) : undefined
+    void props.onConfirm(edits)
+  }
+
+  /** Concepts of one editor section in the current (edited) order. */
+  const sectionConcepts = (ids: readonly string[]): readonly CourseRevision['concepts'][number][] =>
+    order
+      .filter(id => ids.includes(id) && keptSet.has(id))
+      .map(id => conceptById.get(id))
+      .filter((concept): concept is CourseRevision['concepts'][number] => concept !== undefined)
+
+  const renderEditorRows = (ids: readonly string[]): React.ReactElement => (
+    <div className="ai-edit-rows">
+      {sectionConcepts(ids).map(concept => (
+        <ConceptEditRow
+          key={concept.id}
+          revision={revision}
+          concept={concept}
+          state={editState}
+          busy={props.busy}
+          onChangeTitle={changeTitle}
+          onMove={move}
+          onRemove={removeConcept}
+        />
+      ))}
+    </div>
+  )
+
   return (
     <div className="ai-draft-review">
-      <h3 style={{ margin: '0 0 6px', fontSize: 14 }}>课程结构草案（v{revision.version}）</h3>
+      <h3 style={{ margin: '0 0 6px', fontSize: 14 }}>课程结构草案（v{revision.version}）{editing ? ' · 编辑中' : ''}</h3>
       {(origin !== undefined || structureNotes.length > 0) && (
         <div className="ai-draft-origin">
           {origin !== undefined && (
@@ -143,10 +256,36 @@ export function DraftReview(props: DraftReviewProps): React.ReactElement {
         </div>
       )}
       <div className="ai-muted">
-        来源覆盖：{draft.coverage.length} 份资料 · 概念 {revision.concepts.length} 个
-        · 学习顺序 {revision.sequence.length} 步
+        来源覆盖：{draft.coverage.length} 份资料 · 概念 {editing ? kept.length : conceptCount} 个
+        · 学习顺序 {editing ? kept.length : revision.sequence.length} 步
         {chapters.length > 0 ? ` · 章节 ${chapters.length} 个` : ''}
+        {editing && removed.length > 0 ? ` · 已移除 ${removed.length} 个` : ''}
       </div>
+      {!editing && conceptCount > 0 && (
+        <div className="ai-row" style={{ margin: '6px 0 2px' }}>
+          <button
+            type="button"
+            className="ai-small-button"
+            disabled={props.busy}
+            onClick={beginEditing}
+            aria-label="编辑课程结构"
+          >
+            编辑结构
+          </button>
+          <span className="ai-muted">可改名、删除或调整章节内顺序；确认时一并应用。</span>
+        </div>
+      )}
+      {editing && (
+        <div className="ai-row" style={{ margin: '6px 0 2px' }}>
+          <button type="button" className="ai-small-button" disabled={props.busy} onClick={cancelEditing}>
+            取消编辑
+          </button>
+          <button type="button" className="ai-small-button" disabled={props.busy} onClick={resetChanges}>
+            重置修改
+          </button>
+          <span className="ai-muted">修改在点击「确认结构并开始学习」时提交；不会改动原始资料。</span>
+        </div>
+      )}
       {draft.warnings.length > 0 && (
         <ul className="ai-warning-list">
           {draft.warnings.map(warning => <li key={warning}>{warning}</li>)}
@@ -154,10 +293,19 @@ export function DraftReview(props: DraftReviewProps): React.ReactElement {
       )}
       {chapters.length > 0 ? (
         <div className="ai-chapter-list">
-          {groups.map(group => (
+          {groups.chapters.map(group => (
             <section className="ai-chapter" key={group.chapter.id} aria-label={`章节 ${group.chapter.title}`}>
-              <ChapterHead chapter={group.chapter} conceptCount={group.concepts.length} />
-              {group.concepts.length === 0 ? (
+              <ChapterHead
+                chapter={group.chapter}
+                conceptCount={editing
+                  ? sectionConcepts(group.chapter.conceptIds.map(id => id as string)).length
+                  : group.concepts.length}
+              />
+              {editing ? (
+                sectionConcepts(group.chapter.conceptIds.map(id => id as string)).length === 0 ? (
+                  <div className="ai-muted">（该章节暂时没有可编辑的概念）</div>
+                ) : renderEditorRows(group.chapter.conceptIds.map(id => id as string))
+              ) : group.concepts.length === 0 ? (
                 <div className="ai-muted">（该章节暂时没有可展示的概念）</div>
               ) : (
                 <ol className="ai-checklist ai-chapter-concepts">
@@ -166,24 +314,34 @@ export function DraftReview(props: DraftReviewProps): React.ReactElement {
               )}
             </section>
           ))}
-          {ungrouped.length > 0 && (
+          {(editing ? sectionConcepts(groups.ungrouped.map(concept => concept.id as string)).length : groups.ungrouped.length) > 0 && (
             <section className="ai-chapter" aria-label="未分组概念">
               <div className="ai-chapter-head">
                 <div className="ai-row" style={{ alignItems: 'baseline', gap: 8 }}>
                   <span className="ai-chapter-title">未分组概念</span>
-                  <span className="ai-muted">概念 {ungrouped.length} 个</span>
+                  <span className="ai-muted">
+                    概念 {editing
+                      ? sectionConcepts(groups.ungrouped.map(concept => concept.id as string)).length
+                      : groups.ungrouped.length} 个
+                  </span>
                 </div>
                 <div className="ai-chapter-summary">这些概念未归入任何章节，仍会按学习顺序出现。</div>
               </div>
-              <ol className="ai-checklist ai-chapter-concepts">
-                {ungrouped.map(concept => <ConceptItem key={concept.id} concept={concept} />)}
-              </ol>
+              {editing ? (
+                renderEditorRows(groups.ungrouped.map(concept => concept.id as string))
+              ) : (
+                <ol className="ai-checklist ai-chapter-concepts">
+                  {groups.ungrouped.map(concept => <ConceptItem key={concept.id} concept={concept} />)}
+                </ol>
+              )}
             </section>
           )}
         </div>
+      ) : editing ? (
+        <div className="ai-edit-rows">{renderEditorRows(kept)}</div>
       ) : (
         <ol className="ai-checklist">
-          {revision.sequence.map(conceptId => {
+          {revision.sequence.map((conceptId) => {
             const concept = revision.concepts.find(item => item.id === conceptId)
             return concept === undefined ? null : (
               <ConceptItem key={concept.id} concept={concept} />
@@ -196,6 +354,11 @@ export function DraftReview(props: DraftReviewProps): React.ReactElement {
           资料：{draft.coverage.map(item => `${item.title}（${item.status}，${item.usedUnits} 单元${item.issues > 0 ? `，${item.issues} 个问题` : ''}）`).join('；')}
         </div>
       )}
+      {editing && kept.length === 0 && (
+        <div className="ai-banner" data-kind="warning" role="status" style={{ margin: '8px 0', borderRadius: 8 }}>
+          <span>至少保留一个概念才能确认结构。请「取消编辑」「重置修改」，或直接重新生成草案。</span>
+        </div>
+      )}
       {props.error !== undefined && (
         <div className="ai-banner" data-kind="error" role="alert" style={{ margin: '8px 0', borderRadius: 8 }}>
           <span>{props.error}</span>
@@ -206,8 +369,9 @@ export function DraftReview(props: DraftReviewProps): React.ReactElement {
         <button
           type="button"
           className="ai-primary-button"
-          disabled={props.busy || revision.concepts.length === 0}
-          onClick={() => void props.onConfirm()}
+          disabled={!canConfirm}
+          onClick={confirm}
+          title={editing ? '提交修改并确认课程结构' : undefined}
         >
           确认结构并开始学习
         </button>
@@ -223,7 +387,7 @@ export function DraftReview(props: DraftReviewProps): React.ReactElement {
           </button>
         )}
       </div>
-      {revision.concepts.length === 0 && (
+      {conceptCount === 0 && (
         <div className="ai-muted" style={{ marginTop: 6 }}>
           草案还没有概念：请先导入可读资料后重新生成，或直接「先随便问问」用最小结构开始。
         </div>

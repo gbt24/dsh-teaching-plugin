@@ -24,6 +24,7 @@ import {
 import { Banner, ErrorBanner, Spinner } from './Banner.tsx'
 import { ChatPanel, QUICK_ACTION_PROMPTS, type QuickAction } from './ChatPanel.tsx'
 import { Onboarding, type WizardResult } from './Onboarding.tsx'
+import type { DraftConfirmEdits } from '../draft-edits.ts'
 import { CourseSetupCard } from './CourseSetupCard.tsx'
 import { Sidebar } from './Sidebar.tsx'
 import { TeachingArea } from './TeachingArea.tsx'
@@ -870,11 +871,19 @@ export function TeachingWorkspace(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadTasks, awaitTask])
 
-  const confirmDraft = useCallback(async (courseId: string, revisionId: string): Promise<WizardResult> => {
+  const confirmDraft = useCallback(async (
+    courseId: string,
+    revisionId: string,
+    edits?: DraftConfirmEdits,
+  ): Promise<WizardResult> => {
     if (revisionId === '') return { ok: false, error: '草案版本无效，请重新生成草案。' }
     dispatch({ type: 'busy', label: '确认课程结构…' })
     try {
-      await apiPost('courseDraft.confirm', { courseId: courseId as never, revisionId })
+      await apiPost('courseDraft.confirm', {
+        courseId: courseId as never,
+        revisionId,
+        ...(edits === undefined ? {} : { edits }),
+      })
       const { sessions } = await refreshCourse(courseId)
       const first = sessions[0]
       if (first !== undefined) await selectSession(first.id)
@@ -934,9 +943,13 @@ export function TeachingWorkspace(props: {
     else setSetup({ phase: 'error', error: result.error ?? '课程草案生成失败' })
   }, [generateDraft])
 
-  const confirmSetupDraft = useCallback(async (courseId: string, revisionId: string): Promise<void> => {
+  const confirmSetupDraft = useCallback(async (
+    courseId: string,
+    revisionId: string,
+    edits?: DraftConfirmEdits,
+  ): Promise<void> => {
     setSetup(previous => ({ ...previous, busy: true, error: undefined }))
-    const result = await confirmDraft(courseId, revisionId)
+    const result = await confirmDraft(courseId, revisionId, edits)
     if (!mounted.current) return
     setSetup(result.ok ? { phase: 'ready' } : previous => ({ ...previous, busy: false, error: result.error }))
   }, [confirmDraft])
@@ -1030,7 +1043,7 @@ export function TeachingWorkspace(props: {
           hasDraftConcepts={draftConceptCount(detail) > 0}
           onGenerate={() => { void generateSetupDraft(detail.course.id) }}
           onLoadDraft={() => { void loadSetupDraft(detail.course.id) }}
-          onConfirm={(revisionId) => { void confirmSetupDraft(detail.course.id, revisionId) }}
+          onConfirm={(revisionId, edits) => { void confirmSetupDraft(detail.course.id, revisionId, edits) }}
           onAdhoc={() => { void adhocSetup(detail.course.id) }}
         />
       )}

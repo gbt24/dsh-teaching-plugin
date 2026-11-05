@@ -3,7 +3,7 @@
  * sessions and evidence-based review suggestions. All data comes from the Host
  * (CourseDetail / SessionView / ReviewItem); this component only presents it.
  */
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import type {
   Concept, CourseDetail, CourseSummary, MasteryRecord, ReviewItem, SessionSummary, SessionView,
 } from '@deepseek-teaching/core/contracts'
@@ -11,6 +11,9 @@ import type { CourseProgress } from '../state.ts'
 import {
   MASTERY_LABELS, REVIEW_REASON_LABELS, STAGE_LABELS, formatDay, truncate,
 } from '../helpers.ts'
+import {
+  chapterCoverage, defaultOpenChapterId, groupConceptsByChapters,
+} from '../draft-edits.ts'
 
 export interface SidebarProps {
   readonly courses: readonly CourseSummary[]
@@ -52,14 +55,64 @@ export function orderedConcepts(detail: CourseDetail | undefined): readonly Conc
   return ordered
 }
 
+const SIDEBAR_CHAPTER_ROLE_LABELS: Readonly<Record<'chapter' | 'appendix' | 'tool', string>> = {
+  chapter: '',
+  appendix: '附录',
+  tool: '跨章工具',
+}
+
 export function Sidebar(props: SidebarProps): React.ReactElement {
   const detail = props.courseDetail
   const concepts = orderedConcepts(detail)
   const masteryByConcept = new Map(props.mastery.map(record => [record.conceptId, record]))
   const currentConceptId = props.session?.session.position.conceptId
+  const revision = detail?.activeRevision ?? detail?.draftRevision
+  const structure = revision === undefined ? undefined : groupConceptsByChapters(revision)
+  const hasChapters = structure?.hasChapters === true
+  /** Concept ids the student has seen: mastery beyond `unseen` or session coverage. */
+  const seenConceptIds = new Set<string>()
+  for (const conceptId of props.session?.session.coveredConceptIds ?? []) seenConceptIds.add(conceptId as string)
+  for (const record of props.mastery) {
+    if (record.level !== 'unseen') seenConceptIds.add(record.conceptId as string)
+  }
+  const [openChapterIds, setOpenChapterIds] = useState<ReadonlySet<string>>(new Set())
+  // Opening chapters follow the revision (first chapter / current concept's chapter),
+  // while a student's manual open/close stays untouched otherwise.
+  useEffect(() => {
+    if (!hasChapters || revision === undefined) {
+      setOpenChapterIds(new Set())
+      return
+    }
+    const target = defaultOpenChapterId(revision, currentConceptId as string | undefined)
+    setOpenChapterIds(new Set(target === undefined ? [] : [target]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revision?.id, currentConceptId])
   const activeCourseId = detail?.course.id ?? props.courses[0]?.course.id
   const language = detail?.activeRevision?.language ?? detail?.draftRevision?.language ?? 'zh'
   const goal = detail?.activeRevision?.goals[0] ?? detail?.draftRevision?.goals[0]
+  /** One concept row (shared by the flat list and the chapter groups). */
+  const renderConceptRow = (concept: Concept): React.ReactElement => {
+    const record = masteryByConcept.get(concept.id)
+    const level = record?.level ?? 'unseen'
+    const current = concept.id === currentConceptId
+    return (
+      <button
+        key={concept.id}
+        type="button"
+        className="ai-concept-row"
+        data-current={current}
+        onClick={() => props.onConceptClick(concept)}
+        title={concept.summary}
+        aria-label={`学习概念 ${concept.title}`}
+        disabled={props.busy}
+      >
+        <span className="ai-grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {concept.title}
+        </span>
+        <span className="ai-badge" data-level={level}>{MASTERY_LABELS[level]}</span>
+      </button>
+    )
+  }
   return (
     <nav className="ai-teaching-sidebar" aria-label="课程导航">
       <div className="ai-sidebar-section">
@@ -130,36 +183,85 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
       </div>
 
       <div className="ai-sidebar-section">
-        <h3 className="ai-sidebar-heading">
-          概念进度（{props.progress.covered}/{props.progress.total}）
-        </h3>
+        <div className="ai-sidebar-heading-row">
+          <h3 className="ai-sidebar-heading">
+            概念进度（{props.progress.covered}/{props.progress.total}）
+          </h3>
+          {hasChapters && structure !== undefined && (
+            <span className="ai-row">
+              <button
+                type="button"
+                className="ai-link-button"
+                onClick={() => setOpenChapterIds(new Set(structure.chapters.map(group => group.chapter.id)))}
+              >
+                展开全部
+              </button>
+              <button type="button" className="ai-link-button" onClick={() => setOpenChapterIds(new Set())}>
+                收起全部
+              </button>
+            </span>
+          )}
+        </div>
         {concepts.length === 0 && (
           <div className="ai-muted">
             {detail === undefined ? '尚未选择课程' : '课程结构尚未确认，确认后显示概念'}
           </div>
         )}
-        {concepts.map(concept => {
-          const record = masteryByConcept.get(concept.id)
-          const level = record?.level ?? 'unseen'
-          const current = concept.id === currentConceptId
-          return (
-            <button
-              key={concept.id}
-              type="button"
-              className="ai-concept-row"
-              data-current={current}
-              onClick={() => props.onConceptClick(concept)}
-              title={concept.summary}
-              aria-label={`学习概念 ${concept.title}`}
-              disabled={props.busy}
-            >
-              <span className="ai-grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {concept.title}
-              </span>
-              <span className="ai-badge" data-level={level}>{MASTERY_LABELS[level]}</span>
-            </button>
-          )
-        })}
+        {hasChapters && structure !== undefined ? (
+          <div className="ai-sidebar-chapters">
+            {structure.chapters.map(group => {
+              const open = openChapterIds.has(group.chapter.id)
+              const coverage = chapterCoverage(group.concepts, seenConceptIds)
+              const showRole = group.chapter.role !== undefined && group.chapter.role !== 'chapter'
+              return (
+                <div className="ai-chapter-group" key={group.chapter.id}>
+                  <button
+                    type="button"
+                    className="ai-chapter-toggle"
+                    aria-expanded={open}
+                    aria-label={`章节 ${group.chapter.title}`}
+                    onClick={() => setOpenChapterIds((previous) => {
+                      const next = new Set(previous)
+                      if (next.has(group.chapter.id)) next.delete(group.chapter.id)
+                      else next.add(group.chapter.id)
+                      return next
+                    })}
+                  >
+                    <span className="ai-collapsible-arrow" aria-hidden="true">{open ? '▾' : '▸'}</span>
+                    <span className="ai-chapter-title">{group.chapter.title}</span>
+                    {showRole && (
+                      <span className="ai-badge" data-chapter-role={group.chapter.role}>
+                        {SIDEBAR_CHAPTER_ROLE_LABELS[group.chapter.role as 'appendix' | 'tool']}
+                      </span>
+                    )}
+                    <span className="ai-chapter-progress">已接触 {coverage.covered}/{coverage.total}</span>
+                  </button>
+                  {open && (
+                    group.concepts.length === 0
+                      ? <div className="ai-muted ai-chapter-empty">（本章暂无概念）</div>
+                      : <div className="ai-chapter-concept-rows">{group.concepts.map(concept => renderConceptRow(concept))}</div>
+                  )}
+                </div>
+              )
+            })}
+            {structure.ungrouped.length > 0 && (
+              <div className="ai-chapter-group">
+                <div className="ai-chapter-toggle ai-chapter-toggle-static">
+                  <span className="ai-collapsible-arrow" aria-hidden="true">·</span>
+                  <span className="ai-chapter-title">未分组概念</span>
+                  <span className="ai-chapter-progress">
+                    {structure.ungrouped.length} 个 · 已接触 {chapterCoverage(structure.ungrouped, seenConceptIds).covered}
+                  </span>
+                </div>
+                <div className="ai-chapter-concept-rows">
+                  {structure.ungrouped.map(concept => renderConceptRow(concept))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          concepts.map(concept => renderConceptRow(concept))
+        )}
         {props.session !== undefined && (
           <div className="ai-muted" style={{ marginTop: 4 }}>
             当前阶段：{STAGE_LABELS[props.session.session.position.stage]}

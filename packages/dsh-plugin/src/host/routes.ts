@@ -583,14 +583,19 @@ export function registerRoutes(services: RouteServices): void {
       concepts = concepts.filter(concept => !remove.has(concept.id))
     }
     if (edits?.conceptTitles !== undefined) {
-      concepts = concepts.map(concept => edits.conceptTitles?.[concept.id] === undefined
-        ? concept
-        : { ...concept, title: edits.conceptTitles[concept.id] ?? concept.title })
+      concepts = concepts.map(concept => {
+        const raw = edits.conceptTitles?.[concept.id]
+        const title = typeof raw === 'string' ? raw.trim().slice(0, 120) : ''
+        return title === '' ? concept : { ...concept, title }
+      })
     }
     let sequence = draft.sequence.filter(id => concepts.some(concept => concept.id === id))
     if (edits?.sequence !== undefined) {
       const requested = edits.sequence.filter(id => concepts.some(concept => concept.id === id))
       sequence = [...requested, ...concepts.map(concept => concept.id).filter(id => !requested.includes(id))]
+    }
+    if (concepts.length === 0) {
+      return failure({ code: 'invalid-input', message: '确认的课程结构至少需要一个概念' })
     }
     // Keep optional chapter groupings consistent with the edited concept set.
     const chapters = draft.chapters === undefined

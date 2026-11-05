@@ -81,3 +81,9 @@ frontmatter 字段：`title`、`type`、`tags`、`sources`、`confidence`、`con
 - LLM-wiki 回退是“虚拟 wiki”，不写入 `WIKI_PATH`；不替代用户对知识库的维护（lint/ingest 写入仍由 skill/用户控制）。
 - 自定义页面类型（如 `chapter-overview`）按本地扩展识别；其他自定义类型回退为普通概念/源材料。
 - 未结构化的 PDF/Office 资料仍需解析成本；回退只改善结构质量，不减少 OCR 时间。
+
+
+## Phase 2 状态（2026-11-05）
+
+- 已实现：草案概念编辑（改名/删除/排序，确认时提交 edits）、章节化学习侧栏（折叠/进度/旧修订回退）；Host 拒绝空结构；测试 371/371。
+- 仍待：章节标题/摘要编辑、新增概念、未保存编辑提醒、真实 Desktop 目视确认。

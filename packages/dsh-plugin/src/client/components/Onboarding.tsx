@@ -14,6 +14,7 @@ import type { AppError, BootstrapInfo, CourseDraftView, TaskSnapshot } from '@de
 import { formatPercent } from '../helpers.ts'
 import { Banner, Spinner, TaskProgressBar } from './Banner.tsx'
 import { DraftReview } from './DraftReview.tsx'
+import type { DraftConfirmEdits } from '../draft-edits.ts'
 
 /** Result of one wizard action; `error` is shown verbatim with a retry path. */
 export interface WizardResult {
@@ -39,7 +40,7 @@ export interface OnboardingProps {
   }) => Promise<string | undefined>
   readonly onImportPaths: (courseId: string, paths: readonly string[]) => Promise<WizardResult>
   readonly onGenerateDraft: (courseId: string) => Promise<WizardResult>
-  readonly onConfirmDraft: (courseId: string, revisionId: string) => Promise<WizardResult>
+  readonly onConfirmDraft: (courseId: string, revisionId: string, edits?: DraftConfirmEdits) => Promise<WizardResult>
   /** Ad-hoc start: confirm a minimal structure on the Host and open a session. */
   readonly onStartAdhoc: (courseId: string) => Promise<WizardResult>
   /** Whether there are existing courses to return to (adding a course case). */
@@ -145,11 +146,11 @@ export function Onboarding(props: OnboardingProps): React.ReactElement {
     }
   }
 
-  const confirmDraft = async (revisionId: string): Promise<void> => {
+  const confirmDraft = async (revisionId: string, edits?: DraftConfirmEdits): Promise<void> => {
     if (courseId === undefined || revisionId === '') return
     setDraftError(undefined)
     setActionBusy('确认课程结构…')
-    const result = await props.onConfirmDraft(courseId, revisionId)
+    const result = await props.onConfirmDraft(courseId, revisionId, edits)
     setActionBusy(undefined)
     if (!result.ok) setDraftError(result.error ?? '确认课程结构失败')
     // On success the workspace switches itself: the Host has an active revision.
@@ -295,7 +296,7 @@ export function Onboarding(props: OnboardingProps): React.ReactElement {
               draft={props.draft}
               busy={busy}
               {...(draftError !== undefined ? { error: draftError } : {})}
-              onConfirm={() => props.draft === undefined ? undefined : confirmDraft(props.draft.revision.id)}
+              onConfirm={(edits) => props.draft === undefined ? undefined : confirmDraft(props.draft.revision.id, edits)}
               onRegenerate={() => void generateDraft()}
               onAdhoc={() => void startAdhoc()}
               onBack={() => setStep('import')}

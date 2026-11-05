@@ -6,6 +6,7 @@
 import React from 'react'
 import type { CourseDetail, CourseDraftView } from '@deepseek-teaching/core/contracts'
 import { DraftReview } from './DraftReview.tsx'
+import type { DraftConfirmEdits } from '../draft-edits.ts'
 import { Spinner } from './Banner.tsx'
 
 export interface CourseSetupCardProps {
@@ -20,7 +21,7 @@ export interface CourseSetupCardProps {
   readonly onGenerate: () => void
   /** Fetch an existing draft and show it for confirmation. */
   readonly onLoadDraft: () => void
-  readonly onConfirm: (revisionId: string) => void
+  readonly onConfirm: (revisionId: string, edits?: DraftConfirmEdits) => void
   readonly onAdhoc: () => void
 }
 
@@ -59,7 +60,7 @@ export function CourseSetupCard(props: CourseSetupCardProps): React.ReactElement
             draft={props.draft}
             busy={props.busy}
             error={props.error}
-            onConfirm={() => props.onConfirm(props.draft?.revision.id ?? '')}
+            onConfirm={(edits) => props.onConfirm(props.draft?.revision.id ?? '', edits)}
             onRegenerate={props.onGenerate}
             onAdhoc={props.onAdhoc}
           />

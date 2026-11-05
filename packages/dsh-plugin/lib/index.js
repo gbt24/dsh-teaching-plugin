@@ -62646,12 +62646,19 @@ function registerRoutes(services) {
       concepts = concepts.filter((concept) => !remove.has(concept.id));
     }
     if (edits?.conceptTitles !== void 0) {
-      concepts = concepts.map((concept) => edits.conceptTitles?.[concept.id] === void 0 ? concept : { ...concept, title: edits.conceptTitles[concept.id] ?? concept.title });
+      concepts = concepts.map((concept) => {
+        const raw = edits.conceptTitles?.[concept.id];
+        const title = typeof raw === "string" ? raw.trim().slice(0, 120) : "";
+        return title === "" ? concept : { ...concept, title };
+      });
     }
     let sequence = draft.sequence.filter((id) => concepts.some((concept) => concept.id === id));
     if (edits?.sequence !== void 0) {
       const requested = edits.sequence.filter((id) => concepts.some((concept) => concept.id === id));
       sequence = [...requested, ...concepts.map((concept) => concept.id).filter((id) => !requested.includes(id))];
+    }
+    if (concepts.length === 0) {
+      return failure({ code: "invalid-input", message: "\u786E\u8BA4\u7684\u8BFE\u7A0B\u7ED3\u6784\u81F3\u5C11\u9700\u8981\u4E00\u4E2A\u6982\u5FF5" });
     }
     const chapters = draft.chapters === void 0 ? void 0 : draft.chapters.map((chapter) => ({
       ...chapter,
