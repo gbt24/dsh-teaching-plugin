@@ -15,7 +15,7 @@ import { join } from 'node:path'
 import {
   CourseRepository, LearningRepository, LocalState, ProfileRepository, SessionRepository,
 } from '@deepseek-teaching/core'
-import { createCorpusService } from '@deepseek-teaching/core/corpus'
+import { createCorpusService, DEFAULT_LIMITS, resolveOcrRuntime } from '@deepseek-teaching/core/corpus'
 import { createTeachingService } from '@deepseek-teaching/core/teaching'
 import { createLearningService, createModelRubricAssessor, rubricFromActivityPayload } from '@deepseek-teaching/core/learning'
 import { createRunnerRegistry } from '@deepseek-teaching/core/experiments'
@@ -108,6 +108,26 @@ export function apply(ctx: HostContext, config: Config = {}): void {
     appVersion: '0.2.1-rc.5',
   })
 
+  // OCR capability is reported from the real host toolchain (tesseract +
+  // language packs); it is not assumed and not hardcoded off.
+  const ocrState: { available: boolean; reason: string; languages: readonly string[]; checked: boolean } = {
+    available: false, reason: '尚未检测', languages: [], checked: false,
+  }
+  const ensureOcr = async (): Promise<typeof ocrState> => {
+    if (ocrState.checked) return ocrState
+    try {
+      const runtime = await resolveOcrRuntime(undefined, DEFAULT_LIMITS)
+      ocrState.available = runtime.available
+      ocrState.reason = runtime.reason
+      ocrState.languages = runtime.languages
+    } catch (cause) {
+      ocrState.reason = `OCR 能力检测失败：${cause instanceof Error ? cause.message : String(cause)}`
+    }
+    ocrState.checked = true
+    logger('ocr capability', { available: ocrState.available, reason: ocrState.reason, languages: ocrState.languages })
+    return ocrState
+  }
+
   /** Corpus service: parsing, retrieval, course drafts, change detection. */
   const corpus = createCorpusService({
     state,
@@ -170,6 +190,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
     portability,
     createLearningFor,
     takeUsage,
+    getOcrInfo: () => ensureOcr(),
     profiles,
     courses,
     sessions,

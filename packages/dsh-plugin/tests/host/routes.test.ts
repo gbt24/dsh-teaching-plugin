@@ -168,6 +168,7 @@ async function createHarness(replies: ConstructorParameters<typeof ScriptedModel
     portability,
     createLearningFor: createLearningFor as never,
     takeUsage: () => undefined,
+    getOcrInfo: async () => ({ available: true, reason: '', languages: ['eng'] }),
     profiles,
     courses,
     sessions,

@@ -60286,12 +60286,15 @@ var HarnessModelAdapter = class {
     let imageInput = "unknown";
     let contextWindow;
     try {
-      const model = await this.host.llm.resolveModel?.(selection.provider, selection.model);
+      const llm = this.host.llm;
+      const model = llm.resolveModelInfo !== void 0 ? await llm.resolveModelInfo(selection.provider, selection.model) : await llm.resolveModel?.(selection.provider, selection.model);
       const modalities = model?.inputModalities;
       if (Array.isArray(modalities)) imageInput = modalities.includes("image") ? "yes" : "no";
-      const window2 = model?.contextWindow;
+      const context = model?.context;
+      const window2 = model?.contextWindow ?? context?.contextWindow;
       if (typeof window2 === "number") contextWindow = window2;
-    } catch {
+    } catch (cause) {
+      this.options.log?.("model capability probe failed", { message: cause instanceof Error ? cause.message : String(cause) });
     }
     this.cachedInfo = {
       provider: selection.provider,
@@ -60699,6 +60702,7 @@ function registerRoutes(services) {
   route("bootstrap", async () => {
     const profile = await services.profiles.get();
     const model = await services.model.info();
+    const ocr = await services.getOcrInfo();
     const capabilities = {
       provider: model.provider,
       model: model.model,
@@ -60708,7 +60712,16 @@ function registerRoutes(services) {
       note: model.note
     };
     const warnings = [];
-    if (model.imageInput === "unknown") warnings.push("\u672A\u80FD\u786E\u8BA4\u5F53\u524D\u6A21\u578B\u662F\u5426\u652F\u6301\u56FE\u7247\u8F93\u5165\uFF1B\u626B\u63CF\u4EF6\u5C06\u5C55\u793A\u539F\u6587\u4F9B\u6838\u5BF9");
+    if (!ocr.available) {
+      warnings.push(`\u56FE\u7247/\u626B\u63CF\u4EF6\u6587\u5B57\u8BC6\u522B\u672A\u542F\u7528\uFF1A${ocr.reason}\u3002\u626B\u63CF\u4EF6\u4E0E\u56FE\u7247\u4E2D\u7684\u516C\u5F0F\u56FE\u8868\u5C06\u4FDD\u7559\u539F\u6587/\u56FE\u7247\u4F9B\u6838\u5BF9\uFF0C\u4E0D\u4F1A\u7F16\u9020\u8BC6\u522B\u7ED3\u679C\u3002`);
+    } else if (ocr.languages.length > 0) {
+      warnings.push(`\u626B\u63CF\u4EF6/\u56FE\u7247\u5C06\u4F7F\u7528\u672C\u673A tesseract OCR\uFF08${ocr.languages.join("+")}\uFF09\uFF1B\u516C\u5F0F\u4E0E\u590D\u6742\u6392\u7248\u8BC6\u522B\u53EF\u80FD\u4E0D\u5B8C\u6574\uFF0C\u4F4E\u7F6E\u4FE1\u5EA6\u5185\u5BB9\u4F1A\u6807\u6CE8\u5F85\u6838\u5BF9\u3002`);
+    }
+    if (model.imageInput === "unknown") {
+      warnings.push("\u672A\u80FD\u786E\u8BA4\u5F53\u524D\u6A21\u578B\u662F\u5426\u652F\u6301\u56FE\u7247\u8F93\u5165\uFF1B\u63D2\u4EF6\u4E0D\u4F1A\u628A\u56FE\u7247\u76F4\u63A5\u53D1\u9001\u7ED9\u6A21\u578B\uFF0C\u626B\u63CF\u5185\u5BB9\u4EE5 OCR \u6587\u672C + \u539F\u6587\u5B9A\u4F4D\u5448\u73B0\u3002");
+    } else if (model.imageInput === "no") {
+      warnings.push("\u5F53\u524D\u6A21\u578B\u4E0D\u652F\u6301\u56FE\u7247\u8F93\u5165\uFF1B\u626B\u63CF\u5185\u5BB9\u4EE5 OCR \u6587\u672C + \u539F\u6587\u5B9A\u4F4D\u5448\u73B0\u3002");
+    }
     const info2 = {
       pluginVersion: services.pluginVersion,
       builtFor: "0.2.1-rc.5",
@@ -60723,7 +60736,7 @@ function registerRoutes(services) {
       profile,
       language: profile.language,
       features: {
-        imageOcr: false,
+        imageOcr: ocr.available,
         webSearch: services.web.available(),
         experiments: true,
         offlineExport: false
@@ -62324,6 +62337,26 @@ function apply(ctx, config = {}) {
     pluginVersion: "0.1.0",
     appVersion: "0.2.1-rc.5"
   });
+  const ocrState = {
+    available: false,
+    reason: "\u5C1A\u672A\u68C0\u6D4B",
+    languages: [],
+    checked: false
+  };
+  const ensureOcr = async () => {
+    if (ocrState.checked) return ocrState;
+    try {
+      const runtime = await resolveOcrRuntime(void 0, DEFAULT_LIMITS);
+      ocrState.available = runtime.available;
+      ocrState.reason = runtime.reason;
+      ocrState.languages = runtime.languages;
+    } catch (cause) {
+      ocrState.reason = `OCR \u80FD\u529B\u68C0\u6D4B\u5931\u8D25\uFF1A${cause instanceof Error ? cause.message : String(cause)}`;
+    }
+    ocrState.checked = true;
+    logger("ocr capability", { available: ocrState.available, reason: ocrState.reason, languages: ocrState.languages });
+    return ocrState;
+  };
   const corpus = createCorpusService({
     state,
     courses,
@@ -62376,6 +62409,7 @@ function apply(ctx, config = {}) {
     portability,
     createLearningFor,
     takeUsage,
+    getOcrInfo: () => ensureOcr(),
     profiles,
     courses,
     sessions,

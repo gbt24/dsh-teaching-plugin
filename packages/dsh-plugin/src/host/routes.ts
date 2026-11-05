@@ -65,6 +65,8 @@ export interface RouteServices {
   readonly createLearningFor: (activity?: LessonActivity) => LearningService
   /** Usage of the most recent model call in one session, then cleared. */
   readonly takeUsage: (sessionId: string) => UsageEntry | undefined
+  /** Real host OCR capability (tesseract/language packs), probed once. */
+  readonly getOcrInfo: () => Promise<{ readonly available: boolean; readonly reason: string; readonly languages: readonly string[] }>
   readonly profiles: ProfileRepository
   readonly courses: CourseRepository
   readonly sessions: SessionRepository
@@ -167,6 +169,7 @@ export function registerRoutes(services: RouteServices): void {
   route('bootstrap', async () => {
     const profile = await services.profiles.get()
     const model = await services.model.info()
+    const ocr = await services.getOcrInfo()
     const capabilities: ModelCapabilities = {
       provider: model.provider,
       model: model.model,
@@ -176,7 +179,16 @@ export function registerRoutes(services: RouteServices): void {
       note: model.note,
     }
     const warnings: string[] = []
-    if (model.imageInput === 'unknown') warnings.push('未能确认当前模型是否支持图片输入；扫描件将展示原文供核对')
+    if (!ocr.available) {
+      warnings.push(`图片/扫描件文字识别未启用：${ocr.reason}。扫描件与图片中的公式图表将保留原文/图片供核对，不会编造识别结果。`)
+    } else if (ocr.languages.length > 0) {
+      warnings.push(`扫描件/图片将使用本机 tesseract OCR（${ocr.languages.join('+')}）；公式与复杂排版识别可能不完整，低置信度内容会标注待核对。`)
+    }
+    if (model.imageInput === 'unknown') {
+      warnings.push('未能确认当前模型是否支持图片输入；插件不会把图片直接发送给模型，扫描内容以 OCR 文本 + 原文定位呈现。')
+    } else if (model.imageInput === 'no') {
+      warnings.push('当前模型不支持图片输入；扫描内容以 OCR 文本 + 原文定位呈现。')
+    }
     const info: BootstrapInfo = {
       pluginVersion: services.pluginVersion,
       builtFor: '0.2.1-rc.5',
@@ -191,7 +203,7 @@ export function registerRoutes(services: RouteServices): void {
       profile,
       language: profile.language,
       features: {
-        imageOcr: false,
+        imageOcr: ocr.available,
         webSearch: services.web.available(),
         experiments: true,
         offlineExport: false,

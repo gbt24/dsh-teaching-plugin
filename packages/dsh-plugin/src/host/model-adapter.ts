@@ -21,6 +21,9 @@ export interface HarnessModelHost {
   agentDefaultModel: { currentSelection(): { provider: string; model: string; reasoningEffort?: string } }
   llm: {
     stream(options: Record<string, unknown>): AsyncIterable<Record<string, unknown>>
+    /** Public service method: full model metadata incl. inputModalities. */
+    resolveModelInfo?(provider: string, model: string): Promise<Record<string, unknown> | undefined>
+    /** Adapter-side method name exposed by some runtime builds. */
     resolveModel?(provider: string, model: string): Promise<Record<string, unknown> | undefined> | Record<string, unknown> | undefined
   }
 }
@@ -105,13 +108,22 @@ export class HarnessModelAdapter implements ModelClient {
     let imageInput: ModelInfo['imageInput'] = 'unknown'
     let contextWindow: number | undefined
     try {
-      const model = await this.host.llm.resolveModel?.(selection.provider, selection.model)
+      // The public service method is resolveModelInfo; resolveModel is the
+      // adapter-side name and exists only on some runtime builds. Call through
+      // the service object so `this` stays bound.
+      const llm = this.host.llm
+      const model = llm.resolveModelInfo !== undefined
+        ? await llm.resolveModelInfo(selection.provider, selection.model)
+        : await llm.resolveModel?.(selection.provider, selection.model)
       const modalities = model?.inputModalities as readonly string[] | undefined
       if (Array.isArray(modalities)) imageInput = modalities.includes('image') ? 'yes' : 'no'
-      const window = model?.contextWindow
+      const context = model?.context as { contextWindow?: unknown } | undefined
+      const window = model?.contextWindow ?? context?.contextWindow
       if (typeof window === 'number') contextWindow = window
-    } catch {
-      // Capability probing is best-effort; unknown stays unknown.
+    } catch (cause) {
+      // Capability probing is best-effort; unknown stays unknown but the reason
+      // is logged so a deployment can see why image support was not resolved.
+      this.options.log?.('model capability probe failed', { message: cause instanceof Error ? cause.message : String(cause) })
     }
     this.cachedInfo = {
       provider: selection.provider,
