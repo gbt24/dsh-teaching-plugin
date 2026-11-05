@@ -62,8 +62,14 @@ window.__ModuleLoader__.load({
     .ai-topbar-title { font-size: 14px; font-weight: 600; margin: 0; }
     .ai-topbar-goal { font-size: 12px; opacity: 0.72; max-width: 380px; overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; }
-    .ai-topbar-meta { font-size: 11px; opacity: 0.62; margin-left: auto; display: flex;
+    .ai-topbar-meta { font-size: 11px; opacity: 1; margin-left: auto; display: flex;
       gap: 10px; align-items: center; flex-wrap: wrap; }
+    /* Keep interactive controls fully opaque: an opacity ancestor makes the model
+       dropdown look transparent and lets chat content show through it. */
+    .ai-topbar-meta > span:not(.ai-model-selector):not(.ai-context-meter):not(.ai-lang-switch) { opacity: 0.62; }
+    .ai-topbar-meta > .ai-model-selector,
+    .ai-topbar-meta > .ai-context-meter,
+    .ai-topbar-meta > .ai-lang-switch { opacity: 1; }
     .ai-lang-switch { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px;
       background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.10)); }
     .ai-lang-switch button { border: none; background: transparent; color: inherit;
@@ -369,12 +375,14 @@ window.__ModuleLoader__.load({
     .ai-model-button:hover { background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.12)); }
     .ai-model-name { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ai-badge[data-follow-host="true"] { opacity: 0.75; }
-    .ai-model-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 80;
+    .ai-model-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 200;
       min-width: 300px; max-width: 420px; max-height: 60vh; overflow-y: auto;
       padding: 8px; border-radius: 10px; border: 1px solid
-      var(--dsw-alias-border-l2, rgba(127,127,127,0.3)); background: var(--dsw-alias-bg-layer-1, #fff);
+      var(--dsw-alias-border-l2, rgba(127,127,127,0.3));
+      background-color: var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-base, #ffffff));
+      background-image: linear-gradient(var(--dsw-alias-bg-layer-1, transparent), var(--dsw-alias-bg-layer-1, transparent));
       color: var(--dsw-alias-label-primary, #111); box-shadow: 0 12px 36px rgba(0,0,0,0.28);
-      display: flex; flex-direction: column; gap: 4px; }
+      display: flex; flex-direction: column; gap: 4px; isolation: isolate; }
     .ai-model-provider { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
     .ai-model-provider-name { font-size: 11px; opacity: 0.65; font-weight: 600; padding: 2px 4px; }
     .ai-model-item { display: flex; justify-content: space-between; gap: 10px; align-items: baseline;
