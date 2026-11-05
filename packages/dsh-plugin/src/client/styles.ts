@@ -285,7 +285,8 @@ export const TEACHING_CSS = `
 .ai-chapter-group { border-radius: 6px; }
 .ai-chapter-toggle { display: flex; align-items: center; gap: 5px; width: 100%; text-align: left;
   border: none; background: transparent; color: inherit; cursor: pointer; font: inherit;
-  font-size: 12px; padding: 4px 6px; border-radius: 6px; }
+  font-size: 12px; padding: 4px 6px; border-radius: 6px;
+  appearance: none; -webkit-appearance: none; box-shadow: none; }
 .ai-chapter-toggle:hover { background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08)); }
 .ai-chapter-toggle-static { cursor: default; }
 .ai-chapter-toggle-static:hover { background: transparent; }

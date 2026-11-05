@@ -21,21 +21,32 @@ export const inject = ['slots']
 /** Panel id shared by the sidebar entry and the `main` page. */
 export const PANEL_ID = 'ai-teaching'
 
-function injectStyleOnce(id: string, css: string): void {
+/**
+ * Keep one stylesheet per id and update it when the bundle changed.
+ *
+ * A live plugin recomposition can swap this module without a full page reload;
+ * skipping an existing style tag would keep the previous bundle's CSS while the
+ * new components render (e.g. unstyled/UA-styled chapter buttons).
+ */
+function injectStyle(id: string, css: string): void {
   if (typeof document === 'undefined') return
-  if (document.getElementById(id) !== null) return
-  const style = document.createElement('style')
-  style.id = id
-  style.textContent = css
-  document.head.appendChild(style)
+  const existing = document.getElementById(id)
+  if (existing === null) {
+    const style = document.createElement('style')
+    style.id = id
+    style.textContent = css
+    document.head.appendChild(style)
+    return
+  }
+  if (existing instanceof HTMLStyleElement && existing.textContent !== css) existing.textContent = css
 }
 
-/** Inject the stylesheet and KaTeX CSS exactly once per page. */
+/** Inject/refresh the stylesheet and KaTeX CSS for this page. */
 function ensureStyles(): void {
   // KaTeX CSS references font files with relative URLs; the app bundle does not
   // ship those fonts, so formulas render with fallback faces (documented limit).
-  injectStyleOnce('ai-teaching-katex-css', katexCss)
-  injectStyleOnce('ai-teaching-css', TEACHING_CSS)
+  injectStyle('ai-teaching-katex-css', katexCss)
+  injectStyle('ai-teaching-css', TEACHING_CSS)
 }
 
 /** Sidebar icon (rendered with the current theme colour). */

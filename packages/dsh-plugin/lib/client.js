@@ -326,7 +326,8 @@ window.__ModuleLoader__.load({
     .ai-chapter-group { border-radius: 6px; }
     .ai-chapter-toggle { display: flex; align-items: center; gap: 5px; width: 100%; text-align: left;
       border: none; background: transparent; color: inherit; cursor: pointer; font: inherit;
-      font-size: 12px; padding: 4px 6px; border-radius: 6px; }
+      font-size: 12px; padding: 4px 6px; border-radius: 6px;
+      appearance: none; -webkit-appearance: none; box-shadow: none; }
     .ai-chapter-toggle:hover { background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08)); }
     .ai-chapter-toggle-static { cursor: default; }
     .ai-chapter-toggle-static:hover { background: transparent; }
@@ -21200,17 +21201,21 @@ window.__ModuleLoader__.load({
     var name = "ai-teaching-client";
     var inject = ["slots"];
     var PANEL_ID = "ai-teaching";
-    function injectStyleOnce(id, css) {
+    function injectStyle(id, css) {
       if (typeof document === "undefined") return;
-      if (document.getElementById(id) !== null) return;
-      const style = document.createElement("style");
-      style.id = id;
-      style.textContent = css;
-      document.head.appendChild(style);
+      const existing = document.getElementById(id);
+      if (existing === null) {
+        const style = document.createElement("style");
+        style.id = id;
+        style.textContent = css;
+        document.head.appendChild(style);
+        return;
+      }
+      if (existing instanceof HTMLStyleElement && existing.textContent !== css) existing.textContent = css;
     }
     function ensureStyles() {
-      injectStyleOnce("ai-teaching-katex-css", katex_min_default);
-      injectStyleOnce("ai-teaching-css", TEACHING_CSS);
+      injectStyle("ai-teaching-katex-css", katex_min_default);
+      injectStyle("ai-teaching-css", TEACHING_CSS);
     }
     function TeachingIcon({ size }) {
       const dimension = size ?? 20;
