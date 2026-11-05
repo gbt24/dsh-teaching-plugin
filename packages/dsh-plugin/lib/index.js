@@ -62652,17 +62652,52 @@ function registerRoutes(services) {
         return title === "" ? concept : { ...concept, title };
       });
     }
+    const added = [];
+    for (const input2 of (edits?.addConcepts ?? []).slice(0, 200)) {
+      const title = typeof input2?.title === "string" ? input2.title.trim().slice(0, 120) : "";
+      if (title === "") continue;
+      const summary = typeof input2?.summary === "string" ? input2.summary.trim().slice(0, 1200) : "";
+      added.push({
+        concept: {
+          id: conceptId(),
+          title,
+          summary,
+          prerequisites: [],
+          sourceAnchors: []
+        },
+        ...typeof input2?.chapterId === "string" ? { chapterId: input2.chapterId } : {}
+      });
+    }
+    concepts = [...concepts, ...added.map((item) => item.concept)];
     let sequence = draft.sequence.filter((id) => concepts.some((concept) => concept.id === id));
     if (edits?.sequence !== void 0) {
       const requested = edits.sequence.filter((id) => concepts.some((concept) => concept.id === id));
       sequence = [...requested, ...concepts.map((concept) => concept.id).filter((id) => !requested.includes(id))];
+    } else {
+      sequence = [...sequence, ...added.map((item) => item.concept.id)];
     }
+    sequence = [...new Set(sequence)];
     if (concepts.length === 0) {
       return failure({ code: "invalid-input", message: "\u786E\u8BA4\u7684\u8BFE\u7A0B\u7ED3\u6784\u81F3\u5C11\u9700\u8981\u4E00\u4E2A\u6982\u5FF5" });
     }
-    const chapters = draft.chapters === void 0 ? void 0 : draft.chapters.map((chapter) => ({
+    const chapters = draft.chapters === void 0 ? void 0 : draft.chapters.map((chapter) => {
+      const rawTitle = edits?.chapterTitles?.[chapter.id];
+      const title = typeof rawTitle === "string" && rawTitle.trim() !== "" ? rawTitle.trim().slice(0, 160) : chapter.title;
+      const rawSummary = edits?.chapterSummaries?.[chapter.id];
+      const summary = typeof rawSummary === "string" ? rawSummary.trim().slice(0, 600) : chapter.summary;
+      return {
+        ...chapter,
+        title,
+        ...summary === void 0 ? {} : { summary },
+        conceptIds: chapter.conceptIds.filter((id) => concepts.some((concept) => concept.id === id))
+      };
+    });
+    const chaptersWithAdditions = chapters === void 0 ? void 0 : chapters.map((chapter) => ({
       ...chapter,
-      conceptIds: chapter.conceptIds.filter((id) => concepts.some((concept) => concept.id === id))
+      conceptIds: [
+        ...chapter.conceptIds,
+        ...added.filter((item) => item.chapterId === chapter.id).map((item) => item.concept.id)
+      ]
     })).filter((chapter) => chapter.conceptIds.length > 0);
     const confirmed = {
       ...draft,
@@ -62671,7 +62706,7 @@ function registerRoutes(services) {
       provenance: "student-edit",
       concepts,
       sequence,
-      ...chapters === void 0 ? {} : { chapters },
+      ...chaptersWithAdditions === void 0 ? void 0 : { chapters: chaptersWithAdditions },
       goals: edits?.goals ?? draft.goals
     };
     await services.courses.saveRevision(confirmed);

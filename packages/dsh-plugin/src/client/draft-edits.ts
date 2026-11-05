@@ -9,12 +9,32 @@
  */
 import type { Concept, ConceptId, CourseChapter, CourseRevision } from '@deepseek-teaching/core/contracts'
 
+/** One student-authored concept in the editor (not persisted until confirm). */
+export interface AddedConceptDraft {
+  /** Stable React-key/local identity; never sent to the Host. */
+  readonly key: string
+  readonly title: string
+  readonly summary?: string
+  /** Target chapter id; undefined (or unknown on the Host) = ungrouped. */
+  readonly chapterId?: string
+}
+
 /** Edits accepted by `POST /api/teaching/courseDraft.confirm`. */
 export interface DraftConfirmEdits {
   readonly goals?: readonly string[]
   readonly sequence?: readonly ConceptId[]
   readonly conceptTitles?: Readonly<Record<string, string>>
   readonly removeConceptIds?: readonly ConceptId[]
+  /** Renamed chapters, keyed by chapter id (trimmed, non-empty, changed only). */
+  readonly chapterTitles?: Readonly<Record<string, string>>
+  /** Updated chapter one-line summaries, keyed by chapter id (trimmed, non-empty, changed only). */
+  readonly chapterSummaries?: Readonly<Record<string, string>>
+  /** Student-authored concepts (trimmed non-empty titles only). No source anchors yet. */
+  readonly addConcepts?: readonly {
+    readonly title: string
+    readonly summary?: string
+    readonly chapterId?: string
+  }[]
 }
 
 /** Student-editable state of one draft review. */
@@ -25,6 +45,12 @@ export interface DraftEditState {
   readonly titles: Readonly<Record<string, string>>
   /** Removed concept ids. */
   readonly removed: readonly string[]
+  /** Chapter title overrides keyed by chapter id. */
+  readonly chapterTitles?: Readonly<Record<string, string>>
+  /** Chapter summary overrides keyed by chapter id. */
+  readonly chapterSummaries?: Readonly<Record<string, string>>
+  /** Student-authored concepts appended to their chapter (or ungrouped). */
+  readonly addedConcepts?: readonly AddedConceptDraft[]
   /** Optional goals override (the current UI does not edit goals, but the contract supports it). */
   readonly goals?: readonly string[]
 }
@@ -40,6 +66,92 @@ export interface DraftStructureGroups {
   readonly hasChapters: boolean
   readonly chapters: readonly ChapterConceptGroup[]
   readonly ungrouped: readonly Concept[]
+}
+
+/** One preview chapter group: existing concepts plus pending added rows. */
+export interface PreviewChapterGroup {
+  readonly chapter: CourseChapter
+  readonly concepts: readonly Concept[]
+  readonly added: readonly AddedConceptDraft[]
+}
+
+/** Full editor preview: chapter groups (or flat grouping) plus ungrouped rows. */
+export interface PreviewStructure {
+  readonly hasChapters: boolean
+  readonly chapters: readonly PreviewChapterGroup[]
+  readonly ungroupedConcepts: readonly Concept[]
+  readonly ungroupedAdded: readonly AddedConceptDraft[]
+}
+
+/** Added concepts as they should be sent to the Host (trimmed, non-empty titles only). */
+export function addedConceptsForPayload(
+  state: Pick<DraftEditState, 'addedConcepts'>,
+): readonly { readonly title: string; readonly summary?: string; readonly chapterId?: string }[] {
+  const payload: { title: string; summary?: string; chapterId?: string }[] = []
+  for (const added of state.addedConcepts ?? []) {
+    const title = added.title.trim()
+    if (title === '') continue
+    const summary = (added.summary ?? '').trim()
+    const chapterId = added.chapterId?.trim()
+    payload.push({
+      title,
+      ...(summary !== '' ? { summary } : {}),
+      ...(chapterId !== undefined && chapterId !== '' ? { chapterId } : {}),
+    })
+  }
+  return payload
+}
+
+/** Number of non-empty added concepts in the editor. */
+export function addedConceptCount(state: Pick<DraftEditState, 'addedConcepts'>): number {
+  return addedConceptsForPayload(state).length
+}
+
+/** Total concepts the confirmed structure would contain: kept existing + added. */
+export function totalConceptCount(revision: CourseRevision, state: DraftEditState): number {
+  return keptConceptIds(revision, state).length + addedConceptCount(state)
+}
+
+/**
+ * Preview grouping used by the editor: existing concepts follow the current
+ * order; added rows are assigned by `chapterId` (unknown ids fall back to
+ * ungrouped, matching the Host behaviour).
+ */
+export function previewStructure(revision: CourseRevision, state: DraftEditState): PreviewStructure {
+  const chapters = revision.chapters ?? []
+  const chapterIds = new Set(chapters.map(chapter => chapter.id))
+  const kept = keptConceptIds(revision, state)
+  const keptSet = new Set(kept)
+  const conceptById = new Map(revision.concepts.map(concept => [concept.id as string, concept]))
+  const orderedConcepts = state.order
+    .filter(id => keptSet.has(id) && conceptById.has(id))
+    .map(id => conceptById.get(id))
+    .filter((concept): concept is Concept => concept !== undefined)
+  // Safety: concepts missing from state.order stay visible.
+  for (const id of kept) {
+    if (!orderedConcepts.some(concept => (concept.id as string) === id)) {
+      const concept = conceptById.get(id)
+      if (concept !== undefined) orderedConcepts.push(concept)
+    }
+  }
+  const added = state.addedConcepts ?? []
+  const groupChapters = chapters.map(chapter => {
+    const chapterConceptIds = new Set(chapter.conceptIds.map(id => id as string))
+    return {
+      chapter,
+      concepts: orderedConcepts.filter(concept => chapterConceptIds.has(concept.id as string)),
+      added: added.filter(item => item.chapterId !== undefined && item.chapterId === chapter.id),
+    }
+  })
+  const groupedConceptIds = new Set(groupChapters.flatMap(group => group.concepts.map(concept => concept.id as string)))
+  const ungroupedConcepts = orderedConcepts.filter(concept => !groupedConceptIds.has(concept.id as string))
+  const ungroupedAdded = added.filter(item => item.chapterId === undefined || !chapterIds.has(item.chapterId))
+  return {
+    hasChapters: chapters.length > 0,
+    chapters: groupChapters,
+    ungroupedConcepts: chapters.length === 0 ? orderedConcepts : ungroupedConcepts,
+    ungroupedAdded,
+  }
 }
 
 /**
@@ -245,12 +357,35 @@ export function buildDraftEdits(revision: CourseRevision, state: DraftEditState)
   const goalsChanged = state.goals !== undefined
     && (state.goals.length !== revision.goals.length
       || state.goals.some((goal, index) => goal !== revision.goals[index]))
+  const chapterTitles: Record<string, string> = {}
+  const chapterSummaries: Record<string, string> = {}
+  for (const chapter of revision.chapters ?? []) {
+    const rawTitle = state.chapterTitles?.[chapter.id]
+    if (rawTitle !== undefined) {
+      const title = rawTitle.trim()
+      if (title !== '' && title !== chapter.title) chapterTitles[chapter.id] = title
+    }
+    const rawSummary = state.chapterSummaries?.[chapter.id]
+    if (rawSummary !== undefined) {
+      const summary = rawSummary.trim()
+      if (summary !== '' && summary !== (chapter.summary ?? '')) chapterSummaries[chapter.id] = summary
+    }
+  }
+  const additions = addedConceptsForPayload(state)
 
-  if (!structuralChange && titles === undefined && !goalsChanged) return undefined
+  const chapterTitlesChanged = Object.keys(chapterTitles).length > 0
+  const chapterSummariesChanged = Object.keys(chapterSummaries).length > 0
+  if (!structuralChange && titles === undefined && !goalsChanged
+    && !chapterTitlesChanged && !chapterSummariesChanged && additions.length === 0) {
+    return undefined
+  }
   return {
     ...(state.goals !== undefined && goalsChanged ? { goals: state.goals } : {}),
     ...(structuralChange ? { sequence: kept.map(id => id as ConceptId) } : {}),
     ...(titles !== undefined ? { conceptTitles: titles } : {}),
     ...(removedIds.length > 0 ? { removeConceptIds: removedIds.map(id => id as ConceptId) } : {}),
+    ...(chapterTitlesChanged ? { chapterTitles } : {}),
+    ...(chapterSummariesChanged ? { chapterSummaries } : {}),
+    ...(additions.length > 0 ? { addConcepts: additions } : {}),
   }
 }

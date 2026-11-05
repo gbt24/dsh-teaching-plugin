@@ -304,6 +304,15 @@ export const TEACHING_CSS = `
   background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.06)); color: inherit; }
 .ai-edit-title:focus { outline: 2px solid var(--dsw-alias-state-business-primary, #2563eb); outline-offset: 1px; }
 .ai-edit-summary { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-edit-chapter-title { flex: 1; min-width: 0; width: auto; font-weight: 600; }
+.ai-edit-chapter-summary { margin-top: 4px; font-weight: 400; }
+.ai-edit-optional { margin-top: 3px; }
+.ai-edit-row-added { border-style: dashed; }
+.ai-badge[data-added="true"] { color: var(--dsw-alias-state-business-primary, #2563eb);
+  border-color: currentColor; opacity: 1; white-space: nowrap; }
+.ai-edit-hint { font-size: 11px; opacity: 0.7; }
+.ai-add-concept { align-self: flex-start; margin-top: 2px; }
+.ai-unsaved-guard { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .ai-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:60}
 .ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
 .ai-modal h3{margin:0 0 8px;font-size:15px}

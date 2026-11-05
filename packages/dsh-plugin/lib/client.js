@@ -345,6 +345,15 @@ window.__ModuleLoader__.load({
       background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.06)); color: inherit; }
     .ai-edit-title:focus { outline: 2px solid var(--dsw-alias-state-business-primary, #2563eb); outline-offset: 1px; }
     .ai-edit-summary { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ai-edit-chapter-title { flex: 1; min-width: 0; width: auto; font-weight: 600; }
+    .ai-edit-chapter-summary { margin-top: 4px; font-weight: 400; }
+    .ai-edit-optional { margin-top: 3px; }
+    .ai-edit-row-added { border-style: dashed; }
+    .ai-badge[data-added="true"] { color: var(--dsw-alias-state-business-primary, #2563eb);
+      border-color: currentColor; opacity: 1; white-space: nowrap; }
+    .ai-edit-hint { font-size: 11px; opacity: 0.7; }
+    .ai-add-concept { align-self: flex-start; margin-top: 2px; }
+    .ai-unsaved-guard { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .ai-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:60}
     .ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
     .ai-modal h3{margin:0 0 8px;font-size:15px}
@@ -18543,6 +18552,59 @@ window.__ModuleLoader__.load({
     var import_react4 = require("react");
 
     // packages/dsh-plugin/src/client/draft-edits.ts
+    function addedConceptsForPayload(state) {
+      const payload = [];
+      for (const added of state.addedConcepts ?? []) {
+        const title = added.title.trim();
+        if (title === "") continue;
+        const summary = (added.summary ?? "").trim();
+        const chapterId = added.chapterId?.trim();
+        payload.push({
+          title,
+          ...summary !== "" ? { summary } : {},
+          ...chapterId !== void 0 && chapterId !== "" ? { chapterId } : {}
+        });
+      }
+      return payload;
+    }
+    function addedConceptCount(state) {
+      return addedConceptsForPayload(state).length;
+    }
+    function totalConceptCount(revision, state) {
+      return keptConceptIds(revision, state).length + addedConceptCount(state);
+    }
+    function previewStructure(revision, state) {
+      const chapters = revision.chapters ?? [];
+      const chapterIds = new Set(chapters.map((chapter) => chapter.id));
+      const kept = keptConceptIds(revision, state);
+      const keptSet = new Set(kept);
+      const conceptById = new Map(revision.concepts.map((concept) => [concept.id, concept]));
+      const orderedConcepts2 = state.order.filter((id) => keptSet.has(id) && conceptById.has(id)).map((id) => conceptById.get(id)).filter((concept) => concept !== void 0);
+      for (const id of kept) {
+        if (!orderedConcepts2.some((concept) => concept.id === id)) {
+          const concept = conceptById.get(id);
+          if (concept !== void 0) orderedConcepts2.push(concept);
+        }
+      }
+      const added = state.addedConcepts ?? [];
+      const groupChapters = chapters.map((chapter) => {
+        const chapterConceptIds = new Set(chapter.conceptIds.map((id) => id));
+        return {
+          chapter,
+          concepts: orderedConcepts2.filter((concept) => chapterConceptIds.has(concept.id)),
+          added: added.filter((item) => item.chapterId !== void 0 && item.chapterId === chapter.id)
+        };
+      });
+      const groupedConceptIds = new Set(groupChapters.flatMap((group) => group.concepts.map((concept) => concept.id)));
+      const ungroupedConcepts = orderedConcepts2.filter((concept) => !groupedConceptIds.has(concept.id));
+      const ungroupedAdded = added.filter((item) => item.chapterId === void 0 || !chapterIds.has(item.chapterId));
+      return {
+        hasChapters: chapters.length > 0,
+        chapters: groupChapters,
+        ungroupedConcepts: chapters.length === 0 ? orderedConcepts2 : ungroupedConcepts,
+        ungroupedAdded
+      };
+    }
     function groupConceptsByChapters(revision) {
       const chapters = revision.chapters ?? [];
       const sequenceIndex = /* @__PURE__ */ new Map();
@@ -18667,12 +18729,34 @@ window.__ModuleLoader__.load({
       const structuralChange = removedIds.length > 0 || reordered;
       const titles = changedTitles(revision, state, keptSet);
       const goalsChanged = state.goals !== void 0 && (state.goals.length !== revision.goals.length || state.goals.some((goal, index) => goal !== revision.goals[index]));
-      if (!structuralChange && titles === void 0 && !goalsChanged) return void 0;
+      const chapterTitles = {};
+      const chapterSummaries = {};
+      for (const chapter of revision.chapters ?? []) {
+        const rawTitle = state.chapterTitles?.[chapter.id];
+        if (rawTitle !== void 0) {
+          const title = rawTitle.trim();
+          if (title !== "" && title !== chapter.title) chapterTitles[chapter.id] = title;
+        }
+        const rawSummary = state.chapterSummaries?.[chapter.id];
+        if (rawSummary !== void 0) {
+          const summary = rawSummary.trim();
+          if (summary !== "" && summary !== (chapter.summary ?? "")) chapterSummaries[chapter.id] = summary;
+        }
+      }
+      const additions = addedConceptsForPayload(state);
+      const chapterTitlesChanged = Object.keys(chapterTitles).length > 0;
+      const chapterSummariesChanged = Object.keys(chapterSummaries).length > 0;
+      if (!structuralChange && titles === void 0 && !goalsChanged && !chapterTitlesChanged && !chapterSummariesChanged && additions.length === 0) {
+        return void 0;
+      }
       return {
         ...state.goals !== void 0 && goalsChanged ? { goals: state.goals } : {},
         ...structuralChange ? { sequence: kept.map((id) => id) } : {},
         ...titles !== void 0 ? { conceptTitles: titles } : {},
-        ...removedIds.length > 0 ? { removeConceptIds: removedIds.map((id) => id) } : {}
+        ...removedIds.length > 0 ? { removeConceptIds: removedIds.map((id) => id) } : {},
+        ...chapterTitlesChanged ? { chapterTitles } : {},
+        ...chapterSummariesChanged ? { chapterSummaries } : {},
+        ...additions.length > 0 ? { addConcepts: additions } : {}
       };
     }
 
@@ -18716,8 +18800,44 @@ window.__ModuleLoader__.load({
         ] })
       ] });
     }
-    function originalEditState(revision) {
-      return { order: orderedConceptIds(revision), titles: {}, removed: [] };
+    function ChapterEditHead(props) {
+      const { chapter } = props;
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-chapter-head", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", style: { alignItems: "center", gap: 8 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+            "input",
+            {
+              className: "ai-edit-title ai-edit-chapter-title",
+              value: props.title,
+              disabled: props.busy,
+              "aria-label": `\u7F16\u8F91\u7AE0\u8282\u6807\u9898 ${chapter.title}`,
+              onChange: (event) => props.onChangeTitle(event.target.value)
+            }
+          ),
+          chapter.role !== void 0 && chapter.role !== "chapter" && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-badge", "data-chapter-role": chapter.role, children: CHAPTER_ROLE_LABELS[chapter.role] }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "ai-muted", children: [
+            "\u6982\u5FF5 ",
+            props.conceptCount,
+            " \u4E2A"
+          ] })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          "input",
+          {
+            className: "ai-edit-title ai-edit-chapter-summary",
+            value: props.summary,
+            disabled: props.busy,
+            placeholder: "\u7AE0\u8282\u6458\u8981\uFF08\u53EF\u9009\uFF0C\u4E00\u53E5\u8BDD\uFF09",
+            "aria-label": `\u7F16\u8F91\u7AE0\u8282\u6458\u8981 ${chapter.title}`,
+            onChange: (event) => props.onChangeSummary(event.target.value)
+          }
+        ),
+        chapter.sourceAnchors !== void 0 && chapter.sourceAnchors.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-muted ai-chapter-anchors", children: [
+          "\u7AE0\u8282\u6765\u6E90\uFF1A",
+          chapter.sourceAnchors.slice(0, 4).map((anchor) => anchor.label).join("\uFF1B"),
+          chapter.sourceAnchors.length > 4 ? ` \u7B49 ${chapter.sourceAnchors.length} \u5904` : ""
+        ] })
+      ] });
     }
     function ConceptEditRow(props) {
       const { concept, revision, state } = props;
@@ -18777,6 +18897,61 @@ window.__ModuleLoader__.load({
         ] })
       ] });
     }
+    function AddedConceptRow(props) {
+      const { added } = props;
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-edit-row ai-edit-row-added", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-edit-main", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", style: { alignItems: "center", gap: 6 }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-badge", "data-added": "true", children: "\u65B0\u589E" }),
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+              "input",
+              {
+                className: "ai-edit-title",
+                value: added.title,
+                disabled: props.busy,
+                placeholder: "\u65B0\u6982\u5FF5\u6807\u9898\uFF08\u5FC5\u586B\uFF09",
+                "aria-label": "\u65B0\u589E\u6982\u5FF5\u6807\u9898",
+                onChange: (event) => props.onChangeTitle(added.key, event.target.value)
+              }
+            )
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+            "input",
+            {
+              className: "ai-edit-title ai-edit-optional",
+              value: added.summary ?? "",
+              disabled: props.busy,
+              placeholder: "\u4E00\u53E5\u8BDD\u6458\u8981\uFF08\u53EF\u9009\uFF09",
+              "aria-label": "\u65B0\u589E\u6982\u5FF5\u6458\u8981",
+              onChange: (event) => props.onChangeSummary(added.key, event.target.value)
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted ai-edit-hint", children: "\u65B0\u589E\u6982\u5FF5\u6682\u65E0\u8D44\u6599\u951A\u70B9\uFF1B\u6559\u5B66\u65F6\u4F1A\u6807\u6CE8\u4E3A\u6A21\u578B\u77E5\u8BC6\u8865\u5145\u3002" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-row", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          "button",
+          {
+            type: "button",
+            className: "ai-danger-button",
+            disabled: props.busy,
+            onClick: () => props.onRemove(added.key),
+            "aria-label": `\u5220\u9664\u65B0\u589E\u6982\u5FF5 ${added.title === "" ? "\u672A\u547D\u540D" : added.title}`,
+            title: "\u5220\u9664\u65B0\u589E\u6982\u5FF5",
+            children: "\u2715"
+          }
+        ) })
+      ] });
+    }
+    function originalEditState(revision) {
+      return {
+        order: orderedConceptIds(revision),
+        titles: {},
+        removed: [],
+        chapterTitles: {},
+        chapterSummaries: {},
+        addedConcepts: []
+      };
+    }
     function DraftReview(props) {
       const { draft } = props;
       const revision = draft.revision;
@@ -18787,31 +18962,50 @@ window.__ModuleLoader__.load({
       const [order, setOrder] = (0, import_react4.useState)(() => orderedConceptIds(revision));
       const [titles, setTitles] = (0, import_react4.useState)({});
       const [removed, setRemoved] = (0, import_react4.useState)([]);
+      const [chapterTitles, setChapterTitles] = (0, import_react4.useState)({});
+      const [chapterSummaries, setChapterSummaries] = (0, import_react4.useState)({});
+      const [addedConcepts, setAddedConcepts] = (0, import_react4.useState)([]);
+      const [pendingDiscard, setPendingDiscard] = (0, import_react4.useState)(void 0);
+      const nextAddedKey = (0, import_react4.useRef)(1);
       (0, import_react4.useEffect)(() => {
         setEditing(false);
         setOrder(orderedConceptIds(revision));
         setTitles({});
         setRemoved([]);
+        setChapterTitles({});
+        setChapterSummaries({});
+        setAddedConcepts([]);
+        setPendingDiscard(void 0);
       }, [revision.id, revision.version]);
-      const editState = { order, titles, removed };
-      const kept = keptConceptIds(revision, editState);
-      const keptSet = new Set(kept);
-      const conceptById = new Map(revision.concepts.map((concept) => [concept.id, concept]));
-      const groups = groupConceptsByChapters(revision);
-      const chapters = revision.chapters ?? [];
-      const canConfirm = !props.busy && kept.length > 0;
-      const beginEditing = () => {
-        const original = originalEditState(revision);
-        setOrder(original.order);
-        setTitles(original.titles);
-        setRemoved(original.removed);
-        setEditing(true);
+      const editState = {
+        order,
+        titles,
+        removed,
+        chapterTitles,
+        chapterSummaries,
+        addedConcepts
       };
+      const kept = keptConceptIds(revision, editState);
+      const addedCount = addedConceptCount(editState);
+      const totalCount = totalConceptCount(revision, editState);
+      const edits = buildDraftEdits(revision, editState);
+      const dirty = edits !== void 0;
+      const preview = previewStructure(revision, editState);
+      const chapters = revision.chapters ?? [];
+      const canConfirm = !props.busy && totalCount > 0;
       const resetChanges = () => {
         const original = originalEditState(revision);
         setOrder(original.order);
         setTitles(original.titles);
         setRemoved(original.removed);
+        setChapterTitles(original.chapterTitles);
+        setChapterSummaries(original.chapterSummaries);
+        setAddedConcepts(original.addedConcepts);
+        setPendingDiscard(void 0);
+      };
+      const beginEditing = () => {
+        resetChanges();
+        setEditing(true);
       };
       const cancelEditing = () => {
         resetChanges();
@@ -18826,24 +19020,96 @@ window.__ModuleLoader__.load({
       const move = (conceptId, direction) => {
         setOrder(moveConcept(revision, editState, conceptId, direction));
       };
-      const confirm = () => {
-        const edits = editing ? buildDraftEdits(revision, editState) : void 0;
-        void props.onConfirm(edits);
+      const changeChapterTitle = (chapterId, title) => {
+        setChapterTitles((previous) => ({ ...previous, [chapterId]: title }));
       };
-      const sectionConcepts = (ids) => order.filter((id) => ids.includes(id) && keptSet.has(id)).map((id) => conceptById.get(id)).filter((concept) => concept !== void 0);
-      const renderEditorRows = (ids) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-edit-rows", children: sectionConcepts(ids).map((concept) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
-        ConceptEditRow,
-        {
-          revision,
-          concept,
-          state: editState,
-          busy: props.busy,
-          onChangeTitle: changeTitle,
-          onMove: move,
-          onRemove: removeConcept
-        },
-        concept.id
-      )) });
+      const changeChapterSummary = (chapterId, summary) => {
+        setChapterSummaries((previous) => ({ ...previous, [chapterId]: summary }));
+      };
+      const addConcept = (chapterId) => {
+        const key = `added-${nextAddedKey.current}`;
+        nextAddedKey.current += 1;
+        setAddedConcepts((previous) => [...previous, {
+          key,
+          title: "",
+          ...chapterId !== void 0 ? { chapterId } : {}
+        }]);
+      };
+      const changeAddedTitle = (key, title) => {
+        setAddedConcepts((previous) => previous.map((item) => item.key === key ? { ...item, title } : item));
+      };
+      const changeAddedSummary = (key, summary) => {
+        setAddedConcepts((previous) => previous.map((item) => item.key === key ? { ...item, summary } : item));
+      };
+      const removeAdded = (key) => {
+        setAddedConcepts((previous) => previous.filter((item) => item.key !== key));
+      };
+      const requestLeave = (label, run) => {
+        if (editing && dirty) {
+          setPendingDiscard({ label, run });
+          return;
+        }
+        run();
+      };
+      const discardAndContinue = () => {
+        const action = pendingDiscard;
+        if (action === void 0) return;
+        resetChanges();
+        setEditing(false);
+        action.run();
+      };
+      const confirm = () => {
+        void props.onConfirm(editing ? buildDraftEdits(revision, editState) : void 0);
+      };
+      (0, import_react4.useEffect)(() => {
+        if (!editing || !dirty) return;
+        if (typeof window === "undefined" || typeof window.addEventListener !== "function") return;
+        const handler = (event) => {
+          event.preventDefault();
+          event.returnValue = "";
+        };
+        window.addEventListener("beforeunload", handler);
+        return () => window.removeEventListener("beforeunload", handler);
+      }, [editing, dirty]);
+      const sectionConcepts = (ids) => order.filter((id) => ids.includes(id) && kept.includes(id)).map((id) => conceptById.get(id)).filter((concept) => concept !== void 0);
+      const conceptById = new Map(revision.concepts.map((concept) => [concept.id, concept]));
+      const renderEditableSection = (conceptIds, added, chapterId) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-edit-rows", children: [
+        sectionConcepts(conceptIds).map((concept) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          ConceptEditRow,
+          {
+            revision,
+            concept,
+            state: editState,
+            busy: props.busy,
+            onChangeTitle: changeTitle,
+            onMove: move,
+            onRemove: removeConcept
+          },
+          concept.id
+        )),
+        added.map((item) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          AddedConceptRow,
+          {
+            added: item,
+            busy: props.busy,
+            onChangeTitle: changeAddedTitle,
+            onChangeSummary: changeAddedSummary,
+            onRemove: removeAdded
+          },
+          item.key
+        )),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          "button",
+          {
+            type: "button",
+            className: "ai-small-button ai-add-concept",
+            disabled: props.busy,
+            onClick: () => addConcept(chapterId),
+            "aria-label": chapterId === void 0 ? "\u6DFB\u52A0\u6982\u5FF5\uFF08\u672A\u5206\u7EC4\uFF09" : `\u6DFB\u52A0\u6982\u5FF5\u5230\u7AE0\u8282 ${chapterId}`,
+            children: "\uFF0B \u6DFB\u52A0\u6982\u5FF5"
+          }
+        )
+      ] });
       return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-draft-review", children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("h3", { style: { margin: "0 0 6px", fontSize: 14 }, children: [
           "\u8BFE\u7A0B\u7ED3\u6784\u8349\u6848\uFF08v",
@@ -18859,11 +19125,12 @@ window.__ModuleLoader__.load({
           "\u6765\u6E90\u8986\u76D6\uFF1A",
           draft.coverage.length,
           " \u4EFD\u8D44\u6599 \xB7 \u6982\u5FF5 ",
-          editing ? kept.length : conceptCount,
+          editing ? totalCount : conceptCount,
           " \u4E2A \xB7 \u5B66\u4E60\u987A\u5E8F ",
-          editing ? kept.length : revision.sequence.length,
+          editing ? totalCount : revision.sequence.length,
           " \u6B65",
           chapters.length > 0 ? ` \xB7 \u7AE0\u8282 ${chapters.length} \u4E2A` : "",
+          editing && addedCount > 0 ? ` \xB7 \u65B0\u589E ${addedCount} \u4E2A` : "",
           editing && removed.length > 0 ? ` \xB7 \u5DF2\u79FB\u9664 ${removed.length} \u4E2A` : ""
         ] }),
         !editing && conceptCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", style: { margin: "6px 0 2px" }, children: [
@@ -18878,40 +19145,76 @@ window.__ModuleLoader__.load({
               children: "\u7F16\u8F91\u7ED3\u6784"
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-muted", children: "\u53EF\u6539\u540D\u3001\u5220\u9664\u6216\u8C03\u6574\u7AE0\u8282\u5185\u987A\u5E8F\uFF1B\u786E\u8BA4\u65F6\u4E00\u5E76\u5E94\u7528\u3002" })
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-muted", children: "\u53EF\u6539\u540D\u3001\u5220\u9664\u3001\u8C03\u6574\u987A\u5E8F\u3001\u6539\u7AE0\u8282\u6807\u9898/\u6458\u8981\u6216\u6DFB\u52A0\u6982\u5FF5\uFF1B\u786E\u8BA4\u65F6\u4E00\u5E76\u5E94\u7528\u3002" })
         ] }),
-        editing && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", style: { margin: "6px 0 2px" }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: cancelEditing, children: "\u53D6\u6D88\u7F16\u8F91" }),
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: resetChanges, children: "\u91CD\u7F6E\u4FEE\u6539" }),
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-muted", children: "\u4FEE\u6539\u5728\u70B9\u51FB\u300C\u786E\u8BA4\u7ED3\u6784\u5E76\u5F00\u59CB\u5B66\u4E60\u300D\u65F6\u63D0\u4EA4\uFF1B\u4E0D\u4F1A\u6539\u52A8\u539F\u59CB\u8D44\u6599\u3002" })
+        editing && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", style: { margin: "6px 0 2px" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-small-button",
+                disabled: props.busy,
+                onClick: () => requestLeave("\u53D6\u6D88\u7F16\u8F91", cancelEditing),
+                children: "\u53D6\u6D88\u7F16\u8F91"
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: resetChanges, children: "\u91CD\u7F6E\u4FEE\u6539" }),
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-muted", children: "\u4FEE\u6539\u5728\u70B9\u51FB\u300C\u786E\u8BA4\u7ED3\u6784\u5E76\u5F00\u59CB\u5B66\u4E60\u300D\u65F6\u63D0\u4EA4\uFF1B\u4E0D\u4F1A\u6539\u52A8\u539F\u59CB\u8D44\u6599\u3002" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted ai-edit-hint", style: { margin: "2px 0 0" }, children: "\u65B0\u589E\u6982\u5FF5\u6682\u65E0\u8D44\u6599\u951A\u70B9\uFF0C\u6559\u5B66\u65F6\u4F1A\u6807\u6CE8\u4E3A\u6A21\u578B\u77E5\u8BC6\u8865\u5145\u3002" })
+        ] }),
+        pendingDiscard !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-banner ai-unsaved-guard", "data-kind": "warning", role: "alert", style: { margin: "8px 0", borderRadius: 8 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { children: [
+            "\u6709\u672A\u4FDD\u5B58\u7684\u7ED3\u6784\u4FEE\u6539\uFF1A",
+            pendingDiscard.label,
+            "\u5C06\u4E22\u5F03\u8FD9\u4E9B\u4FEE\u6539\u3002"
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "ai-row", style: { marginLeft: "auto" }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: discardAndContinue, children: "\u653E\u5F03\u4FEE\u6539\u5E76\u7EE7\u7EED" }),
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: () => setPendingDiscard(void 0), children: "\u7EE7\u7EED\u7F16\u8F91" })
+          ] })
         ] }),
         draft.warnings.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ul", { className: "ai-warning-list", children: draft.warnings.map((warning) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("li", { children: warning }, warning)) }),
         chapters.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-chapter-list", children: [
-          groups.chapters.map((group) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "ai-chapter", "aria-label": `\u7AE0\u8282 ${group.chapter.title}`, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
-              ChapterHead,
+          preview.chapters.map((group) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "ai-chapter", "aria-label": `\u7AE0\u8282 ${group.chapter.title}`, children: [
+            editing ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+              ChapterEditHead,
               {
                 chapter: group.chapter,
-                conceptCount: editing ? sectionConcepts(group.chapter.conceptIds.map((id) => id)).length : group.concepts.length
+                title: chapterTitles[group.chapter.id] ?? group.chapter.title,
+                summary: chapterSummaries[group.chapter.id] ?? group.chapter.summary ?? "",
+                conceptCount: group.concepts.length + group.added.length,
+                busy: props.busy,
+                onChangeTitle: (title) => changeChapterTitle(group.chapter.id, title),
+                onChangeSummary: (summary) => changeChapterSummary(group.chapter.id, summary)
               }
-            ),
-            editing ? sectionConcepts(group.chapter.conceptIds.map((id) => id)).length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted", children: "\uFF08\u8BE5\u7AE0\u8282\u6682\u65F6\u6CA1\u6709\u53EF\u7F16\u8F91\u7684\u6982\u5FF5\uFF09" }) : renderEditorRows(group.chapter.conceptIds.map((id) => id)) : group.concepts.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted", children: "\uFF08\u8BE5\u7AE0\u8282\u6682\u65F6\u6CA1\u6709\u53EF\u5C55\u793A\u7684\u6982\u5FF5\uFF09" }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: group.concepts.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ConceptItem, { concept }, concept.id)) })
+            ) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ChapterHead, { chapter: group.chapter, conceptCount: group.concepts.length }),
+            editing ? renderEditableSection(
+              group.chapter.conceptIds.map((id) => id),
+              group.added,
+              group.chapter.id
+            ) : group.concepts.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted", children: "\uFF08\u8BE5\u7AE0\u8282\u6682\u65F6\u6CA1\u6709\u53EF\u5C55\u793A\u7684\u6982\u5FF5\uFF09" }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: group.concepts.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ConceptItem, { concept }, concept.id)) })
           ] }, group.chapter.id)),
-          (editing ? sectionConcepts(groups.ungrouped.map((concept) => concept.id)).length : groups.ungrouped.length) > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "ai-chapter", "aria-label": "\u672A\u5206\u7EC4\u6982\u5FF5", children: [
+          (editing || preview.ungroupedConcepts.length + preview.ungroupedAdded.length > 0) && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "ai-chapter", "aria-label": "\u672A\u5206\u7EC4\u6982\u5FF5", children: [
             /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-chapter-head", children: [
               /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", style: { alignItems: "baseline", gap: 8 }, children: [
                 /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-chapter-title", children: "\u672A\u5206\u7EC4\u6982\u5FF5" }),
                 /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "ai-muted", children: [
                   "\u6982\u5FF5 ",
-                  editing ? sectionConcepts(groups.ungrouped.map((concept) => concept.id)).length : groups.ungrouped.length,
+                  preview.ungroupedConcepts.length + preview.ungroupedAdded.length,
                   " \u4E2A"
                 ] })
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-chapter-summary", children: "\u8FD9\u4E9B\u6982\u5FF5\u672A\u5F52\u5165\u4EFB\u4F55\u7AE0\u8282\uFF0C\u4ECD\u4F1A\u6309\u5B66\u4E60\u987A\u5E8F\u51FA\u73B0\u3002" })
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-chapter-summary", children: editing ? "\u8FD9\u4E9B\u6982\u5FF5\u4E0D\u5F52\u5C5E\u4EFB\u4F55\u7AE0\u8282\uFF08\u65B0\u589E\u4E0D\u9009\u7AE0\u8282\u65F6\u4E5F\u653E\u5728\u8FD9\u91CC\uFF09\u3002" : "\u8FD9\u4E9B\u6982\u5FF5\u672A\u5F52\u5165\u4EFB\u4F55\u7AE0\u8282\uFF0C\u4ECD\u4F1A\u6309\u5B66\u4E60\u987A\u5E8F\u51FA\u73B0\u3002" })
             ] }),
-            editing ? renderEditorRows(groups.ungrouped.map((concept) => concept.id)) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: groups.ungrouped.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ConceptItem, { concept }, concept.id)) })
+            editing ? renderEditableSection(
+              preview.ungroupedConcepts.map((concept) => concept.id),
+              preview.ungroupedAdded,
+              void 0
+            ) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: preview.ungroupedConcepts.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ConceptItem, { concept }, concept.id)) })
           ] })
-        ] }) : editing ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-edit-rows", children: renderEditorRows(kept) }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist", children: revision.sequence.map((conceptId) => {
+        ] }) : editing ? renderEditableSection(preview.ungroupedConcepts.map((concept) => concept.id), preview.ungroupedAdded, void 0) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist", children: revision.sequence.map((conceptId) => {
           const concept = revision.concepts.find((item) => item.id === conceptId);
           return concept === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ConceptItem, { concept }, concept.id);
         }) }),
@@ -18919,7 +19222,7 @@ window.__ModuleLoader__.load({
           "\u8D44\u6599\uFF1A",
           draft.coverage.map((item) => `${item.title}\uFF08${item.status}\uFF0C${item.usedUnits} \u5355\u5143${item.issues > 0 ? `\uFF0C${item.issues} \u4E2A\u95EE\u9898` : ""}\uFF09`).join("\uFF1B")
         ] }),
-        editing && kept.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-banner", "data-kind": "warning", role: "status", style: { margin: "8px 0", borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: "\u81F3\u5C11\u4FDD\u7559\u4E00\u4E2A\u6982\u5FF5\u624D\u80FD\u786E\u8BA4\u7ED3\u6784\u3002\u8BF7\u300C\u53D6\u6D88\u7F16\u8F91\u300D\u300C\u91CD\u7F6E\u4FEE\u6539\u300D\uFF0C\u6216\u76F4\u63A5\u91CD\u65B0\u751F\u6210\u8349\u6848\u3002" }) }),
+        editing && totalCount === 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-banner", "data-kind": "warning", role: "status", style: { margin: "8px 0", borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: "\u81F3\u5C11\u4FDD\u7559\u6216\u65B0\u589E\u4E00\u4E2A\u6982\u5FF5\u624D\u80FD\u786E\u8BA4\u7ED3\u6784\u3002\u8BF7\u300C\u53D6\u6D88\u7F16\u8F91\u300D\u300C\u91CD\u7F6E\u4FEE\u6539\u300D\uFF0C\u6216\u76F4\u63A5\u91CD\u65B0\u751F\u6210\u8349\u6848\u3002" }) }),
         props.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { margin: "8px 0", borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: props.error }) }),
         props.busy && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { style: { marginTop: 6 }, children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Spinner, { label: "\u6B63\u5728\u5904\u7406\u2026" }) }),
         /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", style: { marginTop: 10 }, children: [
@@ -18934,9 +19237,36 @@ window.__ModuleLoader__.load({
               children: "\u786E\u8BA4\u7ED3\u6784\u5E76\u5F00\u59CB\u5B66\u4E60"
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: () => void props.onRegenerate(), children: "\u91CD\u65B0\u751F\u6210\u8349\u6848" }),
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-small-button", disabled: props.busy, onClick: () => void props.onAdhoc(), children: "\u5148\u968F\u4FBF\u95EE\u95EE\uFF08\u968F\u95EE\u968F\u5B66\uFF09" }),
-          props.onBack !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "ai-link-button", disabled: props.busy, onClick: props.onBack, children: "\u8FD4\u56DE\u8865\u5145\u8D44\u6599" })
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+            "button",
+            {
+              type: "button",
+              className: "ai-small-button",
+              disabled: props.busy,
+              onClick: () => requestLeave("\u91CD\u65B0\u751F\u6210\u8349\u6848", () => void props.onRegenerate()),
+              children: "\u91CD\u65B0\u751F\u6210\u8349\u6848"
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+            "button",
+            {
+              type: "button",
+              className: "ai-small-button",
+              disabled: props.busy,
+              onClick: () => requestLeave("\u5148\u968F\u4FBF\u95EE\u95EE", () => void props.onAdhoc()),
+              children: "\u5148\u968F\u4FBF\u95EE\u95EE\uFF08\u968F\u95EE\u968F\u5B66\uFF09"
+            }
+          ),
+          props.onBack !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+            "button",
+            {
+              type: "button",
+              className: "ai-link-button",
+              disabled: props.busy,
+              onClick: () => requestLeave("\u8FD4\u56DE\u8865\u5145\u8D44\u6599", () => props.onBack?.()),
+              children: "\u8FD4\u56DE\u8865\u5145\u8D44\u6599"
+            }
+          )
         ] }),
         conceptCount === 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted", style: { marginTop: 6 }, children: "\u8349\u6848\u8FD8\u6CA1\u6709\u6982\u5FF5\uFF1A\u8BF7\u5148\u5BFC\u5165\u53EF\u8BFB\u8D44\u6599\u540E\u91CD\u65B0\u751F\u6210\uFF0C\u6216\u76F4\u63A5\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7528\u6700\u5C0F\u7ED3\u6784\u5F00\u59CB\u3002" })
       ] });

@@ -11,9 +11,10 @@ import type {
   Concept, CourseChapter, CourseRevision,
 } from '@deepseek-teaching/core/contracts'
 import {
-  buildDraftEdits, canMoveConcept, chapterContainingConcept, chapterCoverage, defaultOpenChapterId,
-  groupConceptsByChapters, keptConceptIds, moveConcept, orderedConceptIds,
-  type DraftEditState,
+  addedConceptCount, addedConceptsForPayload, buildDraftEdits, canMoveConcept,
+  chapterContainingConcept, chapterCoverage, defaultOpenChapterId, groupConceptsByChapters,
+  keptConceptIds, moveConcept, orderedConceptIds, previewStructure, totalConceptCount,
+  type AddedConceptDraft, type DraftEditState,
 } from '../../src/client/draft-edits.ts'
 
 const NOW = '2026-11-05T08:00:00.000Z'
@@ -169,4 +170,115 @@ test('chapter progress and default-open chapter follow mastery/current concept',
   assert.equal(defaultOpenChapterId(rev, 'c'), 'ch2')
   assert.equal(defaultOpenChapterId(rev, undefined), 'ch1')
   assert.equal(defaultOpenChapterId(revision({ concepts: [concept('x', 'X')], sequence: ['x'] }), 'x'), undefined)
+})
+
+
+test('adding a concept to a chapter sends addConcepts without a sequence edit', () => {
+  const added: AddedConceptDraft = { key: 'added-1', title: ' 新概念 ', summary: ' 一句话 ', chapterId: 'ch2' }
+  const state = editState({ addedConcepts: [added] })
+  assert.deepEqual(buildDraftEdits(chapteredRevision(), state), {
+    addConcepts: [{ title: '新概念', summary: '一句话', chapterId: 'ch2' }],
+  })
+  assert.equal(addedConceptCount(state), 1)
+  assert.equal(totalConceptCount(chapteredRevision(), state), 5, '4 kept + 1 added')
+})
+
+test('added concepts without a chapter stay ungrouped in the payload', () => {
+  const state = editState({ addedConcepts: [{ key: 'a1', title: '未分组新概念' }] })
+  assert.deepEqual(addedConceptsForPayload(state), [{ title: '未分组新概念' }])
+  assert.deepEqual(buildDraftEdits(chapteredRevision(), state), {
+    addConcepts: [{ title: '未分组新概念' }],
+  })
+})
+
+test('blank added concepts are ignored (no-op stays undefined)', () => {
+  const state = editState({ addedConcepts: [
+    { key: 'a1', title: '   ', summary: '只有摘要' },
+    { key: 'a2', title: '' },
+  ] })
+  assert.deepEqual(addedConceptsForPayload(state), [])
+  assert.equal(addedConceptCount(state), 0)
+  assert.equal(buildDraftEdits(chapteredRevision(), state), undefined)
+})
+
+test('chapter title and summary edits send only the changed fields', () => {
+  const titled = buildDraftEdits(chapteredRevision(), editState({
+    chapterTitles: { ch1: ' 新第一章 ' },
+  }))
+  assert.deepEqual(titled, { chapterTitles: { ch1: '新第一章' } })
+
+  const summarized = buildDraftEdits(chapteredRevision(), editState({
+    chapterSummaries: { ch2: '新摘要' },
+  }))
+  assert.deepEqual(summarized, { chapterSummaries: { ch2: '新摘要' } })
+
+  // Unchanged / blank values are not edits.
+  assert.equal(buildDraftEdits(chapteredRevision(), editState({
+    chapterTitles: { ch1: '第一章' },
+    chapterSummaries: { ch2: '   ' },
+  })), undefined)
+})
+
+test('combined edits include every changed field exactly once', () => {
+  const state: DraftEditState = {
+    order: moveConcept(chapteredRevision(), editState(), 'b', 'up'),
+    titles: { a: 'A 改名' },
+    removed: ['c'],
+    chapterTitles: { ch1: '改名第一章' },
+    chapterSummaries: { ch2: '第二章摘要' },
+    addedConcepts: [{ key: 'a1', title: '新增概念', chapterId: 'ch2' }],
+  }
+  const edits = buildDraftEdits(chapteredRevision(), state)
+  assert.deepEqual(edits, {
+    sequence: ['b', 'a', 'u'],
+    conceptTitles: { a: 'A 改名' },
+    removeConceptIds: ['c'],
+    chapterTitles: { ch1: '改名第一章' },
+    chapterSummaries: { ch2: '第二章摘要' },
+    addConcepts: [{ title: '新增概念', chapterId: 'ch2' }],
+  })
+})
+
+test('previewStructure groups existing and added rows (unknown chapter => ungrouped)', () => {
+  const state = editState({
+    addedConcepts: [
+      { key: 'a1', title: '第二章新概念', chapterId: 'ch2' },
+      { key: 'a2', title: '未知章节概念', chapterId: 'chapter-missing' },
+      { key: 'a3', title: '未分组新概念' },
+    ],
+  })
+  const preview = previewStructure(chapteredRevision(), state)
+  assert.equal(preview.hasChapters, true)
+  assert.deepEqual(preview.chapters[0]?.concepts.map(item => item.id), ['a', 'b'])
+  assert.deepEqual(preview.chapters[1]?.concepts.map(item => item.id), ['c'])
+  assert.deepEqual(preview.chapters[0]?.added, [])
+  assert.deepEqual(preview.chapters[1]?.added.map(item => item.key), ['a1'])
+  assert.deepEqual(preview.ungroupedConcepts.map(item => item.id), ['u'])
+  assert.deepEqual(preview.ungroupedAdded.map(item => item.key), ['a2', 'a3'])
+})
+
+test('previewStructure keeps the flat fallback for revisions without chapters', () => {
+  const flat = revision({ concepts: [concept('x', 'X'), concept('y', 'Y')], sequence: ['y', 'x'] })
+  const state: DraftEditState = {
+    order: ['y', 'x'], titles: {}, removed: [],
+    addedConcepts: [{ key: 'a1', title: '新概念' }],
+  }
+  const preview = previewStructure(flat, state)
+  assert.equal(preview.hasChapters, false)
+  assert.deepEqual(preview.chapters, [])
+  assert.deepEqual(preview.ungroupedConcepts.map(item => item.id), ['y', 'x'])
+  assert.deepEqual(preview.ungroupedAdded.map(item => item.key), ['a1'])
+})
+
+test('totalConceptCount counts kept existing plus non-empty added concepts', () => {
+  const state = editState({
+    removed: ['a', 'b'],
+    addedConcepts: [
+      { key: 'a1', title: '新 A' },
+      { key: 'a2', title: '  ' },
+      { key: 'a3', title: '新 B' },
+    ],
+  })
+  assert.equal(totalConceptCount(chapteredRevision(), state), 4, '2 kept + 2 non-empty added')
+  assert.equal(keptConceptIds(chapteredRevision(), state).length, 2)
 })

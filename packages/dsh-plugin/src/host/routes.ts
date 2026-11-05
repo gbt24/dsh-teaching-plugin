@@ -11,7 +11,7 @@ import { readFile, readdir, stat } from 'node:fs/promises'
 import { basename, extname, join } from 'node:path'
 import type {
   ActivityState, ApiRequests, AppError, AttemptOutcome, AttemptValidation, BootstrapInfo,
-  ChatMessage, ChatStreamEvent, Course, CourseDraftView, CourseRevision, CourseSummary,
+  ChatMessage, ChatStreamEvent, Concept, Course, CourseDraftView, CourseRevision, CourseSummary,
   CourseLearningRecord, EnvironmentDirectory, ExperimentRun, LearningAttempt, LearningService, LessonActivity,
   MasteryRecord, ModelCapabilities, ReviewItem, SessionSummary, SessionView,
   SourceAnchor, SourceDocument, SourceView, TeachingService, TeachingSession, TeachingTurnInput,
@@ -19,8 +19,8 @@ import type {
 } from '@deepseek-teaching/core'
 import {
   CourseRepository, LearningRepository, ProfileRepository, SessionRepository,
-  activityFile, activityStateFile, apiPath, courseId as newCourseId, courseRevisionId as newCourseRevisionId,
-  nowIso, runFile,
+  activityFile, activityStateFile, apiPath, conceptId as newConceptId, courseId as newCourseId,
+  courseRevisionId as newCourseRevisionId, nowIso, runFile,
 } from '@deepseek-teaching/core'
 import type { LocalState } from '@deepseek-teaching/core'
 import type { ModelClient } from '@deepseek-teaching/core'
@@ -589,21 +589,63 @@ export function registerRoutes(services: RouteServices): void {
         return title === '' ? concept : { ...concept, title }
       })
     }
+    // Student-authored concepts: no source anchors yet (teaching marks them as
+    // model knowledge), optional placement into an existing chapter.
+    const added: { concept: Concept; chapterId?: string }[] = []
+    for (const input of (edits?.addConcepts ?? []).slice(0, 200)) {
+      const title = typeof input?.title === 'string' ? input.title.trim().slice(0, 120) : ''
+      if (title === '') continue
+      const summary = typeof input?.summary === 'string' ? input.summary.trim().slice(0, 1200) : ''
+      added.push({
+        concept: {
+          id: newConceptId(),
+          title,
+          summary,
+          prerequisites: [],
+          sourceAnchors: [],
+        },
+        ...(typeof input?.chapterId === 'string' ? { chapterId: input.chapterId } : {}),
+      })
+    }
+    concepts = [...concepts, ...added.map(item => item.concept)]
     let sequence = draft.sequence.filter(id => concepts.some(concept => concept.id === id))
     if (edits?.sequence !== undefined) {
       const requested = edits.sequence.filter(id => concepts.some(concept => concept.id === id))
       sequence = [...requested, ...concepts.map(concept => concept.id).filter(id => !requested.includes(id))]
+    } else {
+      sequence = [...sequence, ...added.map(item => item.concept.id)]
     }
+    sequence = [...new Set(sequence)]
     if (concepts.length === 0) {
       return failure({ code: 'invalid-input', message: '确认的课程结构至少需要一个概念' })
     }
-    // Keep optional chapter groupings consistent with the edited concept set.
+    // Keep optional chapter groupings consistent with the edited concept set and
+    // apply student chapter title/summary edits.
     const chapters = draft.chapters === undefined
       ? undefined
-      : draft.chapters
+      : draft.chapters.map(chapter => {
+        const rawTitle = edits?.chapterTitles?.[chapter.id]
+        const title = typeof rawTitle === 'string' && rawTitle.trim() !== ''
+          ? rawTitle.trim().slice(0, 160)
+          : chapter.title
+        const rawSummary = edits?.chapterSummaries?.[chapter.id]
+        const summary = typeof rawSummary === 'string' ? rawSummary.trim().slice(0, 600) : chapter.summary
+        return {
+          ...chapter,
+          title,
+          ...(summary === undefined ? {} : { summary }),
+          conceptIds: chapter.conceptIds.filter(id => concepts.some(concept => concept.id === id)),
+        }
+      })
+    const chaptersWithAdditions = chapters === undefined
+      ? undefined
+      : chapters
         .map(chapter => ({
           ...chapter,
-          conceptIds: chapter.conceptIds.filter(id => concepts.some(concept => concept.id === id)),
+          conceptIds: [
+            ...chapter.conceptIds,
+            ...added.filter(item => item.chapterId === chapter.id).map(item => item.concept.id),
+          ],
         }))
         .filter(chapter => chapter.conceptIds.length > 0)
     const confirmed: CourseRevision = {
@@ -613,7 +655,7 @@ export function registerRoutes(services: RouteServices): void {
       provenance: 'student-edit',
       concepts,
       sequence,
-      ...(chapters === undefined ? {} : { chapters }),
+      ...(chaptersWithAdditions === undefined ? undefined : { chapters: chaptersWithAdditions }),
       goals: edits?.goals ?? draft.goals,
     }
     await services.courses.saveRevision(confirmed)

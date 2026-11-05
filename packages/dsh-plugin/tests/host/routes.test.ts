@@ -692,6 +692,40 @@ describe('teaching host routes', () => {
     assert.deepEqual(edited.revision.chapters.map(chapter => chapter.id), ['chapter-1', 'chapter-3'])
     assert.deepEqual(edited.revision.chapters[0]?.conceptIds, [first])
 
+    // Added concepts inherit an existing chapter or stay ungrouped; chapter
+    // titles/summaries can be edited in the same confirmation.
+    const base = newConceptId()
+    const addable = await draftWith([{ id: base, title: '基础概念' }], [
+      { id: 'chapter-x', title: '原章节名', summary: '原摘要', conceptIds: [base] },
+    ])
+    const added = unwrap<{
+      revision: {
+        concepts: { title: string }[]
+        sequence: string[]
+        chapters: { id: string; title: string; summary?: string; conceptIds: string[] }[]
+      }
+    }>((await harness.call('courseDraft.confirm', {
+      body: {
+        courseId: addable.courseId,
+        revisionId: addable.revision.id,
+        edits: {
+          chapterTitles: { 'chapter-x': '改后的章节名' },
+          chapterSummaries: { 'chapter-x': '改后的章节摘要' },
+          addConcepts: [
+            { title: '章节新增概念', summary: '学生补充', chapterId: 'chapter-x' },
+            { title: '独立新增概念' },
+            { title: '   ' },
+          ],
+        },
+      },
+    })).json)
+    assert.deepEqual(added.revision.concepts.map(concept => concept.title), ['基础概念', '章节新增概念', '独立新增概念'])
+    assert.equal(added.revision.sequence.length, 3)
+    assert.equal(added.revision.chapters.length, 1)
+    assert.equal(added.revision.chapters[0]?.title, '改后的章节名')
+    assert.equal(added.revision.chapters[0]?.summary, '改后的章节摘要')
+    assert.equal(added.revision.chapters[0]?.conceptIds.length, 2)
+
     // A confirm that removes every concept is rejected instead of creating an unusable course.
     const only = newConceptId()
     const empty = await draftWith([{ id: only, title: '唯一概念' }], [

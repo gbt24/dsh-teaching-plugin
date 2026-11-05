@@ -181,6 +181,17 @@ export interface ApiRequests {
         readonly sequence?: readonly ConceptId[]
         readonly conceptTitles?: Readonly<Record<string, string>>
         readonly removeConceptIds?: readonly ConceptId[]
+        /** Rename chapters (keyed by chapter id) before confirming. */
+        readonly chapterTitles?: Readonly<Record<string, string>>
+        /** Update chapter one-line summaries (keyed by chapter id). */
+        readonly chapterSummaries?: Readonly<Record<string, string>>
+        /** Add student-authored concepts; they have no source anchors yet. */
+        readonly addConcepts?: readonly {
+          readonly title: string
+          readonly summary?: string
+          /** Existing chapter id to place the concept in; omitted = ungrouped. */
+          readonly chapterId?: string
+        }[]
       }
     }
   }
