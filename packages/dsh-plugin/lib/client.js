@@ -20753,13 +20753,15 @@ window.__ModuleLoader__.load({
         }
       }, [notify]);
       const refreshCourse = (0, import_react10.useCallback)(async (courseId) => {
-        const [detail2, sessionsResponse] = await Promise.all([
+        const [detail2, sessionsResponse, coursesResponse] = await Promise.all([
           apiGet("courses.get", { courseId }),
-          apiGet("sessions.list", { courseId })
+          apiGet("sessions.list", { courseId }),
+          apiGet("courses.list")
         ]);
         if (mounted.current) {
           dispatch({ type: "course/loaded", detail: detail2, sessions: sessionsResponse.sessions });
           dispatch({ type: "sessions/loaded", sessions: sessionsResponse.sessions });
+          dispatch({ type: "courses/loaded", courses: coursesResponse.courses });
         }
         return { detail: detail2, sessions: sessionsResponse.sessions };
       }, []);

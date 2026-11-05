@@ -805,13 +805,17 @@ export function TeachingWorkspace(props: {
     detail?: CourseDetail
     sessions: readonly SessionSummary[]
   }> => {
-    const [detail, sessionsResponse] = await Promise.all([
+    const [detail, sessionsResponse, coursesResponse] = await Promise.all([
       apiGet('courses.get', { courseId: courseId as never }),
       apiGet('sessions.list', { courseId: courseId as never }),
+      apiGet('courses.list'),
     ])
     if (mounted.current) {
       dispatch({ type: 'course/loaded', detail, sessions: sessionsResponse.sessions })
       dispatch({ type: 'sessions/loaded', sessions: sessionsResponse.sessions })
+      // Keep the course cards' source/concept counts in sync after a structure
+      // change (confirm/edit/regenerate), not only after a full page reload.
+      dispatch({ type: 'courses/loaded', courses: coursesResponse.courses })
     }
     return { detail, sessions: sessionsResponse.sessions }
     // eslint-disable-next-line react-hooks/exhaustive-deps
