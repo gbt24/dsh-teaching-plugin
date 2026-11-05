@@ -161,7 +161,15 @@ export interface ApiRequests {
     readonly query: { readonly documentId: string; readonly offset?: number; readonly limit?: number }
     readonly body?: never
   }
-  'courseDraft.generate': { readonly method: 'POST'; readonly body: { readonly courseId: CourseId; readonly instruction?: string } }
+  'courseDraft.generate': {
+    readonly method: 'POST'
+    readonly body: {
+      readonly courseId: CourseId
+      readonly instruction?: string
+      /** `auto` (default) prefers a detected knowledge-base structure. */
+      readonly strategy?: 'auto' | 'kb-structure' | 'llm-wiki'
+    }
+  }
   'courseDraft.get': { readonly method: 'GET'; readonly query: { readonly courseId: CourseId }; readonly body?: never }
   'courseDraft.confirm': {
     readonly method: 'POST'

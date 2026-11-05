@@ -303,6 +303,25 @@ window.__ModuleLoader__.load({
     .ai-badge[data-run-status="succeeded"] { color: var(--dsw-alias-state-success-primary, #16a34a); border-color: currentColor; }
     .ai-badge[data-run-status="failed"], .ai-badge[data-run-status="timed-out"] { color: var(--dsw-alias-state-error-primary, #b91c1c); border-color: currentColor; }
     .ai-badge[data-run-status="cancelled"] { color: var(--dsw-alias-state-warn-primary, #b45309); border-color: currentColor; }
+    .ai-draft-origin { margin: 0 0 6px; }
+    .ai-badge[data-origin="kb-structure"] { color: var(--dsw-alias-state-success-primary, #16a34a);
+      border-color: currentColor; opacity: 1; }
+    .ai-badge[data-origin="llm-wiki"] { color: var(--dsw-alias-state-business-primary, #2563eb);
+      border-color: currentColor; opacity: 1; }
+    .ai-badge[data-origin="ai"] { border-style: dashed; opacity: 0.85; }
+    .ai-structure-notes { margin: 4px 0 0; padding-left: 18px; font-size: 11px; opacity: 0.72; }
+    .ai-structure-notes li { margin: 1px 0; }
+    .ai-chapter-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 2px; }
+    .ai-chapter { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22));
+      border-radius: 8px; padding: 8px 10px; background: var(--dsw-alias-bg-base, transparent); }
+    .ai-chapter-head { margin-bottom: 2px; }
+    .ai-chapter-title { font-weight: 600; font-size: 13px; }
+    .ai-chapter-summary { font-size: 12px; opacity: 0.78; margin-top: 2px; }
+    .ai-chapter-anchors { font-size: 11px; opacity: 0.6; margin-top: 2px; }
+    .ai-chapter-concepts { margin-top: 4px; }
+    .ai-badge[data-chapter-role="appendix"] { border-style: dashed; opacity: 0.85; }
+    .ai-badge[data-chapter-role="tool"] { color: var(--dsw-alias-state-warn-primary, #b45309);
+      border-color: currentColor; opacity: 1; }
     .ai-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:60}
     .ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
     .ai-modal h3{margin:0 0 8px;font-size:15px}
@@ -18500,14 +18519,80 @@ window.__ModuleLoader__.load({
     // packages/dsh-plugin/src/client/components/DraftReview.tsx
     var import_react4 = require("react");
     var import_jsx_runtime4 = require("react/jsx-runtime");
+    var ORIGIN_LABELS = {
+      "kb-structure": "\u7ED3\u6784\u6765\u6E90\uFF1A\u77E5\u8BC6\u5E93\uFF08\u76F4\u63A5\u8BFB\u53D6\uFF0C\u672A\u91CD\u65B0\u751F\u6210\uFF09",
+      "llm-wiki": "\u7ED3\u6784\u6765\u6E90\uFF1A\u6309 LLM-wiki \u89C4\u5219\u751F\u6210",
+      ai: "\u7ED3\u6784\u6765\u6E90\uFF1AAI \u751F\u6210"
+    };
+    var CHAPTER_ROLE_LABELS = {
+      chapter: "\u7AE0\u8282",
+      appendix: "\u9644\u5F55",
+      tool: "\u8DE8\u7AE0\u5DE5\u5177"
+    };
+    function groupChapterConcepts(revision) {
+      const chapters = revision.chapters ?? [];
+      const sequenceIndex = /* @__PURE__ */ new Map();
+      revision.sequence.forEach((conceptId, index) => sequenceIndex.set(conceptId, index));
+      const conceptById = new Map(revision.concepts.map((concept) => [concept.id, concept]));
+      const groupedIds = /* @__PURE__ */ new Set();
+      const groups = chapters.map((chapter) => {
+        const chapterConcepts = chapter.conceptIds.map((conceptId, localIndex) => {
+          const concept = conceptById.get(conceptId);
+          if (concept !== void 0) groupedIds.add(conceptId);
+          return {
+            concept,
+            order: sequenceIndex.get(conceptId) ?? Number.MAX_SAFE_INTEGER + localIndex
+          };
+        }).filter((entry) => entry.concept !== void 0).sort((a, b) => a.order - b.order).map((entry) => entry.concept);
+        return { chapter, concepts: chapterConcepts };
+      });
+      const ungrouped = revision.sequence.map((conceptId) => conceptById.get(conceptId)).filter((concept) => concept !== void 0 && !groupedIds.has(concept.id));
+      return { groups, ungrouped };
+    }
+    function ConceptItem(props) {
+      const { concept } = props;
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("li", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("strong", { children: concept.title }),
+        concept.summary !== "" ? ` \u2014 ${concept.summary}` : "",
+        concept.sourceAnchors.length === 0 ? "\uFF08\u4EC5\u6A21\u578B\u77E5\u8BC6\uFF0C\u65E0\u8D44\u6599\u4F9D\u636E\uFF09" : ""
+      ] });
+    }
+    function ChapterHead(props) {
+      const { chapter } = props;
+      return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-chapter-head", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", style: { alignItems: "baseline", gap: 8 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-chapter-title", children: chapter.title }),
+          chapter.role !== void 0 && chapter.role !== "chapter" && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-badge", "data-chapter-role": chapter.role, children: CHAPTER_ROLE_LABELS[chapter.role] }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "ai-muted", children: [
+            "\u6982\u5FF5 ",
+            props.conceptCount,
+            " \u4E2A"
+          ] })
+        ] }),
+        chapter.summary !== void 0 && chapter.summary !== "" && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-chapter-summary", children: chapter.summary }),
+        chapter.sourceAnchors !== void 0 && chapter.sourceAnchors.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-muted ai-chapter-anchors", children: [
+          "\u7AE0\u8282\u6765\u6E90\uFF1A",
+          chapter.sourceAnchors.slice(0, 4).map((anchor) => anchor.label).join("\uFF1B"),
+          chapter.sourceAnchors.length > 4 ? ` \u7B49 ${chapter.sourceAnchors.length} \u5904` : ""
+        ] })
+      ] });
+    }
     function DraftReview(props) {
       const { draft } = props;
       const revision = draft.revision;
+      const origin = draft.origin;
+      const structureNotes = draft.structureNotes ?? [];
+      const chapters = revision.chapters ?? [];
+      const { groups, ungrouped } = groupChapterConcepts(revision);
       return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-draft-review", children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("h3", { style: { margin: "0 0 6px", fontSize: 14 }, children: [
           "\u8BFE\u7A0B\u7ED3\u6784\u8349\u6848\uFF08v",
           revision.version,
           "\uFF09"
+        ] }),
+        (origin !== void 0 || structureNotes.length > 0) && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-draft-origin", children: [
+          origin !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-badge", "data-origin": origin, "aria-label": ORIGIN_LABELS[origin], children: ORIGIN_LABELS[origin] }),
+          structureNotes.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ul", { className: "ai-structure-notes", children: structureNotes.map((note) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("li", { children: note }, note)) })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-muted", children: [
           "\u6765\u6E90\u8986\u76D6\uFF1A",
@@ -18516,16 +18601,32 @@ window.__ModuleLoader__.load({
           revision.concepts.length,
           " \u4E2A \xB7 \u5B66\u4E60\u987A\u5E8F ",
           revision.sequence.length,
-          " \u6B65"
+          " \u6B65",
+          chapters.length > 0 ? ` \xB7 \u7AE0\u8282 ${chapters.length} \u4E2A` : ""
         ] }),
         draft.warnings.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ul", { className: "ai-warning-list", children: draft.warnings.map((warning) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("li", { children: warning }, warning)) }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist", children: revision.sequence.map((conceptId) => {
+        chapters.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-chapter-list", children: [
+          groups.map((group) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "ai-chapter", "aria-label": `\u7AE0\u8282 ${group.chapter.title}`, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ChapterHead, { chapter: group.chapter, conceptCount: group.concepts.length }),
+            group.concepts.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-muted", children: "\uFF08\u8BE5\u7AE0\u8282\u6682\u65F6\u6CA1\u6709\u53EF\u5C55\u793A\u7684\u6982\u5FF5\uFF09" }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: group.concepts.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ConceptItem, { concept }, concept.id)) })
+          ] }, group.chapter.id)),
+          ungrouped.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "ai-chapter", "aria-label": "\u672A\u5206\u7EC4\u6982\u5FF5", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-chapter-head", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-row", style: { alignItems: "baseline", gap: 8 }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "ai-chapter-title", children: "\u672A\u5206\u7EC4\u6982\u5FF5" }),
+                /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: "ai-muted", children: [
+                  "\u6982\u5FF5 ",
+                  ungrouped.length,
+                  " \u4E2A"
+                ] })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "ai-chapter-summary", children: "\u8FD9\u4E9B\u6982\u5FF5\u672A\u5F52\u5165\u4EFB\u4F55\u7AE0\u8282\uFF0C\u4ECD\u4F1A\u6309\u5B66\u4E60\u987A\u5E8F\u51FA\u73B0\u3002" })
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist ai-chapter-concepts", children: ungrouped.map((concept) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ConceptItem, { concept }, concept.id)) })
+          ] })
+        ] }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { className: "ai-checklist", children: revision.sequence.map((conceptId) => {
           const concept = revision.concepts.find((item) => item.id === conceptId);
-          return concept === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("li", { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("strong", { children: concept.title }),
-            concept.summary !== "" ? ` \u2014 ${concept.summary}` : "",
-            concept.sourceAnchors.length === 0 ? "\uFF08\u4EC5\u6A21\u578B\u77E5\u8BC6\uFF0C\u65E0\u8D44\u6599\u4F9D\u636E\uFF09" : ""
-          ] }, concept.id);
+          return concept === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ConceptItem, { concept }, concept.id);
         }) }),
         draft.coverage.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "ai-muted", style: { marginTop: 6 }, children: [
           "\u8D44\u6599\uFF1A",
@@ -18780,7 +18881,7 @@ window.__ModuleLoader__.load({
               draftPhase === "running" && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-badge", children: "\u751F\u6210\u4E2D" }),
               draftPhase === "error" && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: "ai-badge", style: { color: "var(--dsw-alias-state-error-primary, #b91c1c)" }, children: "\u751F\u6210\u5931\u8D25" })
             ] }),
-            draftPhase === "running" && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Spinner, { label: "\u6B63\u5728\u5206\u6790\u8D44\u6599\u5E76\u751F\u6210\u8BFE\u7A0B\u7ED3\u6784\u2026" }),
+            draftPhase === "running" && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(Spinner, { label: "\u6B63\u5728\u8BFB\u53D6/\u751F\u6210\u8BFE\u7A0B\u7ED3\u6784\u2026\uFF08\u7ED3\u6784\u76F4\u8BFB\u8F83\u5FEB\uFF1BLLM-wiki \u751F\u6210\u53EF\u80FD\u9700\u8981\u51E0\u5341\u79D2\uFF09" }),
             draftPhase === "error" && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
               /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { margin: "8px 0", borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { children: draftError ?? "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5931\u8D25" }) }),
               /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-muted", children: "\u53EF\u4EE5\u91CD\u8BD5\u751F\u6210\u3001\u8FD4\u56DE\u8865\u5145\u8D44\u6599\uFF0C\u6216\u76F4\u63A5\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7528\u6700\u5C0F\u7ED3\u6784\u5F00\u59CB\u5B66\u4E60\uFF08\u4E4B\u540E\u4ECD\u53EF\u518D\u751F\u6210\u5B8C\u6574\u8349\u6848\uFF09\u3002" })
@@ -18814,7 +18915,7 @@ window.__ModuleLoader__.load({
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { className: "ai-muted", style: { margin: "8px 0 10px" }, children: "\u8FD9\u95E8\u8BFE\u7A0B\u8FD8\u6CA1\u6709\u786E\u8BA4\u7684\u8BFE\u7A0B\u7ED3\u6784\uFF0C\u7CFB\u7EDF\u5B66\u4E60\u4E0E\u7EC3\u4E60\u9700\u8981\u5148\u786E\u8BA4\u6982\u5FF5\u4E0E\u5B66\u4E60\u987A\u5E8F\uFF1B \u4E5F\u53EF\u4EE5\u76F4\u63A5\u300C\u5148\u968F\u4FBF\u95EE\u95EE\u300D\u7528\u6700\u5C0F\u7ED3\u6784\u5F00\u59CB\uFF0C\u4E4B\u540E\u518D\u8865\u5168\u3002" }),
         props.error !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "ai-banner", "data-kind": "error", role: "alert", style: { marginBottom: 10, borderRadius: 8 }, children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { children: props.error }) }),
-        props.phase === "loading" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Spinner, { label: "\u6B63\u5728\u751F\u6210/\u8BFB\u53D6\u8BFE\u7A0B\u7ED3\u6784\u2026\uFF08\u6A21\u578B\u5206\u6790\u8D44\u6599\u53EF\u80FD\u9700\u8981\u51E0\u5341\u79D2\uFF09" }),
+        props.phase === "loading" && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Spinner, { label: "\u6B63\u5728\u751F\u6210/\u8BFB\u53D6\u8BFE\u7A0B\u7ED3\u6784\u2026\uFF08\u77E5\u8BC6\u5E93\u7ED3\u6784\u76F4\u8BFB\u8F83\u5FEB\uFF1BLLM-wiki \u751F\u6210\u53EF\u80FD\u9700\u8981\u51E0\u5341\u79D2\uFF09" }),
         props.phase === "draft" && props.draft !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
           DraftReview,
           {

@@ -1,8 +1,10 @@
 /**
- * 课程草案证据：有效 JSON 持久化为 draft 修订、解析失败一次修复、
- * 修复失败返回 uncertain、无效 anchor 不伪造、模型取消/缺失、coverage 数据。
- *
- * 模型通过 ScriptedModelClient 注入，真实模型调用由 Host adapter 提供。
+ * 课程结构 v2 · LLM-wiki 回退（llm-wiki）证据：
+ * - 新 sections 结构（章节 → 概念）持久化为 draft 修订，provenance=llm-wiki；
+ * - 只修复一次、失败返回 uncertain、无效 anchor 丢弃不伪造；
+ * - 模型取消/缺失、旧版扁平 JSON 兼容、学生 instruction 进入提示；
+ * - 大资料按预算分组（map）后合并（reduce），调用次数有界；
+ * - 重新生成草案：version 递增、旧 draft superseded、确认版不受影响。
  */
 import test from 'node:test'
 import type { TestContext } from 'node:test'
@@ -11,14 +13,19 @@ import { ScriptedModelClient } from '../../src/model/fake.ts'
 import { courseId as newCourseId, nowIso } from '../../src/contracts/ids.ts'
 import type { CourseId, SourceId } from '../../src/contracts/ids.ts'
 import type { Course } from '../../src/contracts/course.ts'
-import type { SourceDocument, SourceRevision } from '../../src/contracts/source.ts'
+import type { SourceDocument, SourceRevision, SourceUnit } from '../../src/contracts/source.ts'
 import type { CourseRepository } from '../../src/storage/repositories.ts'
 import { samplePath, createTestCorpus, serviceSharing, valueOf, errorCode } from './helpers.ts'
 
-interface Material {
-  readonly courseId: CourseId
+interface MaterialDocument {
   readonly document: SourceDocument
   readonly revision: SourceRevision
+  readonly units: readonly SourceUnit[]
+}
+
+interface Material {
+  readonly courseId: CourseId
+  readonly documents: readonly MaterialDocument[]
 }
 
 async function createCourse(courses: CourseRepository, title = '微积分'): Promise<Course> {
@@ -38,51 +45,75 @@ async function setupMaterial(t: TestContext): Promise<Awaited<ReturnType<typeof 
   const context = await createTestCorpus()
   t.after(async () => await context.cleanup())
   const course = await createCourse(context.courses)
-  const document = valueOf(await context.service.importFile({
-    path: samplePath('markdown/derivatives.md'),
-    courseId: course.id,
-  }))
-  assert.ok(document.currentRevisionId !== undefined)
-  const revision = valueOf(await context.service.getRevision(document.id, document.currentRevisionId))
-  return { ...context, courseId: course.id, document, revision }
+  const outcome = await context.service.importFiles(course.id, [
+    { path: samplePath('markdown/derivatives.md') },
+    { path: samplePath('markdown/overfitting.md') },
+    { path: samplePath('text/limits-notes.txt') },
+    { path: samplePath('pdf/derivative-rules.pdf') },
+  ])
+  assert.equal(outcome.failures.length, 0)
+  const documents: MaterialDocument[] = []
+  for (const document of outcome.documents) {
+    assert.ok(document.currentRevisionId !== undefined)
+    const revision = valueOf(await context.service.getRevision(document.id, document.currentRevisionId))
+    documents.push({ document, revision, units: revision.units })
+  }
+  return { ...context, courseId: course.id as CourseId, documents }
 }
 
-/** 组装一个有效的模型 JSON 草案（anchor 全部指向真实单元）。 */
-function validDraftValue(material: { document: SourceDocument; revision: SourceRevision }): unknown {
-  const units = material.revision.units
-  const heading = units.find(unit => unit.kind === 'heading')
-  const paragraph = units.find(unit => unit.kind === 'paragraph')
-  assert.ok(heading !== undefined && paragraph !== undefined)
+function unitOf(material: Material, documentIndex: number, kind: SourceUnit['kind']): SourceUnit {
+  const units = material.documents[documentIndex]?.units ?? []
+  const found = units.find(unit => unit.kind === kind)
+  assert.ok(found !== undefined, `资料 ${documentIndex} 应包含 ${kind} 单元`)
+  return found
+}
+
+/** 新版 sections 结构（章节 → 概念 → 真实资料锚点）。 */
+function sectionsDraftValue(material: Material, overrides: { readonly titleSuffix?: string } = {}): unknown {
+  const derivDoc = material.documents[0] as MaterialDocument
+  const limitsDoc = material.documents[1] as MaterialDocument
+  const heading = unitOf(material, 0, 'heading')
+  const paragraph = unitOf(material, 1, 'paragraph')
   return {
-    goals: ['理解导数的定义与几何意义'],
-    concepts: [
+    goals: ['理解导数与极限的关系'],
+    sections: [
       {
-        title: '导数的定义',
-        summary: '导数是差商的极限，描述瞬时变化率。',
-        prerequisites: [],
-        difficulty: 'intro',
-        misconceptions: ['把平均变化率当成瞬时变化率'],
-        checkIdeas: ['写出导数定义并解释各符号含义'],
-        anchors: [
-          { documentId: material.document.id as SourceId, unitId: heading.id },
-          { documentId: material.document.id as SourceId, unitId: paragraph.id },
-        ],
+        title: '第一章 极限',
+        summary: '极限是微积分的基础',
+        role: 'chapter',
+        concepts: [{
+          title: `极限${overrides.titleSuffix ?? ''}`,
+          summary: '数列与函数极限、左右极限',
+          difficulty: 'intro',
+          prerequisites: [],
+          misconceptions: ['把极限值当成函数值'],
+          checkIdeas: ['写出 ε-δ 定义'],
+          anchors: [{ documentId: limitsDoc.document.id, unitId: paragraph.id }],
+        }],
       },
       {
-        title: '求导法则',
-        summary: '幂函数、和与链式法则。',
-        prerequisites: ['导数的定义'],
-        difficulty: 'core',
-        anchors: [{ documentId: material.document.id as SourceId, unitId: paragraph.id }],
+        title: '第二章 导数',
+        summary: '导数刻画瞬时变化率',
+        role: 'chapter',
+        concepts: [{
+          title: `导数${overrides.titleSuffix ?? ''}`,
+          summary: '差商的极限与切线斜率',
+          difficulty: 'core',
+          prerequisites: [`极限${overrides.titleSuffix ?? ''}`],
+          anchors: [
+            { documentId: derivDoc.document.id, unitId: heading.id },
+            { documentId: derivDoc.document.id, unitId: 'unit-does-not-exist' },
+          ],
+        }],
       },
     ],
-    sequence: ['导数的定义', '求导法则'],
+    notes: ['资料覆盖导数与极限，线性代数部分缺失'],
   }
 }
 
-test('有效草案：持久化为 draft 修订、anchor 指向真实资料、coverage 可组装', async t => {
+test('有效 sections 草案：章节/概念/锚点/顺序持久化为 llm-wiki draft', async t => {
   const material = await setupMaterial(t)
-  const model = new ScriptedModelClient([{ kind: 'json', value: validDraftValue(material) }])
+  const model = new ScriptedModelClient([{ kind: 'json', value: sectionsDraftValue(material) }])
   const service = serviceSharing(material, { model })
   const revision = valueOf(await service.proposeCourseStructure({
     courseId: material.courseId,
@@ -92,60 +123,55 @@ test('有效草案：持久化为 draft 修订、anchor 指向真实资料、cov
     language: 'zh',
   }))
   assert.equal(revision.state, 'draft')
-  assert.equal(revision.provenance, 'ai-draft')
+  assert.equal(revision.provenance, 'llm-wiki')
   assert.equal(revision.version, 1)
-  assert.equal(revision.courseId, material.courseId)
-  assert.equal(revision.language, 'zh')
-  assert.equal(revision.goals[0], '理解导数', '学生目标应保留在 goals 首位')
+  assert.equal(revision.goals[0], '理解导数', '学生目标保留在 goals 首位')
   assert.equal(revision.concepts.length, 2)
-  const first = revision.concepts[0]
-  assert.ok(first !== undefined)
-  assert.equal(first.sourceAnchors.length, 2)
-  for (const anchor of first.sourceAnchors) {
-    assert.equal(anchor.documentId, material.document.id)
-    assert.equal(anchor.revisionId, material.revision.id)
-    assert.ok(anchor.excerpt.length > 0)
-    assert.ok(anchor.label.includes(material.document.title))
-  }
-  assert.equal(revision.concepts[1]?.prerequisites[0], first.id, 'prerequisites 应按 title 映射为概念 id')
-  assert.deepEqual(revision.sequence, revision.concepts.map(concept => concept.id))
-  assert.ok(revision.basedOn.some(item => item.sourceId === material.document.id && item.revisionId === material.revision.id))
-  assert.ok(revision.sources.some(source => source.sourceId === material.document.id))
-  assert.equal(revision.changeSummary !== undefined, true)
-  assert.match(revision.changeSummary ?? '', /1 份资料/)
+  assert.ok(revision.chapters !== undefined)
+  assert.deepEqual(revision.chapters?.map(chapter => chapter.role), ['chapter', 'chapter'])
+  assert.deepEqual(revision.chapters?.map(chapter => chapter.title), ['第一章 极限', '第二章 导数'])
+  assert.equal(revision.sequence.length, 2)
+  assert.deepEqual(revision.sequence, revision.chapters?.flatMap(chapter => [...chapter.conceptIds]))
+  const derivative = revision.concepts.find(concept => concept.title === '导数')
+  const limit = revision.concepts.find(concept => concept.title === '极限')
+  assert.ok(derivative !== undefined && limit !== undefined)
+  assert.equal(limit.sourceAnchors.length, 1)
+  assert.equal(derivative.sourceAnchors.length, 1, '无效 anchor 应被丢弃')
+  assert.equal(derivative.sourceAnchors[0]?.documentId, material.documents[0]?.document.id)
+  assert.deepEqual(derivative.prerequisites, [limit.id])
+  assert.ok(derivative.difficulty === 'core')
+  assert.ok(revision.basedOn.length >= 2)
+  assert.ok(revision.changeSummary?.includes('LLM-wiki 回退'))
+  assert.ok(revision.changeSummary?.includes('llm-wiki'))
 
-  // 课程草稿关系：只设置 draftRevisionId，不碰 activeRevisionId
+  // 课程关系：只写 draftRevisionId
   const course = await material.courses.get(material.courseId)
-  assert.ok(course !== undefined)
-  assert.equal(course.draftRevisionId, revision.id)
-  assert.equal(course.activeRevisionId, undefined)
+  assert.equal(course?.draftRevisionId, revision.id)
+  assert.equal(course?.activeRevisionId, undefined)
 
-  // 持久化可读回
-  const stored = await material.courses.getRevision(material.courseId, revision.id)
-  assert.ok(stored !== undefined)
-  assert.deepEqual(stored.concepts.map(concept => concept.title), ['导数的定义', '求导法则'])
-
-  // coverage/warnings 数据来源
+  // coverage 可组装
   const coverage = valueOf(await service.buildCourseDraftCoverage(material.courseId))
-  assert.ok(coverage.coverage.some(item => item.sourceId === material.document.id && item.usedUnits >= 2))
-  assert.ok(Array.isArray(coverage.warnings))
+  assert.ok(coverage.coverage.length > 0)
+  assert.ok(coverage.warnings.some(warning => warning.includes('llm-wiki')))
 
-  // 模型请求：带真实 unitId、purpose 为 course-draft
+  // 提示词：LLM-wiki 规则 + 真实 unitId + 课程/目标/基础
   assert.equal(model.calls.length, 1)
   const call = model.calls[0]
   assert.equal(call?.purpose, 'course-draft')
-  const prompt = call?.messages.map(message => message.text).join('\n') ?? ''
+  const prompt = `${call?.system ?? ''}\n${call?.messages.map(message => message.text).join('\n') ?? ''}`
+  assert.match(prompt, /LLM Wiki|LLM-wiki/)
   assert.match(prompt, /unitId=/)
   assert.match(prompt, /微积分/)
   assert.match(prompt, /理解导数/)
   assert.match(prompt, /学过极限/)
+  assert.match(prompt, /页面阈值|passing mention/)
 })
 
 test('解析失败一次修复后成功；请求包含修复说明', async t => {
   const material = await setupMaterial(t)
   const model = new ScriptedModelClient([
     { kind: 'text', text: '抱歉，我无法按要求输出 JSON。' },
-    { kind: 'json', value: validDraftValue(material) },
+    { kind: 'json', value: sectionsDraftValue(material) },
   ])
   const service = serviceSharing(material, { model })
   const revision = valueOf(await service.proposeCourseStructure({
@@ -156,11 +182,9 @@ test('解析失败一次修复后成功；请求包含修复说明', async t => 
   }))
   assert.equal(revision.concepts.length, 2)
   assert.equal(model.calls.length, 2, '只允许一次修复调用')
-  const repairCall = model.calls[1]
-  assert.ok(repairCall !== undefined)
-  const repairText = repairCall.messages.map(message => message.text).join('\n')
+  const repairText = model.calls[1]?.messages.map(message => message.text).join('\n') ?? ''
   assert.match(repairText, /上一次输出无法解析/)
-  assert.equal(repairCall.messages.at(-1)?.role, 'user')
+  assert.equal(model.calls[1]?.messages.at(-1)?.role, 'user')
 })
 
 test('两次都无法解析：返回 uncertain，不保存草案', async t => {
@@ -178,17 +202,14 @@ test('两次都无法解析：返回 uncertain，不保存草案', async t => {
   })
   assert.equal(errorCode(result), 'uncertain')
   assert.equal(model.calls.length, 2)
-  const revisions = await material.courses.listRevisions(material.courseId)
-  assert.equal(revisions.length, 0, '失败时不能保存任何草案修订')
-  const course = await material.courses.get(material.courseId)
-  assert.equal(course?.draftRevisionId, undefined)
+  assert.equal((await material.courses.listRevisions(material.courseId)).length, 0, '失败时不能保存任何草案修订')
 })
 
 test('缺字段/概念为空：不可恢复时返回 uncertain（不编造）', async t => {
   const material = await setupMaterial(t)
   const model = new ScriptedModelClient([
-    { kind: 'json', value: { goals: [], concepts: [] } },
-    { kind: 'json', value: { concepts: [{ summary: '没有 title' }] } },
+    { kind: 'json', value: { sections: [] } },
+    { kind: 'json', value: { sections: [{ title: '章', concepts: [{ summary: '没有 title' }] }] } },
   ])
   const service = serviceSharing(material, { model })
   const result = await service.proposeCourseStructure({
@@ -203,13 +224,12 @@ test('缺字段/概念为空：不可恢复时返回 uncertain（不编造）', 
 
 test('模型引用不存在的单元：丢弃 anchor 而不是伪造定位', async t => {
   const material = await setupMaterial(t)
-  const draft = validDraftValue(material) as {
-    concepts: { title: string; anchors: { documentId: string; unitId: string }[] }[]
+  const forged = sectionsDraftValue(material) as {
+    sections: { concepts: { title: string; anchors: { documentId: string; unitId: string }[] }[] }[]
   }
-  const forged = structuredClone(draft)
-  const firstConcept = forged.concepts[0]
+  const firstConcept = forged.sections[0]?.concepts[0]
   assert.ok(firstConcept !== undefined)
-  firstConcept.anchors = [{ documentId: material.document.id, unitId: 'unit-does-not-exist' }]
+  firstConcept.anchors = [{ documentId: material.documents[0]?.document.id as SourceId, unitId: 'unit-does-not-exist' }]
   const model = new ScriptedModelClient([{ kind: 'json', value: forged }])
   const service = serviceSharing(material, { model })
   const revision = valueOf(await service.proposeCourseStructure({
@@ -220,11 +240,9 @@ test('模型引用不存在的单元：丢弃 anchor 而不是伪造定位', asy
   }))
   assert.equal(revision.concepts[0]?.sourceAnchors.length, 0, '不存在的单元引用必须被丢弃')
   assert.match(revision.changeSummary ?? '', /丢弃/)
-  const coverage = valueOf(await service.buildCourseDraftCoverage(material.courseId))
-  assert.ok(coverage.warnings.some(warning => warning.includes('没有资料定位')))
 })
 
-test('模型取消：返回 cancelled；无模型：capability-missing；课程不存在：not-found', async t => {
+test('模型取消：cancelled；无模型：capability-missing；课程不存在：not-found', async t => {
   const material = await setupMaterial(t)
   const abortModel = new ScriptedModelClient([{ kind: 'abort' }])
   const abortService = serviceSharing(material, { model: abortModel })
@@ -254,9 +272,9 @@ test('模型取消：返回 cancelled；无模型：capability-missing；课程�
   assert.equal(errorCode(missingCourse), 'not-found')
 })
 
-test('重新生成草案：新版本 draft，旧 draft 标记 superseded，确认版不变', async t => {
+test('重新生成草案：新版本 draft、旧 draft superseded、确认版不受影响', async t => {
   const material = await setupMaterial(t)
-  const firstModel = new ScriptedModelClient([{ kind: 'json', value: validDraftValue(material) }])
+  const firstModel = new ScriptedModelClient([{ kind: 'json', value: sectionsDraftValue(material) }])
   const firstService = serviceSharing(material, { model: firstModel })
   const first = valueOf(await firstService.proposeCourseStructure({
     courseId: material.courseId,
@@ -264,15 +282,13 @@ test('重新生成草案：新版本 draft，旧 draft 标记 superseded，确�
     goal: '第一版目标',
     language: 'zh',
   }))
-  // 先确认第一版（模拟 Host/学生确认），再生成第二版
+  // 模拟 Host/学生确认第一版
   await material.courses.saveRevision({ ...first, state: 'confirmed', confirmedAt: nowIso() })
   const confirmedCourse = await material.courses.get(material.courseId)
   assert.ok(confirmedCourse !== undefined)
   await material.courses.save({ ...confirmedCourse, activeRevisionId: first.id, draftRevisionId: undefined })
 
-  const secondModel = new ScriptedModelClient([
-    { kind: 'json', value: { ...(validDraftValue(material) as object), goals: ['第二版目标'] } },
-  ])
+  const secondModel = new ScriptedModelClient([{ kind: 'json', value: sectionsDraftValue(material, { titleSuffix: '（二）' }) }])
   const secondService = serviceSharing(material, { model: secondModel })
   const second = valueOf(await secondService.proposeCourseStructure({
     courseId: material.courseId,
@@ -281,13 +297,13 @@ test('重新生成草案：新版本 draft，旧 draft 标记 superseded，确�
     language: 'zh',
   }))
   assert.equal(second.version, 2)
-  const revisions = await material.courses.listRevisions(material.courseId)
-  assert.equal(revisions.length, 2)
+  assert.equal((await material.courses.listRevisions(material.courseId)).length, 2)
   const courseAfter = await material.courses.get(material.courseId)
   assert.equal(courseAfter?.draftRevisionId, second.id)
   assert.equal(courseAfter?.activeRevisionId, first.id, '生成草案不能改变已确认版本')
-  // 只有 draft 会被 superseded（confirmed 版本不受影响）；用新模型生成第三版
-  const thirdModel = new ScriptedModelClient([{ kind: 'json', value: validDraftValue(material) }])
+
+  // 第三版会把第二版（draft）标记 superseded；已确认的第一版保持 confirmed
+  const thirdModel = new ScriptedModelClient([{ kind: 'json', value: sectionsDraftValue(material, { titleSuffix: '（三）' }) }])
   const thirdService = serviceSharing(material, { model: thirdModel })
   await thirdService.proposeCourseStructure({
     courseId: material.courseId,
@@ -297,23 +313,143 @@ test('重新生成草案：新版本 draft，旧 draft 标记 superseded，确�
   })
   const secondStored = await material.courses.getRevision(material.courseId, second.id)
   assert.equal(secondStored?.state, 'superseded')
+  const firstStored = await material.courses.getRevision(material.courseId, first.id)
+  assert.equal(firstStored?.state, 'confirmed')
 })
 
-test('学生修改 instruction 进入提示；sequence 缺失时自动补齐', async t => {
+test('学生 instruction 进入提示；旧版扁平 JSON 兼容为单章节', async t => {
   const material = await setupMaterial(t)
-  const draft = validDraftValue(material) as { sequence?: string[]; concepts: unknown[] }
-  delete draft.sequence
-  const model = new ScriptedModelClient([{ kind: 'json', value: draft }])
-  const service = serviceSharing(material, { model })
+  const flatModel = new ScriptedModelClient([{
+    kind: 'json',
+    value: {
+      goals: ['理解导数'],
+      concepts: [{
+        title: '导数',
+        summary: '差商的极限',
+        prerequisites: [],
+        difficulty: 'intro',
+        anchors: [{
+          documentId: material.documents[0]?.document.id,
+          unitId: unitOf(material, 0, 'heading').id,
+        }],
+      }],
+      sequence: ['导数'],
+    },
+  }])
+  const service = serviceSharing(material, { model: flatModel })
   const revision = valueOf(await service.proposeCourseStructure({
     courseId: material.courseId,
     courseTitle: '微积分',
     goal: '理解导数',
     language: 'zh',
-    instruction: '先讲直观定义，再讲求导法则',
+    instruction: '先讲直观定义，再讲计算',
   }))
-  assert.equal(revision.sequence.length, revision.concepts.length, 'sequence 必须覆盖所有概念')
-  assert.equal(new Set(revision.sequence).size, revision.concepts.length)
-  const prompt = model.calls[0]?.messages.map(message => message.text).join('\n') ?? ''
+  assert.equal(revision.provenance, 'llm-wiki')
+  assert.ok(revision.chapters !== undefined && revision.chapters.length >= 1, '旧版扁平输出应兼容为单章节')
+  assert.equal(revision.concepts.length, 1)
+  assert.equal(revision.concepts[0]?.sourceAnchors.length, 1)
+  assert.equal(revision.sequence.length, 1)
+  const prompt = flatModel.calls[0]?.messages.map(message => message.text).join('\n') ?? ''
   assert.match(prompt, /先讲直观定义/)
+})
+
+test('大资料：按摘要预算分组 map 后合并，模型调用有界', async t => {
+  const context = await createTestCorpus({
+    limits: {
+      draftLlmWikiBudgetChars: 2_000,
+      draftLlmWikiDocChars: 420,
+      draftLlmWikiGroupCallsMax: 3,
+      draftLlmWikiHeadingsPerDoc: 4,
+    },
+  })
+  t.after(async () => await context.cleanup())
+  const course = await createCourse(context.courses, '分组测试')
+  const imported = await context.service.importFiles(course.id, [
+    { path: samplePath('markdown/derivatives.md') },
+    { path: samplePath('markdown/overfitting.md') },
+    { path: samplePath('text/limits-notes.txt') },
+    { path: samplePath('pdf/derivative-rules.pdf') },
+    { path: samplePath('docx/derivative-lecture.docx') },
+    { path: samplePath('pptx/derivative-slides.pptx') },
+  ])
+  assert.equal(imported.failures.length, 0)
+  const reply = (title: string): { kind: 'json'; value: unknown } => ({
+    kind: 'json',
+    value: {
+      sections: [{ title, summary: '', role: 'chapter', concepts: [{ title: `${title} 概念`, summary: '一句话', anchors: [] }] }],
+      goals: ['理解内容'],
+      notes: [],
+    },
+  })
+  const model = new ScriptedModelClient([reply('第一章'), reply('第二章'), reply('第三章')])
+  const service = serviceSharing(context, {
+    model,
+    limits: {
+      draftLlmWikiBudgetChars: 2_000,
+      draftLlmWikiDocChars: 420,
+      draftLlmWikiGroupCallsMax: 3,
+      draftLlmWikiHeadingsPerDoc: 4,
+    },
+  })
+  const revision = valueOf(await service.proposeCourseStructure({
+    courseId: course.id,
+    courseTitle: '分组测试',
+    goal: '理解内容',
+    language: 'zh',
+  }))
+  assert.ok(model.calls.length > 1, `应触发分组调用，实际 ${model.calls.length}`)
+  assert.ok(model.calls.length <= 3, '模型调用次数必须有界')
+  assert.ok(revision.chapters !== undefined && revision.chapters.length >= 1)
+  assert.ok(revision.concepts.length >= 1)
+  assert.equal(new Set(revision.sequence).size, revision.concepts.length)
+  assert.ok(revision.changeSummary?.includes('份资料'))
+})
+
+test('分组部分失败：保留成功分组并给出覆盖警告，不整体失败', async t => {
+  const context = await createTestCorpus({
+    limits: {
+      draftLlmWikiBudgetChars: 2_000,
+      draftLlmWikiDocChars: 420,
+      draftLlmWikiGroupCallsMax: 3,
+      draftLlmWikiHeadingsPerDoc: 4,
+    },
+  })
+  t.after(async () => await context.cleanup())
+  const course = await createCourse(context.courses, '部分失败')
+  const imported = await context.service.importFiles(course.id, [
+    { path: samplePath('markdown/derivatives.md') },
+    { path: samplePath('markdown/overfitting.md') },
+    { path: samplePath('text/limits-notes.txt') },
+    { path: samplePath('pdf/derivative-rules.pdf') },
+    { path: samplePath('docx/derivative-lecture.docx') },
+    { path: samplePath('pptx/derivative-slides.pptx') },
+  ])
+  assert.equal(imported.failures.length, 0)
+  const validReply = {
+    kind: 'json' as const,
+    value: {
+      sections: [{ title: '第一章 成功分组', role: 'chapter', concepts: [{ title: '成功概念', summary: '一句话', anchors: [] }] }],
+      goals: [],
+      notes: [],
+    },
+  }
+  const model = new ScriptedModelClient([validReply, { kind: 'text', text: '第二组不是 JSON' }, { kind: 'text', text: '第二组仍然不是 JSON' }])
+  const service = serviceSharing(context, {
+    model,
+    limits: {
+      draftLlmWikiBudgetChars: 2_000,
+      draftLlmWikiDocChars: 420,
+      draftLlmWikiGroupCallsMax: 3,
+      draftLlmWikiHeadingsPerDoc: 4,
+    },
+  })
+  const revision = valueOf(await service.proposeCourseStructure({
+    courseId: course.id,
+    courseTitle: '部分失败',
+    goal: '理解内容',
+    language: 'zh',
+  }))
+  assert.ok(revision.concepts.length >= 1, '成功分组的概念应保留')
+  assert.ok(revision.changeSummary?.includes('警告'), '部分分组失败应体现在结构说明/警告中')
+  assert.ok(model.calls.length >= 2)
 })

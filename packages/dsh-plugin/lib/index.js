@@ -2323,11 +2323,11 @@ var PathMutex = class {
     }
   }
 };
-function safePath(dataDir, relative2) {
+function safePath(dataDir, relative3) {
   const root = normalize(dataDir);
-  const full = isAbsolute(relative2) ? normalize(relative2) : normalize(join2(root, relative2));
+  const full = isAbsolute(relative3) ? normalize(relative3) : normalize(join2(root, relative3));
   if (full !== root && !full.startsWith(`${root}/`)) {
-    throw new StoreError({ code: "invalid-input", message: `\u62D2\u7EDD\u8D8A\u754C\u8DEF\u5F84\u5199\u5165: ${relative2}` });
+    throw new StoreError({ code: "invalid-input", message: `\u62D2\u7EDD\u8D8A\u754C\u8DEF\u5F84\u5199\u5165: ${relative3}` });
   }
   return full;
 }
@@ -2382,8 +2382,8 @@ var LocalState = class {
     return meta;
   }
   /** Read one JSON record by relative path; returns undefined when absent. */
-  async readJson(relative2) {
-    const path2 = safePath(this.dataDir, relative2);
+  async readJson(relative3) {
+    const path2 = safePath(this.dataDir, relative3);
     try {
       const raw = await readFile(path2, "utf8");
       if (raw.trim() === "") return void 0;
@@ -2393,8 +2393,8 @@ var LocalState = class {
       if (cause instanceof SyntaxError) {
         throw new StoreError({
           code: "storage",
-          message: `\u672C\u5730\u8BB0\u5F55\u635F\u574F\uFF0C\u5DF2\u4FDD\u7559\u539F\u6587\u4EF6\u4EE5\u4FBF\u6062\u590D: ${relative2}`,
-          details: { path: relative2, reason: cause.message }
+          message: `\u672C\u5730\u8BB0\u5F55\u635F\u574F\uFF0C\u5DF2\u4FDD\u7559\u539F\u6587\u4EF6\u4EE5\u4FBF\u6062\u590D: ${relative3}`,
+          details: { path: relative3, reason: cause.message }
         });
       }
       throw cause;
@@ -2403,23 +2403,23 @@ var LocalState = class {
   /** Read multiple records, skipping absent ones. */
   async readMany(relativePaths) {
     const out = [];
-    for (const relative2 of relativePaths) {
-      const value = await this.readJson(relative2);
+    for (const relative3 of relativePaths) {
+      const value = await this.readJson(relative3);
       if (value !== void 0) out.push(value);
     }
     return out;
   }
   /** Atomically write one JSON record. */
-  async writeJson(relative2, value) {
-    const path2 = safePath(this.dataDir, relative2);
+  async writeJson(relative3, value) {
+    const path2 = safePath(this.dataDir, relative3);
     await this.mutex.run(path2, async () => {
       await mkdir(dirname(path2), { recursive: true });
       await this.writeAbsolute(path2, value);
     });
   }
   /** Delete one file or directory (idempotent). */
-  async remove(relative2) {
-    const path2 = safePath(this.dataDir, relative2);
+  async remove(relative3) {
+    const path2 = safePath(this.dataDir, relative3);
     return this.mutex.run(path2, async () => {
       try {
         await rm(path2, { recursive: true, force: true });
@@ -2453,9 +2453,9 @@ var LocalState = class {
     }
   }
   /** Whether a relative file exists. */
-  async exists(relative2) {
+  async exists(relative3) {
     try {
-      await stat(safePath(this.dataDir, relative2));
+      await stat(safePath(this.dataDir, relative3));
       return true;
     } catch (cause) {
       if (isMissing(cause)) return false;
@@ -2463,8 +2463,8 @@ var LocalState = class {
     }
   }
   /** Append one JSON line (usage logs, append-only message streams). */
-  async appendJsonl(relative2, value) {
-    const path2 = safePath(this.dataDir, relative2);
+  async appendJsonl(relative3, value) {
+    const path2 = safePath(this.dataDir, relative3);
     await this.mutex.run(path2, async () => {
       await mkdir(dirname(path2), { recursive: true });
       await appendFile(path2, `${JSON.stringify(value)}
@@ -2472,8 +2472,8 @@ var LocalState = class {
     });
   }
   /** Read a JSONL file, skipping a trailing partial line after a crash. */
-  async readJsonl(relative2) {
-    const path2 = safePath(this.dataDir, relative2);
+  async readJsonl(relative3) {
+    const path2 = safePath(this.dataDir, relative3);
     let raw;
     try {
       raw = await readFile(path2, "utf8");
@@ -2779,8 +2779,8 @@ function extractJson(text2) {
 }
 
 // packages/teaching-core/src/corpus/service.ts
-import { readFile as readFile4 } from "node:fs/promises";
-import { basename as basename3, extname as extname4, resolve } from "node:path";
+import { readFile as readFile5 } from "node:fs/promises";
+import { basename as basename4, extname as extname5, resolve as resolve2 } from "node:path";
 
 // packages/teaching-core/src/corpus/errors.ts
 var CorpusParseError = class extends Error {
@@ -2993,11 +2993,11 @@ async function statFile(path2) {
 }
 async function hashFile(path2) {
   const hash = createHash("sha256");
-  await new Promise((resolve5, reject) => {
+  await new Promise((resolve6, reject) => {
     const stream = createReadStream(path2);
     stream.on("data", (chunk2) => hash.update(chunk2));
     stream.on("error", reject);
-    stream.on("end", () => resolve5());
+    stream.on("end", () => resolve6());
   });
   return `${FINGERPRINT_PREFIX}${hash.digest("hex")}`;
 }
@@ -3018,6 +3018,13 @@ var DEFAULT_LIMITS = Object.freeze({
   draftMaxChars: 18e3,
   draftUnitsPerDoc: 80,
   draftMaxConcepts: 40,
+  draftLlmWikiBudgetChars: 8e4,
+  draftLlmWikiDocChars: 1400,
+  draftLlmWikiGroupCallsMax: 6,
+  draftLlmWikiMaxConcepts: 200,
+  kbMaxConcepts: 500,
+  kbMaxChapters: 80,
+  draftLlmWikiHeadingsPerDoc: 24,
   searchDefaultLimit: 10,
   searchMaxLimit: 100,
   searchMaxQueryTerms: 24,
@@ -3040,7 +3047,7 @@ import { access } from "node:fs/promises";
 import { delimiter, join as join3 } from "node:path";
 async function runCommand(command, args, options = {}) {
   const maxOutputChars = options.maxOutputChars ?? 8 * 1024 * 1024;
-  return await new Promise((resolve5) => {
+  return await new Promise((resolve6) => {
     let stdout = "";
     let stderr = "";
     let timedOut = false;
@@ -3055,7 +3062,7 @@ async function runCommand(command, args, options = {}) {
         windowsHide: true
       });
     } catch (cause) {
-      resolve5({
+      resolve6({
         code: null,
         stdout: "",
         stderr: cause instanceof Error ? cause.message : String(cause),
@@ -3070,7 +3077,7 @@ async function runCommand(command, args, options = {}) {
       settled = true;
       if (timer !== void 0) clearTimeout(timer);
       options.signal?.removeEventListener("abort", onAbort);
-      resolve5(result);
+      resolve6(result);
     };
     const onAbort = () => {
       aborted2 = true;
@@ -5016,8 +5023,8 @@ var CorpusStore = class {
     const knownById = stored?.documents ?? {};
     const knownFiles = /* @__PURE__ */ new Set();
     for (const fileName of fileNames) {
-      const relative2 = `sources/${fileName}`;
-      const absolute = join6(this.state.dataDir, relative2);
+      const relative3 = `sources/${fileName}`;
+      const absolute = join6(this.state.dataDir, relative3);
       let fileMtimeMs = 0;
       try {
         fileMtimeMs = (await stat3(absolute)).mtimeMs;
@@ -5031,7 +5038,7 @@ var CorpusStore = class {
         documents[documentIdFromFile] = cached;
         continue;
       }
-      const rawDocument = await this.state.readJson(relative2);
+      const rawDocument = await this.state.readJson(relative3);
       if (!isSourceDocumentRecord(rawDocument)) {
         dirty = true;
         continue;
@@ -5194,88 +5201,271 @@ function entryFromDocument(document2, fileMtimeMs) {
   };
 }
 
-// packages/teaching-core/src/corpus/draft.ts
-var ROLE_BY_FORMAT = {
-  pdf: "textbook",
-  docx: "lecture",
-  pptx: "slides",
-  markdown: "lecture",
-  text: "textbook",
-  html: "reference",
-  code: "reference",
-  notebook: "reference",
-  image: "other"
-};
-async function proposeCourseRevision(deps, input, signal) {
-  if (input.courseTitle.trim() === "" || input.goal.trim() === "") {
-    return err("invalid-input", "\u8BFE\u7A0B\u8349\u6848\u9700\u8981\u8BFE\u7A0B\u6807\u9898\u4E0E\u5B66\u4E60\u76EE\u6807");
+// packages/teaching-core/src/corpus/structure.ts
+import { readFile as readFile3 } from "node:fs/promises";
+import { basename, dirname as dirname3, extname, relative as relative2, sep as sep2 } from "node:path";
+async function prepareKbContext(deps, input, signal) {
+  const material = await loadMaterialDocuments(deps, input);
+  if (material.documents.length === 0) {
+    return err("invalid-input", "\u8BFE\u7A0B\u6CA1\u6709\u53EF\u8BFB\u8D44\u6599\uFF0C\u65E0\u6CD5\u8BFB\u53D6\u77E5\u8BC6\u5E93\u7ED3\u6784");
   }
-  if (isSignalAborted(signal)) return err("cancelled", "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5DF2\u53D6\u6D88");
-  const course = await deps.courses.get(input.courseId);
-  if (course === void 0) return err("not-found", "\u8BFE\u7A0B\u4E0D\u5B58\u5728\u6216\u5DF2\u88AB\u5220\u9664");
-  if (deps.model === void 0) {
-    return err("capability-missing", "\u5F53\u524D\u6CA1\u6709\u53EF\u7528\u7684\u6A21\u578B\u5BA2\u6237\u7AEF\uFF0C\u65E0\u6CD5\u751F\u6210\u8BFE\u7A0B\u8349\u6848");
-  }
-  let material;
-  try {
-    material = await gatherMaterial(deps, input);
-  } catch (cause) {
-    return toResultError(cause, "\u8BFB\u53D6\u8BFE\u7A0B\u8D44\u6599\u5931\u8D25\uFF0C\u65E0\u6CD5\u751F\u6210\u8BFE\u7A0B\u8349\u6848");
-  }
-  const requestBase = buildDraftPrompt(deps, input, material);
-  const parseFailureLimit = 2;
-  let lastReason = "";
-  let lastText = "";
-  for (let attempt = 0; attempt < parseFailureLimit; attempt += 1) {
-    if (isSignalAborted(signal)) return err("cancelled", "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5DF2\u53D6\u6D88");
-    const messages = attempt === 0 ? requestBase.messages : [
-      ...requestBase.messages,
-      { role: "assistant", text: lastText.slice(0, 4e3) },
-      {
-        role: "user",
-        text: `\u4E0A\u4E00\u6B21\u8F93\u51FA\u65E0\u6CD5\u89E3\u6790\u4E3A\u6240\u9700 JSON\uFF08${lastReason}\uFF09\u3002\u8BF7\u53EA\u8F93\u51FA\u4E00\u6B21\u5408\u6CD5\u7684 JSON \u5BF9\u8C61\uFF0C\u4E0D\u8981\u89E3\u91CA\uFF0C\u4E0D\u8981 Markdown \u4EE3\u7801\u56F4\u680F\u3002`
-      }
-    ];
-    const request = {
-      messages,
-      system: requestBase.system,
-      json: requestBase.json,
-      purpose: "course-draft",
-      language: input.language,
-      maxTokens: 4e3,
-      temperature: 0.2
-    };
-    let completion;
-    try {
-      completion = await deps.model.complete(request, signal);
-    } catch (cause) {
-      return mapModelFailure(cause, signal);
-    }
-    if (isSignalAborted(signal)) return err("cancelled", "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5DF2\u53D6\u6D88");
-    lastText = completion.text;
-    const candidate = completion.json !== void 0 ? completion.json : tryParseJson(completion.text);
-    if (candidate === void 0) {
-      lastReason = completion.parseError ?? "\u8F93\u51FA\u4E0D\u662F\u5408\u6CD5 JSON";
-      continue;
-    }
-    const validated = validateDraftValue(candidate, material, deps.limits, input);
-    if (!validated.ok) {
-      lastReason = validated.error;
-      continue;
-    }
-    try {
-      const revision = await persistDraft(deps, input, material, validated.value, [...material.warnings, ...validated.warnings]);
-      return ok(revision);
-    } catch (cause) {
-      return toResultError(cause, "\u8BFE\u7A0B\u8349\u6848\u4FDD\u5B58\u5931\u8D25");
-    }
-  }
-  return err("uncertain", "\u6A21\u578B\u8FD4\u56DE\u7684\u8BFE\u7A0B\u7ED3\u6784\u65E0\u6CD5\u89E3\u6790\u6216\u7F3A\u5C11\u5FC5\u8981\u5B57\u6BB5\uFF08\u5DF2\u5C1D\u8BD5\u4E00\u6B21\u4FEE\u590D\uFF09\uFF0C\u672A\u4FDD\u5B58\u8349\u6848\uFF1B\u53EF\u91CD\u65B0\u751F\u6210\u6216\u5148\u7528\u5DF2\u8BFB\u5185\u5BB9\u968F\u95EE\u968F\u5B66", {
-    details: { reason: lastReason },
-    retryable: true
-  });
+  const pages = await loadKbPages(deps, material.documents, signal);
+  const detection = detectWikiKnowledgeBase(pages);
+  return ok({ material, pages, detection });
 }
-async function gatherMaterial(deps, input) {
+function kbRoleToSourceRole(role) {
+  return SOURCE_ROLE_BY_KB_ROLE[role];
+}
+var LAYER_SEGMENTS = [
+  "concepts",
+  "entities",
+  "comparisons",
+  "queries",
+  "raw",
+  "visuals",
+  "images",
+  "assets",
+  "_archive",
+  "_meta"
+];
+var VISUAL_EXTENSIONS = /* @__PURE__ */ new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg", ".bmp", ".html", ".htm"]);
+var SOURCE_ROLE_BY_KB_ROLE = {
+  schema: "reference",
+  catalog: "reference",
+  log: "reference",
+  "raw-article": "textbook",
+  "raw-paper": "textbook",
+  "raw-transcript": "textbook",
+  "raw-asset": "other",
+  "visual-asset": "other",
+  concept: "lecture",
+  entity: "lecture",
+  comparison: "reference",
+  query: "reference",
+  summary: "reference",
+  "chapter-overview": "lecture",
+  archive: "other",
+  unknown: "other"
+};
+var TEACHABLE_ROLES = /* @__PURE__ */ new Set(["concept", "entity", "comparison", "summary"]);
+var CONTENT_READING_ROLES = /* @__PURE__ */ new Set([
+  "schema",
+  "catalog",
+  "log",
+  "concept",
+  "entity",
+  "comparison",
+  "query",
+  "summary",
+  "chapter-overview",
+  "archive",
+  "unknown"
+]);
+function toPosix(path2) {
+  return sep2 === "/" ? path2 : path2.split(sep2).join("/");
+}
+function normalizeSlug(value) {
+  return value.normalize("NFKC").trim().replace(/\.md$/i, "").replace(/[\\/]+/g, "-").toLowerCase().replace(/[\s_]+/g, "-").replace(/[^\p{Letter}\p{Number}-]+/gu, "").replace(/-+/g, "-").replace(/^-|-$/g, "");
+}
+function cleanHeadingText(text2) {
+  return text2.replace(/^#+\s*/, "").replace(/[*_`~]+/g, "").replace(/^[\p{Emoji_Presentation}\p{Extended_Pictographic}\u2b50\u2605\u2606\s]+/gu, "").replace(/\s*[—–-]\s*概览\s*$/u, "").replace(/\s*概览\s*$/u, "").trim();
+}
+function stripInlineMarkdown(text2) {
+  return text2.replace(/!\[\[[^\]]*\]\]/g, "").replace(/\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (_match, _target, alias) => alias ?? "").replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/(\d)\s*~\s*(\d)/g, "$1\u2013$2").replace(/[*_`~]+/g, "").replace(/\s+/g, " ").trim();
+}
+function truncate(text2, max2) {
+  if (text2.length <= max2) return text2;
+  return `${text2.slice(0, Math.max(0, max2 - 1)).trimEnd()}\u2026`;
+}
+function parseYamlScalar(raw) {
+  let value = raw.trim();
+  if (value.startsWith('"') && value.endsWith('"') || value.startsWith("'") && value.endsWith("'")) {
+    value = value.slice(1, -1);
+  }
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return value;
+}
+function splitInlineArray(raw) {
+  const inner2 = raw.trim().replace(/^\[/, "").replace(/\]$/, "");
+  if (inner2.trim() === "") return [];
+  const items = [];
+  let current = "";
+  let quote;
+  for (const char of inner2) {
+    if (quote !== void 0) {
+      if (char === quote) quote = void 0;
+      else current += char;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === ",") {
+      const value = current.trim();
+      if (value !== "") items.push(value);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  const last = current.trim();
+  if (last !== "") items.push(last);
+  return items;
+}
+function parseFrontmatter(content) {
+  const withoutBom = content.charCodeAt(0) === 65279 ? content.slice(1) : content;
+  const lines = withoutBom.split("\n");
+  const blank = { data: {}, body: withoutBom, bodyStartLine: 1 };
+  if (lines.length === 0 || (lines[0] ?? "").trim() !== "---") return blank;
+  let end = -1;
+  for (let index = 1; index < lines.length; index += 1) {
+    if ((lines[index] ?? "").trim() === "---") {
+      end = index;
+      break;
+    }
+  }
+  if (end === -1) return blank;
+  const data = {};
+  for (let index = 1; index < end; index += 1) {
+    const line = lines[index] ?? "";
+    if (line.trim() === "" || line.trim().startsWith("#")) continue;
+    const match = /^([A-Za-z0-9_-]+)\s*:\s*(.*)$/.exec(line);
+    if (match === null) continue;
+    const key = (match[1] ?? "").toLowerCase();
+    const rawValue = (match[2] ?? "").trim();
+    if (rawValue === "") {
+      const items = [];
+      let cursor = index + 1;
+      while (cursor < end) {
+        const candidate = lines[cursor] ?? "";
+        const itemMatch = /^\s*-\s+(.+)$/.exec(candidate);
+        if (itemMatch !== null) {
+          items.push(parseYamlScalar(itemMatch[1] ?? ""));
+          cursor += 1;
+          continue;
+        }
+        if (candidate.trim() === "") {
+          cursor += 1;
+          continue;
+        }
+        break;
+      }
+      if (items.length > 0) {
+        data[key] = items;
+        index = cursor - 1;
+      }
+      continue;
+    }
+    if (rawValue.startsWith("[")) {
+      data[key] = splitInlineArray(rawValue);
+      continue;
+    }
+    data[key] = parseYamlScalar(rawValue);
+  }
+  const bodyStartLine = end + 2;
+  const body = lines.slice(end + 1).join("\n");
+  return { data, body, bodyStartLine };
+}
+function frontmatterString(frontmatter, key) {
+  const value = frontmatter?.[key];
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : void 0;
+}
+function frontmatterList(frontmatter, key) {
+  const value = frontmatter?.[key];
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter((item) => item !== "");
+  if (typeof value === "string" && value.trim() !== "") {
+    return value.split(",").map((item) => item.trim()).filter((item) => item !== "");
+  }
+  return [];
+}
+function scanMarkdownPage(content) {
+  const parsedFrontmatter = parseFrontmatter(content);
+  const lines = parsedFrontmatter.body.split("\n");
+  const headings = [];
+  const wikilinks = [];
+  let h1;
+  let h1Line;
+  let inFence = false;
+  let fenceMarker = "";
+  for (let index = 0; index < lines.length; index += 1) {
+    const lineNumber = index + parsedFrontmatter.bodyStartLine;
+    const line = lines[index] ?? "";
+    const fenceMatch = /^\s*(```|~~~)/.exec(line);
+    if (fenceMatch !== null) {
+      const marker = fenceMatch[1] ?? "```";
+      if (!inFence) {
+        inFence = true;
+        fenceMarker = marker;
+      } else if (line.trim().startsWith(fenceMarker)) {
+        inFence = false;
+        fenceMarker = "";
+      }
+      continue;
+    }
+    if (inFence) continue;
+    const headingMatch = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line);
+    if (headingMatch !== null) {
+      const level = (headingMatch[1] ?? "#").length;
+      const text2 = cleanHeadingText(headingMatch[2] ?? "");
+      if (text2 !== "") headings.push({ level, text: text2, line: lineNumber });
+      if (level === 1 && h1 === void 0) {
+        h1 = text2;
+        h1Line = lineNumber;
+      }
+      continue;
+    }
+    const linkRegex = /(!?)\[\[([^\]|#]+)(?:#([^\]|]+))?(?:\|([^\]]+))?\]\]/g;
+    const lineWithoutCode = line.replace(/`[^`]*`/g, "");
+    for (const match of lineWithoutCode.matchAll(linkRegex)) {
+      const target = (match[2] ?? "").trim();
+      if (target === "") continue;
+      const display = (match[4] ?? match[3] ?? "").trim();
+      wikilinks.push({
+        target,
+        ...display !== "" ? { display } : {},
+        embed: match[1] === "!",
+        line: lineNumber
+      });
+    }
+  }
+  let firstParagraph;
+  const bodyStart = h1Line !== void 0 ? h1Line : parsedFrontmatter.bodyStartLine;
+  for (let index = 0; index < lines.length; index += 1) {
+    const lineNumber = index + parsedFrontmatter.bodyStartLine;
+    if (lineNumber < bodyStart) continue;
+    const line = (lines[index] ?? "").trim();
+    if (line === "" || line === "---") continue;
+    if (/^(#{1,6}\s|```|~~~|\||>\s|[-*+]\s|\d+\.\s|\$\$|\\\[)/.test(line)) continue;
+    if (/^!\[\[.*\]\]$/.test(line) || /^!\[.*\]\(.*\)$/.test(line)) continue;
+    const cleaned = stripInlineMarkdown(line);
+    if (cleaned.length < 10) continue;
+    firstParagraph = truncate(cleaned, 300);
+    break;
+  }
+  return {
+    ...h1 !== void 0 ? { h1 } : {},
+    ...h1Line !== void 0 ? { h1Line } : {},
+    headings,
+    wikilinks,
+    ...firstParagraph !== void 0 ? { firstParagraph } : {},
+    lineCount: lines.length
+  };
+}
+function reconstructMarkdownFromUnits(units) {
+  const lines = [];
+  for (const unit of units) {
+    if (unit.kind === "heading") {
+      const level = Math.min(6, Math.max(1, unit.locator.sectionPath?.length ?? 1));
+      lines.push(`${"#".repeat(level)} ${unit.text}`);
+      continue;
+    }
+    lines.push(unit.text);
+  }
+  return lines.join("\n");
+}
+async function loadMaterialDocuments(deps, input) {
   const warnings = [];
   let documents;
   if (input.documentIds !== void 0 && input.documentIds.length > 0) {
@@ -5313,107 +5503,1353 @@ async function gatherMaterial(deps, input) {
     }
     ready.push({ document: document2, revision, units: revision.units });
   }
-  if (ready.length === 0) {
-    warnings.push("\u8BE5\u8BFE\u7A0B\u8FD8\u6CA1\u6709\u53EF\u8BFB\u8D44\u6599\uFF0C\u8BFE\u7A0B\u8349\u6848\u5C06\u53EA\u57FA\u4E8E\u5B66\u751F\u76EE\u6807\u4E0E\u6A21\u578B\u77E5\u8BC6\uFF0C\u4E0D\u5305\u542B\u8D44\u6599\u5B9A\u4F4D");
+  return { documents: ready, warnings };
+}
+function lastSegmentIndex(segments, name2) {
+  for (let index = segments.length - 1; index >= 0; index -= 1) {
+    if ((segments[index] ?? "").toLowerCase() === name2) return index;
   }
-  const anchorIndex = /* @__PURE__ */ new Map();
-  const lines = [];
-  let budgetChars = deps.limits.draftMaxChars;
-  let usedDocuments = 0;
-  for (let index = 0; index < ready.length; index += 1) {
-    const material = ready[index];
-    const label = `D${index + 1}`;
-    const selected = selectUnits(material.units, deps.limits.draftUnitsPerDoc);
-    const header = `[${label}] \u300A${material.document.title}\u300B \u683C\u5F0F=${material.document.format} \u72B6\u6001=${material.revision.status} documentId=${material.document.id}`;
-    if (budgetChars - header.length < 200) {
-      warnings.push(`\u6750\u6599\u8F83\u591A\uFF0C\u8BFE\u7A0B\u8349\u6848\u53EA\u4F7F\u7528\u4E86\u524D ${usedDocuments} \u4EFD\u8D44\u6599\u7684\u6458\u8981`);
-      break;
+  return -1;
+}
+function classifySourceRole(input) {
+  const relativeSegments = input.relativePath.split("/").filter(Boolean);
+  const absoluteSegments = input.absolutePath !== void 0 ? toPosix(input.absolutePath).split("/").filter(Boolean) : relativeSegments;
+  const fileName = input.fileName.toLowerCase();
+  const extension = input.extension.toLowerCase();
+  const fmType = frontmatterString(input.frontmatter, "type")?.toLowerCase();
+  const rawIndex = Math.max(lastSegmentIndex(relativeSegments, "raw"), lastSegmentIndex(absoluteSegments, "raw"));
+  if (rawIndex !== -1) {
+    const segments = lastSegmentIndex(relativeSegments, "raw") !== -1 ? relativeSegments : absoluteSegments;
+    const next = (segments[rawIndex + 1] ?? "").toLowerCase();
+    if (next === "assets") return "raw-asset";
+    if (next === "papers") return "raw-paper";
+    if (next === "transcripts") return "raw-transcript";
+    if (next === "articles") return "raw-article";
+    return "raw-article";
+  }
+  const segmentSearch = (name2) => lastSegmentIndex(relativeSegments, name2) !== -1 || lastSegmentIndex(absoluteSegments, name2) !== -1;
+  const segmentAt = (name2) => {
+    const rel2 = lastSegmentIndex(relativeSegments, name2);
+    if (rel2 !== -1) return relativeSegments;
+    const abs = lastSegmentIndex(absoluteSegments, name2);
+    return abs !== -1 ? absoluteSegments : [];
+  };
+  if (segmentSearch("_archive")) return "archive";
+  if (segmentSearch("concepts")) {
+    const fileNameIsOverview = /^chapter[-_ ]?\d+[-_ ]?overview\.md$/i.test(fileName);
+    if (fmType === "chapter-overview" || fileNameIsOverview) return "chapter-overview";
+    if (fmType === "entity" || fmType === "comparison" || fmType === "query" || fmType === "summary") {
+      return fmType;
     }
-    lines.push(header);
-    budgetChars -= header.length;
-    for (const unit of selected) {
-      const locator = locatorDescription(unit.locator);
-      const excerpt = excerptAround(unit.text, [], Math.min(320, deps.limits.maxUnitChars));
-      const line = `  - unitId=${unit.id} (${unit.kind}${locator !== "\u539F\u6587\u5B9A\u4F4D" ? ` ${locator}` : ""}) ${excerpt}`;
-      if (line.length > budgetChars) break;
-      lines.push(line);
-      budgetChars -= line.length;
-      anchorIndex.set(`${material.document.id}|${unit.id}`, {
-        document: material.document,
-        revision: material.revision,
-        unit
+    return "concept";
+  }
+  if (segmentSearch("entities")) return "entity";
+  if (segmentSearch("comparisons")) return "comparison";
+  if (segmentSearch("queries")) return "query";
+  if (segmentSearch("_meta")) return fmType === "summary" ? "summary" : "unknown";
+  if (segmentSearch("visuals") || segmentSearch("images") || segmentSearch("assets")) {
+    if (VISUAL_EXTENSIONS.has(extension) || segmentAt("visuals").length > 0) return "visual-asset";
+  }
+  const depth = relativeSegments.length;
+  if (depth === 1) {
+    if (fileName === "schema.md") return "schema";
+    if (fileName === "index.md") return "catalog";
+    if (/^log(?:-\d{4})?\.md$/.test(fileName) || fileName === "error-log.md") return "log";
+  }
+  if (fmType === "chapter-overview") return "chapter-overview";
+  if (fmType === "concept") return "concept";
+  if (fmType === "entity") return "entity";
+  if (fmType === "comparison") return "comparison";
+  if (fmType === "query") return "query";
+  if (fmType === "summary") return "summary";
+  if (extension === ".md" && (input.absolutePath?.includes("/concepts/") ?? false)) return "concept";
+  if (VISUAL_EXTENSIONS.has(extension)) return "visual-asset";
+  return "unknown";
+}
+function sectionKindOf(title) {
+  if (/^chapter\s*overviews?/i.test(title)) return { kind: "chapter-overviews" };
+  const chapterMatch = /^(?:ch|chapter)\s*(\d+)/i.exec(title) ?? /^第\s*([0-9一二三四五六七八九十百零两]+)\s*章/.exec(title);
+  if (chapterMatch !== null) {
+    return { kind: "chapter", chapterNumber: chineseNumber(chapterMatch[1] ?? "") ?? void 0 };
+  }
+  if (/跨章工具|工具|tool/i.test(title)) return { kind: "tool" };
+  if (/复习/.test(title)) return { kind: "review" };
+  if (/raw\s*sources?/i.test(title)) return { kind: "raw" };
+  return { kind: "other" };
+}
+function chineseNumber(raw) {
+  const digits = Number.parseInt(raw, 10);
+  if (Number.isFinite(digits)) return digits;
+  const map = {
+    \u4E00: 1,
+    \u4E8C: 2,
+    \u4E24: 2,
+    \u4E09: 3,
+    \u56DB: 4,
+    \u4E94: 5,
+    \u516D: 6,
+    \u4E03: 7,
+    \u516B: 8,
+    \u4E5D: 9
+  };
+  if (raw === "\u5341") return 10;
+  const tenMatch = /^([一二三四五六七八九])?十([一二三四五六七八九])?$/.exec(raw);
+  if (tenMatch !== null) {
+    const tens = tenMatch[1] === void 0 ? 1 : map[tenMatch[1]] ?? 0;
+    const ones = tenMatch[2] === void 0 ? 0 : map[tenMatch[2]] ?? 0;
+    return tens * 10 + ones;
+  }
+  return map[raw];
+}
+function parseIndexSections(content) {
+  const parsedFrontmatter = parseFrontmatter(content);
+  const lines = parsedFrontmatter.body.split("\n");
+  const sections = [];
+  let title;
+  let lastUpdated;
+  let totalPages;
+  let current;
+  let inFence = false;
+  for (let index = 0; index < lines.length; index += 1) {
+    const lineNumber = index + parsedFrontmatter.bodyStartLine;
+    const line = lines[index] ?? "";
+    if (/^\s*(```|~~~)/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    const h1 = /^#\s+(.+)$/.exec(line);
+    if (h1 !== null && title === void 0) {
+      title = (h1[1] ?? "").trim();
+      continue;
+    }
+    const quote = /^>\s*(.*)$/.exec(line);
+    if (quote !== null) {
+      const text2 = quote[1] ?? "";
+      const updated = /Last updated:\s*([0-9-]+)/i.exec(text2);
+      if (updated !== null) lastUpdated = updated[1];
+      const total = /Total pages:\s*(\d+)/i.exec(text2);
+      if (total !== null) totalPages = Number(total[1]);
+      continue;
+    }
+    const h2 = /^##\s+(.+?)\s*#*\s*$/.exec(line);
+    if (h2 !== null) {
+      const rawTitle = (h2[1] ?? "").trim();
+      const cleanedTitle = rawTitle.replace(/\s*\(\d+\)\s*$/, "");
+      const meta = sectionKindOf(cleanedTitle);
+      current = {
+        title: cleanedTitle,
+        kind: meta.kind,
+        ...meta.chapterNumber !== void 0 ? { chapterNumber: meta.chapterNumber } : {},
+        entries: []
+      };
+      sections.push(current);
+      continue;
+    }
+    if (current === void 0) continue;
+    const bullet = /^\s*[-*+]\s+(.*)$/.exec(line);
+    if (bullet === null) continue;
+    const body = bullet[1] ?? "";
+    const link = /\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/.exec(body);
+    if (link === null) continue;
+    const target = (link[1] ?? "").trim();
+    if (target === "") continue;
+    const display = (link[2] ?? "").trim();
+    const rest = stripInlineMarkdown(body.slice(link.index + link[0].length)).replace(/^[\s—–:-]+/, "").trim();
+    current.entries.push({
+      target,
+      ...display !== "" ? { display } : {},
+      ...rest !== "" ? { summary: truncate(rest, 240) } : {},
+      line: lineNumber
+    });
+  }
+  return {
+    ...title !== void 0 ? { title } : {},
+    ...lastUpdated !== void 0 ? { lastUpdated } : {},
+    ...totalPages !== void 0 ? { totalPages } : {},
+    sections: sections.map((section) => ({ ...section, entries: [...section.entries] }))
+  };
+}
+function commonAncestor(paths) {
+  if (paths.length === 0) return process.cwd();
+  const split = paths.map((path2) => toPosix(path2).split("/"));
+  const first = split[0] ?? [];
+  let length = first.length;
+  for (const parts of split.slice(1)) {
+    let index = 0;
+    while (index < length && index < parts.length && parts[index] === first[index]) index += 1;
+    length = index;
+  }
+  const joined = first.slice(0, length).join("/");
+  return joined === "" ? "/" : joined;
+}
+function inferKbLayout(documents) {
+  const candidates = [];
+  for (const document2 of documents) {
+    const absolute = toPosix(document2.originalPath);
+    const segments = absolute.split("/").filter(Boolean);
+    const fileName = basename(absolute).toLowerCase();
+    if (fileName === "schema.md" || fileName === "index.md") {
+      candidates.push(dirname3(absolute));
+      continue;
+    }
+    for (const layer of LAYER_SEGMENTS) {
+      const index = segments.lastIndexOf(layer);
+      if (index !== -1) {
+        candidates.push(`/${segments.slice(0, index).join("/")}`);
+        break;
+      }
+    }
+  }
+  if (candidates.length === 0) {
+    const dirs = documents.map((document2) => dirname3(toPosix(document2.originalPath)));
+    return { kbRoot: commonAncestor(dirs) };
+  }
+  const kbRoot = commonAncestor(candidates);
+  return { kbRoot: kbRoot === "" ? "/" : kbRoot };
+}
+async function readTextFile(path2) {
+  try {
+    return await readFile3(path2, "utf8");
+  } catch {
+    return void 0;
+  }
+}
+async function loadKbPages(deps, materials, signal) {
+  const layout2 = inferKbLayout(materials.map((material) => material.document));
+  const readText = deps.readFileText ?? readTextFile;
+  const pages = [];
+  for (const material of materials) {
+    if (isSignalAborted(signal)) break;
+    const document2 = material.document;
+    const absolute = toPosix(document2.originalPath);
+    const relativePath = toPosix(relative2(layout2.kbRoot, absolute)).replace(/^\.\//, "");
+    const fileName = basename(absolute);
+    const extension = extname(absolute).toLowerCase();
+    const preliminaryRole = classifySourceRole({
+      relativePath,
+      absolutePath: absolute,
+      fileName,
+      extension
+    });
+    let content;
+    let fromDisk = false;
+    let fromUnits = false;
+    if (CONTENT_READING_ROLES.has(preliminaryRole) && document2.format === "markdown") {
+      const raw = await readText(document2.originalPath);
+      if (raw !== void 0) {
+        content = raw.length > 4e6 ? raw.slice(0, 4e6) : raw;
+        fromDisk = true;
+      }
+    }
+    if (content === void 0 && document2.format === "markdown") {
+      content = reconstructMarkdownFromUnits(material.units);
+      fromUnits = true;
+    }
+    const frontmatter = content === void 0 ? void 0 : parseFrontmatter(content).data;
+    const emptyScan = { headings: [], wikilinks: [], lineCount: 0 };
+    const scan = content === void 0 ? emptyScan : scanMarkdownPage(content);
+    const role = classifySourceRole({
+      relativePath,
+      absolutePath: absolute,
+      fileName,
+      extension,
+      ...frontmatter !== void 0 ? { frontmatter } : {}
+    });
+    pages.push({
+      document: document2,
+      relativePath,
+      fileName,
+      slug: normalizeSlug(fileName.replace(/\.md$/i, "")),
+      fromDisk,
+      fromUnits,
+      ...content !== void 0 ? { content } : {},
+      ...frontmatter !== void 0 ? { frontmatter } : {},
+      ...scan.h1 !== void 0 ? { h1: scan.h1 } : {},
+      ...scan.h1Line !== void 0 ? { h1Line: scan.h1Line } : {},
+      headings: scan.headings,
+      wikilinks: scan.wikilinks,
+      ...scan.firstParagraph !== void 0 ? { firstParagraph: scan.firstParagraph } : {},
+      lineCount: scan.lineCount,
+      role
+    });
+  }
+  return pages;
+}
+function detectWikiKnowledgeBase(pages) {
+  const pageBySlug = /* @__PURE__ */ new Map();
+  const pageByTitle = /* @__PURE__ */ new Map();
+  for (const page of pages) {
+    if (!pageBySlug.has(page.slug)) pageBySlug.set(page.slug, page);
+    const titleKey = normalizeSlug(pageTitleOf(page));
+    if (titleKey !== "" && !pageByTitle.has(titleKey)) pageByTitle.set(titleKey, page);
+  }
+  const resolve6 = (target) => {
+    const key = normalizeSlug(basename(target));
+    return pageBySlug.get(key) ?? pageByTitle.get(normalizeSlug(target));
+  };
+  const roleByDocumentId = /* @__PURE__ */ new Map();
+  for (const page of pages) roleByDocumentId.set(page.document.id, page.role);
+  const rootPages = pages.filter((page) => page.relativePath === page.fileName);
+  const schemaPage = rootPages.find((page) => page.role === "schema");
+  const indexCandidates = pages.filter((page) => page.role === "catalog").sort((a, b) => a.relativePath.split("/").length - b.relativePath.split("/").length);
+  const indexPage = indexCandidates[0];
+  const index = indexPage?.content !== void 0 ? parseIndexSections(indexPage.content) : void 0;
+  const indexSectionCount = index?.sections.length ?? 0;
+  const frontmatterRolePages = pages.filter((page) => page.frontmatter !== void 0 && page.role !== "raw-article" && page.role !== "raw-paper" && page.role !== "raw-transcript" && page.role !== "raw-asset");
+  const frontmatterPageCount = frontmatterRolePages.filter((page) => {
+    const hasTitle = frontmatterString(page.frontmatter, "title") !== void 0;
+    const hasType = frontmatterString(page.frontmatter, "type") !== void 0;
+    return hasTitle || hasType;
+  }).length;
+  const layeredDirs = [];
+  for (const layer of LAYER_SEGMENTS) {
+    if (pages.some((page) => page.relativePath.split("/").includes(layer))) layeredDirs.push(layer);
+  }
+  const chapterOverviewPages = pages.filter((page) => page.role === "chapter-overview");
+  const rawSourceCount = pages.filter((page) => page.role === "raw-article" || page.role === "raw-paper" || page.role === "raw-transcript").length;
+  const visualAssetCount = pages.filter((page) => page.role === "raw-asset" || page.role === "visual-asset").length;
+  let wikilinkCount = 0;
+  let resolvableWikilinkCount = 0;
+  for (const page of pages) {
+    for (const link of page.wikilinks) {
+      if (link.embed) continue;
+      wikilinkCount += 1;
+      if (resolve6(link.target) !== void 0) resolvableWikilinkCount += 1;
+    }
+  }
+  const signals = [
+    { id: "schema", label: "\u5B58\u5728\u6839\u76EE\u5F55 SCHEMA.md", weight: 3, matched: schemaPage !== void 0 },
+    { id: "index", label: "\u5B58\u5728 index.md \u76EE\u5F55\u9875", weight: 2, matched: indexPage !== void 0 },
+    { id: "index-sections", label: "index.md \u542B \u22652 \u4E2A\u5206\u533A\u6761\u76EE", weight: 2, matched: indexSectionCount >= 2 },
+    { id: "frontmatter", label: "\u22652 \u4E2A\u9875\u9762\u5E26 title/type frontmatter", weight: 2, matched: frontmatterPageCount >= 2 },
+    { id: "layers", label: "\u5B58\u5728 concepts/raw \u7B49\u5206\u5C42\u76EE\u5F55", weight: 2, matched: layeredDirs.length >= 2 },
+    { id: "chapter-overview", label: "\u5B58\u5728 chapter-overview \u7AE0\u8282\u6982\u89C8\u9875", weight: 3, matched: chapterOverviewPages.length >= 1 },
+    { id: "wikilinks", label: "\u5B58\u5728\u53EF\u89E3\u6790\u7684 [[wikilinks]] \u4EA4\u53C9\u5F15\u7528", weight: 2, matched: resolvableWikilinkCount >= 2 },
+    { id: "raw-sources", label: "\u5B58\u5728 raw/ \u539F\u59CB\u8D44\u6599\u5C42", weight: 1, matched: rawSourceCount >= 1 || pages.some((page) => page.relativePath.split("/").includes("raw")) }
+  ];
+  const matchedSignals = signals.filter((signal) => signal.matched);
+  const isKnowledgeBase = schemaPage !== void 0 && indexPage !== void 0 || indexPage !== void 0 && (indexSectionCount >= 2 || chapterOverviewPages.length >= 1) || chapterOverviewPages.length >= 1 && frontmatterPageCount >= 2 || frontmatterPageCount >= 3 && layeredDirs.length >= 2 || resolvableWikilinkCount >= 3 && layeredDirs.length >= 2;
+  const reason = isKnowledgeBase ? `\u68C0\u6D4B\u5230 LLM-wiki \u77E5\u8BC6\u5E93\u7ED3\u6784\uFF08${matchedSignals.map((signal) => signal.label.replace("\u5B58\u5728", "").replace("\u22652 \u4E2A", "")).slice(0, 4).join("\u3001")}\uFF09` : "\u672A\u53D1\u73B0 SCHEMA.md/index.md\u3001\u5206\u5C42\u76EE\u5F55\u3001frontmatter \u6216 chapter-overview \u7B49\u77E5\u8BC6\u5E93\u7ED3\u6784\u7279\u5F81";
+  const facts = {
+    isKnowledgeBase,
+    reason,
+    ...schemaPage !== void 0 || indexPage !== void 0 ? { rootPath: dirname3((schemaPage ?? indexPage)?.document.originalPath ?? "") } : {},
+    pageCount: pages.length,
+    hasSchema: schemaPage !== void 0,
+    hasIndex: indexPage !== void 0,
+    indexSectionCount,
+    frontmatterPageCount,
+    layeredDirs,
+    chapterOverviewCount: chapterOverviewPages.length,
+    wikilinkCount,
+    resolvableWikilinkCount,
+    rawSourceCount,
+    visualAssetCount,
+    signals
+  };
+  return {
+    facts,
+    pages,
+    ...indexPage !== void 0 ? { indexPage } : {},
+    ...schemaPage !== void 0 ? { schemaPage } : {},
+    roleByDocumentId
+  };
+}
+function pageTitleOf(page) {
+  return frontmatterString(page.frontmatter, "title") ?? page.h1 ?? page.fileName.replace(/\.md$/i, "");
+}
+function summarizeRoles(pages) {
+  const counts = /* @__PURE__ */ new Map();
+  for (const page of pages) counts.set(page.role, (counts.get(page.role) ?? 0) + 1);
+  const order = [
+    "concept",
+    "chapter-overview",
+    "entity",
+    "comparison",
+    "summary",
+    "query",
+    "catalog",
+    "schema",
+    "log",
+    "raw-article",
+    "raw-paper",
+    "raw-transcript",
+    "raw-asset",
+    "visual-asset",
+    "archive",
+    "unknown"
+  ];
+  const labels = {
+    concept: "\u6982\u5FF5\u9875",
+    "chapter-overview": "\u7AE0\u8282\u6982\u89C8",
+    entity: "\u5B9E\u4F53\u9875",
+    comparison: "\u5BF9\u6BD4\u9875",
+    summary: "\u6458\u8981\u9875",
+    query: "\u67E5\u8BE2\u5F52\u6863",
+    catalog: "\u76EE\u5F55\u9875",
+    schema: "Schema",
+    log: "\u65E5\u5FD7",
+    "raw-article": "raw \u6587\u7AE0",
+    "raw-paper": "raw \u8BBA\u6587",
+    "raw-transcript": "raw \u8F6C\u5F55",
+    "raw-asset": "raw \u8D44\u4EA7",
+    "visual-asset": "\u53EF\u89C6\u5316\u8D44\u4EA7",
+    archive: "\u5F52\u6863",
+    unknown: "\u672A\u8BC6\u522B"
+  };
+  return order.filter((role) => (counts.get(role) ?? 0) > 0).map((role) => `${labels[role]} ${counts.get(role)}`).join(" / ");
+}
+function describeKbDetection(detection) {
+  const facts = detection.facts;
+  const notes = [];
+  notes.push(`\u7ED3\u6784\u6765\u6E90\uFF1A\u77E5\u8BC6\u5E93\u76F4\u8BFB\uFF08kb-structure\uFF09\u3002${facts.reason}`);
+  notes.push(`\u8D44\u6599\u89D2\u8272\uFF1A${summarizeRoles(detection.pages)}`);
+  const matched = facts.signals.filter((signal) => signal.matched).map((signal) => signal.label);
+  if (matched.length > 0) notes.push(`\u68C0\u6D4B\u4FE1\u53F7\uFF1A${matched.join("\uFF1B")}`);
+  if (facts.rootPath !== void 0) notes.push(`\u77E5\u8BC6\u5E93\u6839\u76EE\u5F55\uFF1A${facts.rootPath}`);
+  return notes;
+}
+function materialById(materials) {
+  const map = /* @__PURE__ */ new Map();
+  for (const material of materials) map.set(material.document.id, material);
+  return map;
+}
+function anchorForUnit(material, unit) {
+  return {
+    documentId: material.document.id,
+    revisionId: material.revision.id,
+    unitId: unit.id,
+    locator: unit.locator,
+    excerpt: excerptAround(unit.text, [], 240),
+    confidence: unit.confidence,
+    label: `${material.document.title} \xB7 ${locatorDescription(unit.locator)}`
+  };
+}
+function pageAnchor(material, preferredTitle) {
+  if (material === void 0 || material.units.length === 0) return void 0;
+  const headings = material.units.filter((unit) => unit.kind === "heading");
+  const wanted = preferredTitle === void 0 ? "" : normalizeSlug(cleanHeadingText(preferredTitle));
+  let best;
+  let bestScore = 0;
+  for (const heading of headings) {
+    const normalized = normalizeSlug(cleanHeadingText(heading.text));
+    if (normalized === "") continue;
+    let score = 0;
+    if (wanted !== "" && normalized === wanted) score = 5;
+    else if (wanted !== "" && (normalized.includes(wanted) || wanted.includes(normalized))) score = 3;
+    else if (headings[0]?.id === heading.id) score = 1;
+    if (score > bestScore) {
+      bestScore = score;
+      best = heading;
+    }
+  }
+  const chosen = best ?? material.units.find((unit) => unit.kind === "heading") ?? material.units.find((unit) => unit.kind === "paragraph") ?? material.units[0];
+  if (chosen === void 0) return void 0;
+  return anchorForUnit(material, chosen);
+}
+function resolvedChapterNumber(page) {
+  const match = /chapter[-_ ]?(\d+)[-_ ]?overview/i.exec(page.fileName);
+  if (match !== null) {
+    const value = Number(match[1]);
+    return Number.isFinite(value) ? value : void 0;
+  }
+  const title = pageTitleOf(page);
+  return chineseNumber(/第\s*([0-9一二三四五六七八九十百零两]+)\s*章/.exec(title)?.[1] ?? "");
+}
+function pageSummary(page) {
+  return page.firstParagraph;
+}
+async function buildKbStructureFromContext(deps, input, context, signal) {
+  const material = context.material;
+  const pages = context.pages;
+  const detection = context.detection;
+  if (!detection.facts.isKnowledgeBase) {
+    return err("capability-missing", `\u672A\u68C0\u6D4B\u5230 LLM-wiki \u77E5\u8BC6\u5E93\u7ED3\u6784\uFF1A${detection.facts.reason}`, {
+      details: {
+        signals: detection.facts.signals.map((signal2) => ({ id: signal2.id, matched: signal2.matched })),
+        pageCount: detection.facts.pageCount
+      }
+    });
+  }
+  if (isSignalAborted(signal)) return err("cancelled", "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5DF2\u53D6\u6D88");
+  const warnings = [...material.warnings];
+  const notes = [...describeKbDetection(detection)];
+  const materials = materialById(material.documents);
+  const pageBySlug = /* @__PURE__ */ new Map();
+  const pageByTitle = /* @__PURE__ */ new Map();
+  const pageByDocumentId = /* @__PURE__ */ new Map();
+  for (const page of pages) {
+    pageByDocumentId.set(page.document.id, page);
+    if (!pageBySlug.has(page.slug)) pageBySlug.set(page.slug, page);
+    const titleKey = normalizeSlug(pageTitleOf(page));
+    if (titleKey !== "" && !pageByTitle.has(titleKey)) pageByTitle.set(titleKey, page);
+  }
+  const resolveLink = (target) => pageBySlug.get(normalizeSlug(basename(target))) ?? pageByTitle.get(normalizeSlug(target));
+  const index = detection.indexPage?.content !== void 0 ? parseIndexSections(detection.indexPage.content) : void 0;
+  if (index === void 0) {
+    notes.push("\u672A\u627E\u5230\u6216\u65E0\u6CD5\u89E3\u6790 index.md\uFF1A\u7AE0\u8282\u987A\u5E8F\u56DE\u9000\u4E3A chapter-overview \u7F16\u53F7\u4E0E\u6587\u4EF6\u540D\u987A\u5E8F");
+  } else {
+    notes.push(`index.md \u89E3\u6790\uFF1A${index.sections.length} \u4E2A\u5206\u533A\uFF08\u6700\u540E\u66F4\u65B0 ${index.lastUpdated ?? "\u672A\u77E5"}\uFF09`);
+  }
+  const indexEntryByKey = /* @__PURE__ */ new Map();
+  for (const section of index?.sections ?? []) {
+    for (const entry of section.entries) {
+      const key = normalizeSlug(basename(entry.target));
+      if (!indexEntryByKey.has(key)) indexEntryByKey.set(key, { entry, section });
+    }
+  }
+  const chapterOverviewPages = pages.filter((page) => page.role === "chapter-overview");
+  const chapterByNumber = /* @__PURE__ */ new Map();
+  for (const page of chapterOverviewPages) {
+    const number = resolvedChapterNumber(page);
+    if (number !== void 0 && !chapterByNumber.has(number)) chapterByNumber.set(number, page);
+  }
+  const overviewOrder = (() => {
+    const section = index?.sections.find((item) => item.kind === "chapter-overviews");
+    if (section !== void 0) {
+      const ordered = [];
+      for (const entry of section.entries) {
+        const page = resolveLink(entry.target);
+        if (page !== void 0 && page.role === "chapter-overview" && !ordered.includes(page)) ordered.push(page);
+      }
+      if (ordered.length > 0) return ordered;
+    }
+    return [...chapterOverviewPages].sort((a, b) => {
+      const numberA = resolvedChapterNumber(a) ?? Number.MAX_SAFE_INTEGER;
+      const numberB = resolvedChapterNumber(b) ?? Number.MAX_SAFE_INTEGER;
+      return numberA - numberB || a.relativePath.localeCompare(b.relativePath);
+    });
+  })();
+  const teachablePages = pages.filter((page) => TEACHABLE_ROLES.has(page.role));
+  const conceptSources = /* @__PURE__ */ new Map();
+  const usedDocumentIds = /* @__PURE__ */ new Set();
+  const usedRawDocumentIds = /* @__PURE__ */ new Set();
+  let invalidAnchorCount = 0;
+  const duplicateTitles = [];
+  const titleSeen = /* @__PURE__ */ new Set();
+  for (const page of teachablePages) {
+    if (isSignalAborted(signal)) return err("cancelled", "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5DF2\u53D6\u6D88");
+    const materialDocument = materials.get(page.document.id);
+    const title = cleanHeadingText(pageTitleOf(page));
+    if (title === "") continue;
+    const titleKey = normalizeSlug(title);
+    const titleOwner = pageByTitle.get(titleKey);
+    if (titleSeen.has(titleKey) && titleOwner !== page) duplicateTitles.push(title);
+    titleSeen.add(titleKey);
+    const indexInfo = indexEntryByKey.get(page.slug);
+    const summary = indexInfo?.entry.summary ?? pageSummary(page) ?? "";
+    const anchors = [];
+    const pageMaterial = materials.get(page.document.id);
+    const anchor = pageAnchor(pageMaterial, title);
+    if (anchor !== void 0) anchors.push(anchor);
+    const rawSourceRefs = frontmatterList(page.frontmatter, "sources");
+    let rawAnchorCount = 0;
+    for (const ref of rawSourceRefs) {
+      if (rawAnchorCount >= 2) break;
+      const resolved = resolveRawDocument(pages, materials, ref);
+      if (resolved === void 0) continue;
+      if (resolved.page.document.id === page.document.id) continue;
+      const rawAnchor = pageAnchor(materials.get(resolved.page.document.id));
+      if (rawAnchor === void 0) continue;
+      if (anchors.some((existing) => existing.documentId === rawAnchor.documentId && existing.unitId === rawAnchor.unitId)) continue;
+      anchors.push(rawAnchor);
+      usedRawDocumentIds.add(resolved.page.document.id);
+      rawAnchorCount += 1;
+    }
+    usedDocumentIds.add(page.document.id);
+    if (summary === "" && anchors.length === 0) invalidAnchorCount += 1;
+    conceptSources.set(page.slug, {
+      page,
+      title,
+      summary: truncate(summary, 600),
+      slug: page.slug,
+      tags: frontmatterList(page.frontmatter, "tags"),
+      ...frontmatterString(page.frontmatter, "confidence") !== void 0 ? { confidence: frontmatterString(page.frontmatter, "confidence") } : {},
+      rawSourceRefs,
+      anchors
+    });
+  }
+  if (duplicateTitles.length > 0) {
+    warnings.push(`${duplicateTitles.length} \u4E2A\u6982\u5FF5\u6807\u9898\u91CD\u590D\uFF08\u4FDD\u7559\u9996\u4E2A\uFF0C\u5176\u4F59\u6309 slug \u533A\u5206\uFF09\uFF1A${duplicateTitles.slice(0, 5).join("\u3001")}`);
+  }
+  const orderedConceptSlugs = [];
+  const seenConceptSlugs = /* @__PURE__ */ new Set();
+  const addConceptSlug = (slug) => {
+    if (!conceptSources.has(slug) || seenConceptSlugs.has(slug)) return;
+    seenConceptSlugs.add(slug);
+    orderedConceptSlugs.push(slug);
+  };
+  const indexConceptEntriesBySection = [];
+  for (const section of index?.sections ?? []) {
+    for (const entry of section.entries) {
+      const page = resolveLink(entry.target);
+      if (page === void 0) continue;
+      if (!conceptSources.has(page.slug)) continue;
+      indexConceptEntriesBySection.push({ section, slug: page.slug });
+      addConceptSlug(page.slug);
+    }
+  }
+  const unlistedConcepts = [...conceptSources.values()].filter((concept) => !seenConceptSlugs.has(concept.slug)).sort((a, b) => a.page.relativePath.localeCompare(b.page.relativePath) || a.title.localeCompare(b.title));
+  for (const concept of unlistedConcepts) addConceptSlug(concept.slug);
+  if (unlistedConcepts.length > 0) {
+    warnings.push(`${unlistedConcepts.length} \u4E2A wiki \u9875\u672A\u51FA\u73B0\u5728 index.md \u4E2D\uFF0C\u5DF2\u6309\u8DEF\u5F84\u987A\u5E8F\u9644\u5728\u6700\u540E\uFF1A${unlistedConcepts.slice(0, 5).map((concept) => concept.title).join("\u3001")}`);
+  }
+  const chapterSectionByNumber = /* @__PURE__ */ new Map();
+  for (const section of index?.sections ?? []) {
+    if (section.kind === "chapter" && section.chapterNumber !== void 0) {
+      chapterSectionByNumber.set(section.chapterNumber, section);
+    }
+  }
+  const chapterDrafts = [];
+  const assignedConceptSlugs = /* @__PURE__ */ new Set();
+  const overviewSourceByPage = /* @__PURE__ */ new Map();
+  for (const page of overviewOrder) {
+    const number = resolvedChapterNumber(page);
+    const title = cleanHeadingText(pageTitleOf(page)) || (number === void 0 ? "" : `\u7B2C ${number} \u7AE0`);
+    if (title === "") continue;
+    overviewSourceByPage.set(page.document.id, {
+      page,
+      ...number !== void 0 ? { number } : {},
+      title,
+      ...pageSummary(page) !== void 0 ? { summary: pageSummary(page) } : {},
+      links: page.wikilinks.filter((link) => !link.embed).map((link) => link.target)
+    });
+  }
+  const useIndexChapters = chapterSectionByNumber.size > 0;
+  if (useIndexChapters) {
+    const sections = [...chapterSectionByNumber.entries()].sort((a, b) => a[0] - b[0]);
+    for (const [number, section] of sections) {
+      const overview = chapterByNumber.get(number);
+      const title = overview !== void 0 ? cleanHeadingText(pageTitleOf(overview)) || section.title : section.title;
+      const conceptSlugs = [];
+      for (const entry of section.entries) {
+        const page = resolveLink(entry.target);
+        if (page === void 0) {
+          warnings.push(`index.md \u7684\u300C${section.title}\u300D\u5F15\u7528\u4E86\u672A\u5BFC\u5165\u9875\u9762\uFF1A${entry.target}`);
+          continue;
+        }
+        if (conceptSources.has(page.slug) && !conceptSlugs.includes(page.slug)) conceptSlugs.push(page.slug);
+      }
+      if (overview !== void 0) {
+        const overviewSlugs = overview.wikilinks.filter((link) => !link.embed).map((link) => resolveLink(link.target)).filter((page) => page !== void 0 && conceptSources.has(page.slug)).map((page) => page.slug).filter((slug, index2, all) => all.indexOf(slug) === index2);
+        const missingFromIndex = overviewSlugs.filter((slug) => !conceptSlugs.includes(slug));
+        const missingFromOverview = conceptSlugs.filter((slug) => !overviewSlugs.includes(slug));
+        if (overviewSlugs.length > 0 && (missingFromIndex.length > 0 || missingFromOverview.length > 0)) {
+          warnings.push(`\u7AE0\u8282\u6982\u89C8\u300A${title}\u300B\u4E0E index \u5206\u533A\u7684\u5B50\u6982\u5FF5\u4E0D\u4E00\u81F4\uFF08\u6982\u89C8\u591A ${missingFromIndex.length} / index \u591A ${missingFromOverview.length}\uFF09`);
+        }
+      }
+      if (conceptSlugs.length === 0 && overview !== void 0) {
+        for (const link of overview.wikilinks) {
+          const page = resolveLink(link.target);
+          if (page !== void 0 && conceptSources.has(page.slug) && !conceptSlugs.includes(page.slug)) {
+            conceptSlugs.push(page.slug);
+          }
+        }
+      }
+      for (const slug of conceptSlugs) assignedConceptSlugs.add(slug);
+      chapterDrafts.push({
+        title,
+        ...overview !== void 0 && pageSummary(overview) !== void 0 ? { summary: pageSummary(overview) } : {},
+        role: "chapter",
+        ...overview !== void 0 ? { page: overview } : {},
+        conceptSlugs
       });
     }
-    usedDocuments += 1;
-  }
-  if (usedDocuments < ready.length) {
-    warnings.push(`\u8BFE\u7A0B\u8349\u6848\u6458\u8981\u8FBE\u5230\u957F\u5EA6\u4E0A\u9650\uFF0C\u53EA\u4F7F\u7528\u4E86 ${usedDocuments}/${ready.length} \u4EFD\u8D44\u6599`);
-  }
-  const promptText = lines.length > 0 ? lines.join("\n") : "\uFF08\u6682\u65E0\u53EF\u7528\u8D44\u6599\uFF1A\u672C\u8BFE\u7A0B\u5C1A\u672A\u5BFC\u5165\u6216\u89E3\u6790\u51FA\u53EF\u8BFB\u5185\u5BB9\uFF09";
-  return { documents: ready.slice(0, usedDocuments), anchorIndex, promptText, warnings };
-}
-function selectUnits(units, maxUnits) {
-  if (units.length <= maxUnits) return [...units];
-  const selected = [];
-  const seen = /* @__PURE__ */ new Set();
-  const push = (unit) => {
-    if (selected.length >= maxUnits || seen.has(unit.id)) return;
-    seen.add(unit.id);
-    selected.push(unit);
-  };
-  for (const unit of units) {
-    if (unit.kind === "heading" && selected.length < Math.floor(maxUnits / 3)) push(unit);
-  }
-  for (const kind of ["formula", "figure", "table", "code"]) {
-    let count = 0;
-    for (const unit of units) {
-      if (unit.kind !== kind || count >= Math.max(2, Math.floor(maxUnits / 10))) continue;
-      push(unit);
-      count += 1;
+  } else {
+    for (const page of overviewOrder) {
+      const source = overviewSourceByPage.get(page.document.id);
+      if (source === void 0) continue;
+      const conceptSlugs = [];
+      for (const target of source.links) {
+        const resolved = resolveLink(target);
+        if (resolved === void 0) {
+          warnings.push(`\u7AE0\u8282\u6982\u89C8\u300A${source.title}\u300B\u5F15\u7528\u4E86\u672A\u5BFC\u5165\u9875\u9762\uFF1A${target}`);
+          continue;
+        }
+        if (conceptSources.has(resolved.slug) && !conceptSlugs.includes(resolved.slug)) conceptSlugs.push(resolved.slug);
+      }
+      for (const slug of conceptSlugs) assignedConceptSlugs.add(slug);
+      chapterDrafts.push({
+        title: source.title,
+        ...source.summary !== void 0 ? { summary: source.summary } : {},
+        role: "chapter",
+        page,
+        conceptSlugs
+      });
+    }
+    if (chapterDrafts.length === 0) {
+      for (const [number, section] of [...chapterSectionByNumber.entries()].sort((a, b) => a[0] - b[0])) {
+        const conceptSlugs = [];
+        for (const entry of section.entries) {
+          const page = resolveLink(entry.target);
+          if (page !== void 0 && conceptSources.has(page.slug) && !conceptSlugs.includes(page.slug)) {
+            conceptSlugs.push(page.slug);
+          }
+        }
+        for (const slug of conceptSlugs) assignedConceptSlugs.add(slug);
+        chapterDrafts.push({ title: `\u7B2C ${number} \u7AE0 ${section.title}`, role: "chapter", conceptSlugs });
+      }
     }
   }
-  const remaining = maxUnits - selected.length;
-  const step = Math.max(1, Math.floor(units.length / Math.max(1, remaining)));
-  for (let index = 0; index < units.length && selected.length < maxUnits; index += step) {
-    push(units[index]);
+  const toolSections = (index?.sections ?? []).filter((section) => section.kind === "tool" || section.kind === "review");
+  for (const section of toolSections) {
+    const conceptSlugs = [];
+    for (const entry of section.entries) {
+      const page = resolveLink(entry.target);
+      if (page === void 0) {
+        warnings.push(`index.md \u7684\u300C${section.title}\u300D\u5F15\u7528\u4E86\u672A\u5BFC\u5165\u9875\u9762\uFF1A${entry.target}`);
+        continue;
+      }
+      if (conceptSources.has(page.slug) && !conceptSlugs.includes(page.slug)) {
+        conceptSlugs.push(page.slug);
+      } else if (!conceptSources.has(page.slug)) {
+        notes.push(`\u300C${section.title}\u300D\u4E2D\u7684\u9875\u9762\u300A${pageTitleOf(page)}\u300B\u89D2\u8272\u4E3A ${page.role}\uFF0C\u672A\u4F5C\u4E3A\u6559\u5B66\u6982\u5FF5\u6536\u5F55`);
+      }
+    }
+    if (conceptSlugs.length === 0) continue;
+    for (const slug of conceptSlugs) assignedConceptSlugs.add(slug);
+    chapterDrafts.push({
+      title: section.title,
+      ...section.entries.find((entry) => entry.summary !== void 0)?.summary !== void 0 ? { summary: section.entries.find((entry) => entry.summary !== void 0)?.summary } : {},
+      role: "tool",
+      conceptSlugs
+    });
   }
-  for (const unit of units) {
-    if (selected.length >= maxUnits) break;
-    push(unit);
+  const unassigned = orderedConceptSlugs.filter((slug) => !assignedConceptSlugs.has(slug));
+  if (unassigned.length > 0) {
+    chapterDrafts.push({
+      title: "\u672A\u5206\u7AE0\u5185\u5BB9",
+      summary: "\u4EE5\u4E0B wiki \u9875\u672A\u51FA\u73B0\u5728\u7AE0\u8282\u7D22\u5F15\u6216\u7AE0\u8282\u6982\u89C8\u4E2D\uFF0C\u6682\u5217\u9644\u5F55",
+      role: "appendix",
+      conceptSlugs: unassigned
+    });
+    warnings.push(`${unassigned.length} \u4E2A\u6982\u5FF5\u4E0D\u5C5E\u4E8E\u4EFB\u4F55\u7AE0\u8282\uFF0C\u5DF2\u653E\u5165\u9644\u5F55\u7AE0\u8282`);
   }
-  return selected.sort((a, b) => units.indexOf(a) - units.indexOf(b));
+  if (chapterDrafts.length === 0) {
+    chapterDrafts.push({
+      title: "\u77E5\u8BC6\u5E93\u6982\u5FF5",
+      summary: "\u77E5\u8BC6\u5E93\u6CA1\u6709\u7AE0\u8282\u5206\u533A\uFF0C\u6982\u5FF5\u6309\u7D22\u5F15\u987A\u5E8F\u6392\u5217",
+      role: "appendix",
+      conceptSlugs: orderedConceptSlugs
+    });
+    for (const slug of orderedConceptSlugs) assignedConceptSlugs.add(slug);
+  }
+  const sequence = [];
+  const sequenceSeen = /* @__PURE__ */ new Set();
+  for (const chapter of chapterDrafts) {
+    for (const slug of chapter.conceptSlugs) {
+      const concept = conceptSources.get(slug);
+      if (concept === void 0 || sequenceSeen.has(concept.title)) continue;
+      sequenceSeen.add(concept.title);
+      sequence.push(concept.title);
+    }
+  }
+  for (const slug of orderedConceptSlugs) {
+    const concept = conceptSources.get(slug);
+    if (concept === void 0 || sequenceSeen.has(concept.title)) continue;
+    sequenceSeen.add(concept.title);
+    sequence.push(concept.title);
+  }
+  const conceptDifficulty = (indexInSequence, total, role) => {
+    if (role === "tool") return "core";
+    const ratio = total <= 1 ? 0 : indexInSequence / (total - 1);
+    if (ratio < 1 / 3) return "intro";
+    if (ratio < 2 / 3) return "core";
+    return "advanced";
+  };
+  const chapterBySlug = /* @__PURE__ */ new Map();
+  for (const chapter of chapterDrafts) {
+    chapter.conceptSlugs.forEach((slug, indexInChapter) => {
+      if (!chapterBySlug.has(slug)) chapterBySlug.set(slug, { chapter, indexInChapter, role: chapter.role });
+    });
+  }
+  const builtConcepts = [];
+  const conceptBySlug = /* @__PURE__ */ new Map();
+  const builtSequence = [];
+  for (let sequenceIndex = 0; sequenceIndex < sequence.length; sequenceIndex += 1) {
+    const title = sequence[sequenceIndex];
+    const entry = [...conceptSources.values()].find((concept2) => concept2.title === title);
+    if (entry === void 0) continue;
+    const placement = chapterBySlug.get(entry.slug);
+    const previousInChapter = placement !== void 0 && placement.indexInChapter > 0 ? placement.chapter.conceptSlugs[placement.indexInChapter - 1] : void 0;
+    const previousTitle = previousInChapter !== void 0 ? conceptSources.get(previousInChapter)?.title : void 0;
+    const difficulty = conceptDifficulty(sequenceIndex, sequence.length, placement?.role ?? "appendix");
+    const concept = {
+      title: entry.title,
+      summary: entry.summary,
+      anchors: entry.anchors,
+      prerequisites: previousTitle !== void 0 ? [previousTitle] : [],
+      difficulty,
+      tags: entry.tags,
+      slug: entry.slug
+    };
+    if (builtConcepts.length >= deps.limits.kbMaxConcepts) {
+      warnings.push(`\u6982\u5FF5\u6570\u8D85\u8FC7\u77E5\u8BC6\u5E93\u76F4\u8BFB\u4E0A\u9650\uFF08${deps.limits.kbMaxConcepts}\uFF09\uFF0C\u5176\u4F59\u6982\u5FF5\u5DF2\u4E22\u5F03`);
+      break;
+    }
+    builtConcepts.push(concept);
+    conceptBySlug.set(entry.slug, concept);
+    builtSequence.push(entry.title);
+  }
+  if (builtConcepts.length === 0) {
+    return err("uncertain", "\u68C0\u6D4B\u5230\u77E5\u8BC6\u5E93\u7ED3\u6784\uFF0C\u4F46\u6CA1\u6709\u89E3\u6790\u51FA\u4EFB\u4F55\u53EF\u6559\u5B66\u7684\u6982\u5FF5\u9875\uFF08concepts/entities/comparisons/summary\uFF09", {
+      details: { pageCount: pages.length, roles: detection.facts.signals }
+    });
+  }
+  const knownTitles = new Set(builtConcepts.map((concept) => concept.title));
+  const builtChapters = [];
+  for (const chapter of chapterDrafts) {
+    const conceptTitles = chapter.conceptSlugs.map((slug) => conceptSources.get(slug)?.title).filter((title) => title !== void 0 && knownTitles.has(title)).filter((title, index2, all) => all.indexOf(title) === index2);
+    if (conceptTitles.length === 0 && chapter.page === void 0) continue;
+    const chapterMaterial = chapter.page === void 0 ? void 0 : materials.get(chapter.page.document.id);
+    const anchor = chapter.page === void 0 ? void 0 : pageAnchor(chapterMaterial, chapter.title);
+    builtChapters.push({
+      title: chapter.title,
+      ...chapter.summary !== void 0 ? { summary: chapter.summary } : {},
+      role: chapter.role,
+      conceptTitles,
+      anchors: anchor !== void 0 ? [anchor] : []
+    });
+    if (builtChapters.length >= deps.limits.kbMaxChapters) {
+      warnings.push(`\u7AE0\u8282\u6570\u8D85\u8FC7\u77E5\u8BC6\u5E93\u76F4\u8BFB\u4E0A\u9650\uFF08${deps.limits.kbMaxChapters}\uFF09\uFF0C\u5176\u4F59\u7AE0\u8282\u5DF2\u4E22\u5F03`);
+      break;
+    }
+  }
+  let droppedChapterConcepts = 0;
+  const normalizedChapters = builtChapters.map((chapter) => ({
+    ...chapter,
+    conceptTitles: chapter.conceptTitles.filter((title) => {
+      if (knownTitles.has(title)) return true;
+      droppedChapterConcepts += 1;
+      return false;
+    })
+  })).filter((chapter) => chapter.conceptTitles.length > 0 || chapter.role !== "chapter");
+  if (droppedChapterConcepts > 0) {
+    warnings.push(`${droppedChapterConcepts} \u4E2A\u7AE0\u8282\u6982\u5FF5\u56E0\u6982\u5FF5\u4E0A\u9650\u88AB\u4E22\u5F03`);
+  }
+  const usedIds = /* @__PURE__ */ new Set([...usedDocumentIds, ...usedRawDocumentIds]);
+  if (detection.indexPage !== void 0) usedIds.add(detection.indexPage.document.id);
+  if (detection.schemaPage !== void 0) usedIds.add(detection.schemaPage.document.id);
+  for (const page of pages) {
+    if (page.role === "chapter-overview") usedIds.add(page.document.id);
+  }
+  for (const chapter of builtChapters) {
+    for (const anchor of chapter.anchors) usedIds.add(anchor.documentId);
+  }
+  const usedPages = pages.filter((page) => usedIds.has(page.document.id));
+  const sources = usedPages.map((page) => ({
+    sourceId: page.document.id,
+    role: SOURCE_ROLE_BY_KB_ROLE[page.role]
+  }));
+  const basedOn = usedPages.map((page) => materials.get(page.document.id)).filter((item) => item !== void 0).map((item) => ({ sourceId: item.document.id, revisionId: item.revision.id }));
+  const importedSlugs = new Set(pages.map((page) => page.slug));
+  const linkSourceRoles = /* @__PURE__ */ new Set(["concept", "chapter-overview", "entity", "comparison", "summary"]);
+  let danglingCount = 0;
+  const danglingSamples = [];
+  for (const page of pages) {
+    if (!linkSourceRoles.has(page.role)) continue;
+    for (const link of page.wikilinks) {
+      if (link.embed) continue;
+      const targetSlug = normalizeSlug(basename(link.target));
+      if (importedSlugs.has(targetSlug)) continue;
+      if (resolveLink(link.target) !== void 0) continue;
+      danglingCount += 1;
+      if (danglingSamples.length < 3) danglingSamples.push(`${page.fileName} \u2192 [[${link.target}]]`);
+    }
+  }
+  if (danglingCount > 0) {
+    warnings.push(`${danglingCount} \u4E2A wikilink \u6307\u5411\u672A\u5BFC\u5165\u7684\u9875\u9762\uFF08\u7ED3\u679C\u4E2D\u4E0D\u4F2A\u9020\u5BF9\u5E94\u6982\u5FF5\uFF09\uFF1A${danglingSamples.join("\uFF1B")}`);
+  }
+  const inbound = /* @__PURE__ */ new Map();
+  for (const page of pages) {
+    if (!linkSourceRoles.has(page.role)) continue;
+    for (const link of page.wikilinks) {
+      if (link.embed) continue;
+      const targetSlug = normalizeSlug(basename(link.target));
+      inbound.set(targetSlug, (inbound.get(targetSlug) ?? 0) + 1);
+    }
+  }
+  const orphans = teachablePages.filter((page) => (inbound.get(page.slug) ?? 0) === 0 && !indexEntryByKey.has(page.slug));
+  if (orphans.length > 0) {
+    warnings.push(`${orphans.length} \u4E2A\u6982\u5FF5\u9875\u6CA1\u6709\u5165\u94FE\u4E5F\u4E0D\u5728 index.md \u4E2D\uFF08\u5B64\u7ACB\u9875\uFF09\uFF1A${orphans.slice(0, 5).map((page) => pageTitleOf(page)).join("\u3001")}`);
+  }
+  const missingFrontmatter = teachablePages.filter((page) => page.frontmatter === void 0 || frontmatterString(page.frontmatter, "title") === void 0 || frontmatterString(page.frontmatter, "type") === void 0);
+  if (missingFrontmatter.length > 0) {
+    warnings.push(`${missingFrontmatter.length} \u4E2A\u6982\u5FF5\u9875\u7F3A\u5C11 frontmatter \u7684 title/type\uFF1A${missingFrontmatter.slice(0, 5).map((page) => page.fileName).join("\u3001")}`);
+  }
+  let tagMismatch = 0;
+  const tagMismatchSamples = [];
+  for (const concept of conceptSources.values()) {
+    const chapterTag = concept.tags.map((tag) => /^ch0*(\d+)$/i.exec(tag)?.[1]).find((value) => value !== void 0);
+    if (chapterTag === void 0) continue;
+    const placement = chapterBySlug.get(concept.slug);
+    const chapterPage = placement?.chapter.page;
+    const assignedNumber = chapterPage === void 0 ? void 0 : resolvedChapterNumber(chapterPage);
+    if (assignedNumber !== void 0 && Number(chapterTag) !== assignedNumber) {
+      tagMismatch += 1;
+      if (tagMismatchSamples.length < 3) tagMismatchSamples.push(`${concept.title}(ch${chapterTag}\u2192\u7AE0${assignedNumber})`);
+    }
+  }
+  if (tagMismatch > 0) {
+    warnings.push(`${tagMismatch} \u4E2A\u6982\u5FF5\u9875\u7684 tags \u7AE0\u8282\u53F7\u4E0E index \u7AE0\u8282\u4E0D\u4E00\u81F4\uFF1A${tagMismatchSamples.join("\u3001")}`);
+  }
+  let whitespaceMismatch = 0;
+  const whitespaceSamples = [];
+  for (const concept of conceptSources.values()) {
+    for (const ref of concept.rawSourceRefs) {
+      if (resolveRawDocument(pages, materials, ref) !== void 0) continue;
+      const collapsed = normalizeWhitespacePath(ref);
+      const matched = pages.some((page) => normalizeWhitespacePath(page.relativePath) === collapsed);
+      if (matched) {
+        whitespaceMismatch += 1;
+        if (whitespaceSamples.length < 3) whitespaceSamples.push(ref);
+      }
+    }
+  }
+  if (whitespaceMismatch > 0) {
+    warnings.push(`${whitespaceMismatch} \u4E2A frontmatter sources \u8DEF\u5F84\u4E0E\u5DF2\u5BFC\u5165\u6587\u4EF6\u5B58\u5728\u7A7A\u683C/\u89C4\u8303\u5DEE\u5F02\uFF1A${whitespaceSamples.join("\u3001")}`);
+  }
+  const unresolvedRaw = [...conceptSources.values()].flatMap((concept) => concept.rawSourceRefs).filter((ref, index2, all) => all.indexOf(ref) === index2).filter((ref) => resolveRawDocument(pages, materials, ref) === void 0);
+  if (unresolvedRaw.length > 0) {
+    notes.push(`frontmatter sources \u4E2D\u6709 ${unresolvedRaw.length} \u6761\u539F\u59CB\u8D44\u6599\u8DEF\u5F84\u672A\u5BFC\u5165\uFF08\u6982\u5FF5\u9875\u4ECD\u4F5C\u4E3A\u4E3B\u951A\u70B9\uFF09\uFF1A${unresolvedRaw.slice(0, 3).join("\u3001")}`);
+  }
+  if (invalidAnchorCount > 0) {
+    notes.push(`${invalidAnchorCount} \u4E2A\u6982\u5FF5\u65E2\u65E0\u6458\u8981\u4E5F\u65E0\u951A\u70B9\uFF0C\u5DF2\u4FDD\u7559\u6807\u9898\u4F46\u63D0\u793A\u6559\u5B66\u65F6\u6807\u6CE8\u4E0D\u786E\u5B9A`);
+  }
+  notes.push(`\u6784\u5EFA\u7ED3\u679C\uFF1A${normalizedChapters.filter((chapter) => chapter.role === "chapter").length} \u7AE0 + ${normalizedChapters.filter((chapter) => chapter.role === "tool").length} \u4E2A\u5DE5\u5177\u7AE0\u8282 + ${builtConcepts.length} \u4E2A\u6982\u5FF5\uFF08${builtConcepts.reduce((sum, concept) => sum + concept.anchors.length, 0)} \u4E2A\u539F\u6587\u951A\u70B9\uFF09`);
+  if (warnings.length > 0) {
+    notes.push(`\u7ED3\u6784\u8B66\u544A ${warnings.length} \u6761\uFF08\u8BE6\u89C1 warnings\uFF09`);
+  }
+  return ok({
+    detection,
+    concepts: builtConcepts,
+    chapters: normalizedChapters,
+    sequence: builtSequence,
+    sources,
+    basedOn,
+    notes,
+    warnings
+  });
 }
-function buildDraftPrompt(deps, input, material) {
-  const languageHint = input.language === "en" ? "\u4F7F\u7528\u82F1\u6587\u8F93\u51FA\u6982\u5FF5\u6807\u9898\u4E0E\u6458\u8981" : input.language === "bilingual" ? "\u6982\u5FF5\u6807\u9898\u4F7F\u7528\u4E2D\u6587\u5E76\u4FDD\u7559\u82F1\u6587\u672F\u8BED\uFF0C\u6458\u8981\u4F7F\u7528\u4E2D\u6587" : "\u4F7F\u7528\u4E2D\u6587\u8F93\u51FA\uFF0C\u4FDD\u7559\u539F\u6587\u82F1\u6587\u672F\u8BED";
+function normalizeWhitespacePath(path2) {
+  return path2.replace(/\\/g, "/").replace(/\s+/g, " ").trim().toLowerCase();
+}
+function resolveRawDocument(pages, _materials, ref) {
+  const normalizedRef = normalizeWhitespacePath(ref).replace(/^\.\//, "");
+  const refBase = basename(normalizedRef);
+  for (const page of pages) {
+    if (page.role === "concept" || page.role === "chapter-overview" || page.role === "catalog" || page.role === "schema" || page.role === "log") {
+      continue;
+    }
+    const normalizedPage = normalizeWhitespacePath(page.relativePath).replace(/^\.\//, "");
+    if (normalizedPage === normalizedRef || normalizedPage.endsWith(`/${normalizedRef}`)) return { page };
+    if (normalizeWhitespacePath(page.document.originalPath).endsWith(`/${normalizedRef}`)) return { page };
+    if (basename(normalizedPage) === refBase && normalizeWhitespacePath(page.document.originalPath).endsWith(normalizedRef)) {
+      return { page };
+    }
+  }
+  return void 0;
+}
+
+// packages/teaching-core/src/corpus/draft.ts
+var ROLE_BY_FORMAT = {
+  pdf: "textbook",
+  docx: "lecture",
+  pptx: "slides",
+  markdown: "lecture",
+  text: "textbook",
+  html: "reference",
+  code: "reference",
+  notebook: "reference",
+  image: "other"
+};
+async function proposeCourseRevision(deps, input, signal) {
+  if (input.courseTitle.trim() === "" || input.goal.trim() === "") {
+    return err("invalid-input", "\u8BFE\u7A0B\u8349\u6848\u9700\u8981\u8BFE\u7A0B\u6807\u9898\u4E0E\u5B66\u4E60\u76EE\u6807");
+  }
+  if (isSignalAborted(signal)) return err("cancelled", "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5DF2\u53D6\u6D88");
+  const course = await deps.courses.get(input.courseId);
+  if (course === void 0) return err("not-found", "\u8BFE\u7A0B\u4E0D\u5B58\u5728\u6216\u5DF2\u88AB\u5220\u9664");
+  const strategy = input.strategy ?? "auto";
+  let prepared;
+  try {
+    prepared = await prepareKbContext(deps, input, signal);
+  } catch (cause) {
+    return toResultError(cause, "\u8BFB\u53D6\u8BFE\u7A0B\u8D44\u6599\u5931\u8D25\uFF0C\u65E0\u6CD5\u751F\u6210\u8BFE\u7A0B\u8349\u6848");
+  }
+  if (!prepared.ok) return prepared;
+  const context = prepared.value;
+  const detected = context.detection.facts.isKnowledgeBase;
+  if (strategy !== "llm-wiki" && detected) {
+    const built = await buildKbStructureFromContext(deps, input, context, signal);
+    if (built.ok) {
+      try {
+        const revision = await persistStructureRevision(deps, input, structureDataFromKb(built.value, input, deps.limits));
+        return ok(revision);
+      } catch (cause) {
+        return toResultError(cause, "\u8BFE\u7A0B\u8349\u6848\u4FDD\u5B58\u5931\u8D25");
+      }
+    }
+    if (strategy === "kb-structure") return built;
+    if (built.error.code !== "uncertain" || deps.model === void 0) return built;
+    const fallback = await runLlmWikiPath(deps, input, context, signal);
+    return fallback.ok ? fallback : built;
+  }
+  if (strategy === "kb-structure") {
+    return err(
+      "capability-missing",
+      `\u672A\u68C0\u6D4B\u5230 LLM-wiki \u77E5\u8BC6\u5E93\u7ED3\u6784\uFF0C\u65E0\u6CD5\u4F7F\u7528 kb-structure \u7B56\u7565\uFF1A${context.detection.facts.reason}`,
+      {
+        details: {
+          strategy,
+          signals: context.detection.facts.signals.map((item) => ({ id: item.id, matched: item.matched })),
+          pageCount: context.detection.facts.pageCount
+        }
+      }
+    );
+  }
+  return await runLlmWikiPath(deps, input, context, signal);
+}
+function structureDataFromKb(build2, input, _limits) {
+  const concepts = build2.concepts.map((concept) => ({
+    title: concept.title,
+    summary: concept.summary,
+    prerequisites: concept.prerequisites,
+    anchors: concept.anchors,
+    ...concept.difficulty !== void 0 ? { difficulty: concept.difficulty } : {}
+  }));
+  const chapters = build2.chapters.map((chapter) => ({
+    title: chapter.title,
+    ...chapter.summary !== void 0 ? { summary: chapter.summary } : {},
+    role: chapter.role,
+    conceptTitles: chapter.conceptTitles,
+    anchors: chapter.anchors
+  }));
+  const coveredTitles = new Set(chapters.flatMap((chapter) => chapter.conceptTitles));
+  const missing = concepts.filter((concept) => !coveredTitles.has(concept.title)).map((concept) => concept.title);
+  if (missing.length > 0) {
+    chapters.push({ title: "\u672A\u5206\u7AE0\u5185\u5BB9", role: "appendix", conceptTitles: missing, anchors: [] });
+  }
+  return {
+    goals: buildGoals(input),
+    concepts,
+    chapters,
+    sequenceTitles: build2.sequence.length > 0 ? build2.sequence : void 0,
+    sources: build2.sources,
+    basedOn: build2.basedOn,
+    provenance: "kb-structure",
+    changeSummary: describeKbBuild(build2)
+  };
+}
+function buildGoals(input) {
+  const goal = input.goal.trim().slice(0, 240);
+  return goal === "" ? [] : [goal];
+}
+function describeKbBuild(build2) {
+  const facts = build2.detection.facts;
+  const chapterCount = build2.chapters.filter((chapter) => chapter.role === "chapter").length;
+  const toolCount = build2.chapters.filter((chapter) => chapter.role === "tool").length;
+  const anchorCount = build2.concepts.reduce((sum, concept) => sum + concept.anchors.length, 0);
+  const warningPart = build2.warnings.length > 0 ? `\u7ED3\u6784\u8B66\u544A ${build2.warnings.length} \u6761\uFF08${build2.warnings.slice(0, 2).join("\uFF1B")}\uFF09` : "\u672A\u53D1\u73B0\u7ED3\u6784\u95EE\u9898";
+  return [
+    `\u77E5\u8BC6\u5E93\u7ED3\u6784\u76F4\u8BFB\uFF08kb-structure\uFF09\uFF1A${chapterCount} \u7AE0 + ${toolCount} \u4E2A\u5DE5\u5177\u7AE0\u8282 + ${build2.concepts.length} \u4E2A\u6982\u5FF5`,
+    `${anchorCount} \u4E2A\u539F\u6587\u951A\u70B9\uFF1B\u8BFB\u53D6 ${facts.pageCount} \u4E2A\u9875\u9762\uFF08index=${facts.hasIndex ? "\u6709" : "\u65E0"}\u3001frontmatter=${facts.frontmatterPageCount}\u3001chapter-overview=${facts.chapterOverviewCount}\u3001\u53EF\u89E3\u6790\u94FE\u63A5=${facts.resolvableWikilinkCount}\uFF09`,
+    warningPart
+  ].join("\uFF1B");
+}
+async function runLlmWikiPath(deps, input, context, signal) {
+  if (deps.model === void 0) {
+    return err("capability-missing", "\u5F53\u524D\u6CA1\u6709\u53EF\u7528\u7684\u6A21\u578B\u5BA2\u6237\u7AEF\uFF0C\u65E0\u6CD5\u751F\u6210\u8BFE\u7A0B\u8349\u6848");
+  }
+  const digest = buildStructureDigest(context, input, deps.limits);
+  if (digest.groups.length === 0) {
+    return err("invalid-input", "\u8BFE\u7A0B\u6CA1\u6709\u53EF\u7528\u4E8E\u751F\u6210\u7ED3\u6784\u7684\u8D44\u6599\u6458\u8981");
+  }
+  const maxCalls = Math.max(1, deps.limits.draftLlmWikiGroupCallsMax);
+  let calls = 0;
+  const results = [];
+  const warnings = [...digest.warnings];
+  const notes = [];
+  for (const group of digest.groups) {
+    if (isSignalAborted(signal)) return err("cancelled", "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5DF2\u53D6\u6D88");
+    if (calls >= maxCalls) {
+      warnings.push(`\u6A21\u578B\u8C03\u7528\u6B21\u6570\u8FBE\u5230\u4E0A\u9650\uFF08${maxCalls}\uFF09\uFF0C\u5269\u4F59 ${digest.groups.length - group.index + 1} \u7EC4\u8D44\u6599\u672A\u8986\u76D6`);
+      break;
+    }
+    calls += 1;
+    let attempt = await generateGroupStructure(deps, input, context, digest, group, signal);
+    if (!attempt.ok && attempt.error.code === "uncertain" && calls < maxCalls) {
+      calls += 1;
+      attempt = await generateGroupStructure(deps, input, context, digest, group, signal, attempt.error.repair);
+    }
+    if (!attempt.ok) {
+      if (attempt.error.code === "cancelled") return err("cancelled", "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5DF2\u53D6\u6D88");
+      warnings.push(`\u8D44\u6599\u5206\u7EC4 ${group.index}/${group.total} \u7684\u7ED3\u6784\u751F\u6210\u5931\u8D25\uFF1A${attempt.error.message}`);
+      notes.push(`\u5206\u7EC4 ${group.index}/${group.total} \u672A\u8986\u76D6`);
+      continue;
+    }
+    results.push(attempt.value);
+  }
+  if (results.length === 0) {
+    return err("uncertain", "\u6A21\u578B\u672A\u80FD\u751F\u6210\u53EF\u7528\u7684\u8BFE\u7A0B\u7ED3\u6784\uFF08JSON \u65E0\u6548\u6216\u7F3A\u5C11\u6982\u5FF5\uFF09\uFF0C\u672A\u4FDD\u5B58\u8349\u6848\uFF1B\u53EF\u91CD\u8BD5\u6216\u5148\u7528\u968F\u95EE\u968F\u5B66", {
+      details: { calls, groups: digest.groups.length },
+      retryable: true
+    });
+  }
+  const merged = mergeValidatedStructures(results, input, deps.limits, warnings);
+  if (merged.concepts.length === 0) {
+    return err("uncertain", "\u6A21\u578B\u8FD4\u56DE\u7684\u7ED3\u6784\u4E2D\u6CA1\u6709\u6709\u6548\u6982\u5FF5\uFF0C\u672A\u4FDD\u5B58\u8349\u6848", { details: { calls } });
+  }
+  const digestedDocIds = new Set(digest.groups.flatMap((group) => [...group.documentIds]));
+  const sources = context.material.documents.filter((material) => digestedDocIds.has(material.document.id)).map((material) => {
+    const role = context.detection.roleByDocumentId.get(material.document.id) ?? "unknown";
+    return {
+      sourceId: material.document.id,
+      role: role === "unknown" ? ROLE_BY_FORMAT[material.document.format] : kbRoleToSourceRole(role)
+    };
+  });
+  const basedOn = context.material.documents.filter((material) => digestedDocIds.has(material.document.id)).map((material) => ({ sourceId: material.document.id, revisionId: material.revision.id }));
+  const changeSummary = describeLlmWikiResult({
+    input,
+    digest,
+    merged,
+    calls,
+    warnings
+  });
+  const data = {
+    goals: merged.goals,
+    concepts: merged.concepts,
+    chapters: merged.chapters,
+    sources,
+    basedOn,
+    provenance: "llm-wiki",
+    changeSummary
+  };
+  try {
+    return ok(await persistStructureRevision(deps, input, data));
+  } catch (cause) {
+    return toResultError(cause, "\u8BFE\u7A0B\u8349\u6848\u4FDD\u5B58\u5931\u8D25");
+  }
+}
+function describeLlmWikiResult(input) {
+  const chapterCount = input.merged.chapters.filter((chapter) => chapter.role === "chapter").length;
+  const toolCount = input.merged.chapters.filter((chapter) => chapter.role === "tool").length;
+  const anchorCount = input.merged.concepts.reduce((sum, concept) => sum + concept.anchors.length, 0);
+  const coverage = `${input.digest.digestedDocumentCount}/${input.digest.documentCount} \u4EFD\u8D44\u6599`;
+  const parts = [
+    `LLM-wiki \u56DE\u9000\uFF08llm-wiki\uFF09\uFF1A\u6309 skill \u89C4\u5219\u4ECE ${coverage} \u751F\u6210 ${chapterCount} \u7AE0 + ${toolCount} \u4E2A\u5DE5\u5177\u7AE0\u8282 + ${input.merged.concepts.length} \u4E2A\u6982\u5FF5`,
+    `${anchorCount} \u4E2A\u8D44\u6599\u951A\u70B9\uFF1B\u6A21\u578B\u8C03\u7528 ${input.calls} \u6B21`
+  ];
+  const noteText = [...input.merged.notes, ...input.input.instruction === void 0 ? [] : [`\u5B66\u751F\u4FEE\u6539\u8981\u6C42\uFF1A${input.input.instruction.trim().slice(0, 80)}`]];
+  if (noteText.length > 0) parts.push(`\u8BF4\u660E\uFF1A${noteText.slice(0, 2).join("\uFF1B")}`);
+  if (input.warnings.length > 0) parts.push(`\u8B66\u544A\uFF1A${input.warnings.slice(0, 2).join("\uFF1B")}`);
+  return parts.join("\uFF1B").slice(0, 600);
+}
+function normalizeHeadingPath(unit) {
+  const path2 = unit.locator.sectionPath;
+  if (path2 !== void 0 && path2.length > 0) return path2.join(" > ");
+  return unit.text;
+}
+function buildStructureDigest(context, _input, limits) {
+  const pageByDocumentId = /* @__PURE__ */ new Map();
+  for (const page of context.pages) pageByDocumentId.set(page.document.id, page);
+  const warnings = [];
+  const anchorIndex = /* @__PURE__ */ new Map();
+  const blocks = [];
+  const documentCount = context.material.documents.length;
+  const docCharLimit = Math.max(300, limits.draftLlmWikiDocChars);
+  const headingLimit = Math.max(4, limits.draftLlmWikiHeadingsPerDoc);
+  let truncatedDocs = 0;
+  let skippedDocuments = 0;
+  for (let index = 0; index < context.material.documents.length; index += 1) {
+    const material = context.material.documents[index];
+    const document2 = material.document;
+    const role = context.detection.roleByDocumentId.get(document2.id) ?? "unknown";
+    if (role === "log" || role === "raw-asset" || role === "visual-asset") {
+      skippedDocuments += 1;
+      continue;
+    }
+    const page = pageByDocumentId.get(document2.id);
+    const headingUnits = material.units.filter((unit) => unit.kind === "heading");
+    const paragraphUnit = material.units.find((unit) => unit.kind === "paragraph") ?? material.units.find((unit) => unit.kind !== "heading");
+    const specialUnit = material.units.find((unit) => unit.kind === "formula" || unit.kind === "table" || unit.kind === "code" || unit.kind === "figure");
+    const representative = [headingUnits[0], paragraphUnit, specialUnit].filter((unit) => unit !== void 0).filter((unit, position, all) => all.findIndex((item) => item.id === unit.id) === position).slice(0, 4);
+    const header = `[D${index + 1}] documentId=${document2.id} role=${role} format=${document2.format} revision=${material.revision.id} title=\u300A${document2.title}\u300B`;
+    const headingLines = [];
+    for (const unit of headingUnits.slice(0, headingLimit)) {
+      const path2 = normalizeHeadingPath(unit);
+      if (path2 !== "") headingLines.push(`  - ${path2}`);
+    }
+    const firstParagraph = page?.firstParagraph ?? (paragraphUnit === void 0 ? "" : excerptAround(paragraphUnit.text, [], 260));
+    const unitLines = [];
+    for (const unit of representative) {
+      const key = `${document2.id}|${unit.id}`;
+      anchorIndex.set(key, { document: document2, revision: material.revision, unit });
+      unitLines.push(`  \u53EF\u5F15\u7528\u5355\u5143: unitId=${unit.id} (${locatorDescription(unit.locator)}) ${excerptAround(unit.text, [], 160)}`);
+    }
+    const pieces = [header, ...unitLines];
+    if (headingLines.length > 0) pieces.push("  \u6807\u9898\u6811:", ...headingLines);
+    if (firstParagraph !== "") pieces.push(`  \u9996\u6BB5: ${truncateText(firstParagraph, 260)}`);
+    let block = pieces.join("\n");
+    if (block.length > docCharLimit) {
+      block = `${block.slice(0, Math.max(0, docCharLimit - 12)).trimEnd()}
+\u2026\uFF08\u622A\u65AD\uFF09`;
+      truncatedDocs += 1;
+    }
+    blocks.push({ documentId: document2.id, text: block });
+  }
+  if (truncatedDocs > 0) warnings.push(`${truncatedDocs} \u4EFD\u8D44\u6599\u7684\u6458\u8981\u88AB\u622A\u65AD\uFF08\u5355\u4EFD\u4E0A\u9650 ${docCharLimit} \u5B57\u7B26\uFF09`);
+  if (skippedDocuments > 0) warnings.push(`${skippedDocuments} \u4EFD\u65E5\u5FD7/\u56FE\u7247\u8D44\u4EA7\u8D44\u6599\u672A\u7EB3\u5165\u7ED3\u6784\u6458\u8981\uFF08\u4E0D\u53C2\u4E0E\u6982\u5FF5\u751F\u6210\uFF09`);
+  const budget = Math.max(2e3, limits.draftLlmWikiBudgetChars);
+  const totalChars = blocks.reduce((sum, block) => sum + block.text.length + 1, 0);
+  const maxCalls = Math.max(1, limits.draftLlmWikiGroupCallsMax);
+  const rawGroups = [];
+  if (totalChars <= budget || maxCalls === 1) {
+    rawGroups.push({ index: 1, text: blocks.map((block) => block.text).join("\n"), documentIds: blocks.map((block) => block.documentId) });
+  } else {
+    const needed = Math.ceil(totalChars / budget);
+    const groupCount = Math.min(maxCalls, Math.max(1, needed));
+    const buckets = Array.from(
+      { length: groupCount },
+      () => ({ chars: 0, blocks: [] })
+    );
+    for (const block of [...blocks].sort((a, b) => b.text.length - a.text.length)) {
+      let target = buckets[0];
+      for (const bucket of buckets) {
+        if (bucket.chars < target.chars) target = bucket;
+      }
+      target.blocks.push(block);
+      target.chars += block.text.length + 1;
+    }
+    for (const bucket of buckets) {
+      if (bucket.blocks.length === 0) continue;
+      let text2 = "";
+      const documentIds = [];
+      let droppedHere = 0;
+      for (const block of bucket.blocks) {
+        if (text2.length > 0 && text2.length + block.text.length > budget) {
+          droppedHere += 1;
+          continue;
+        }
+        if (text2.length > 0) text2 += "\n";
+        text2 += block.text;
+        documentIds.push(block.documentId);
+      }
+      if (droppedHere > 0) {
+        warnings.push(`\u8D44\u6599\u5206\u7EC4 ${rawGroups.length + 1} \u8D85\u51FA\u6458\u8981\u9884\u7B97\uFF0C${droppedHere} \u4EFD\u8D44\u6599\u672A\u8986\u76D6`);
+        text2 += `
+\uFF08\u672C\u7EC4\u8FD8\u6709 ${droppedHere} \u4EFD\u8D44\u6599\u56E0\u9884\u7B97\u672A\u5217\u51FA\uFF09`;
+      }
+      rawGroups.push({ index: rawGroups.length + 1, text: text2, documentIds });
+    }
+  }
+  const groups = rawGroups.map((group) => ({
+    index: group.index,
+    total: rawGroups.length,
+    text: group.text,
+    documentIds: group.documentIds
+  }));
+  const digestedIds = new Set(groups.flatMap((group) => [...group.documentIds]));
+  const digestedDocumentCount = digestedIds.size;
+  if (digestedDocumentCount < documentCount) {
+    warnings.push(`digest \u8986\u76D6 ${digestedDocumentCount}/${documentCount} \u4EFD\u8D44\u6599\uFF08\u9884\u7B97 ${budget} \u5B57\u7B26/\u7EC4\uFF0C\u6700\u591A ${maxCalls} \u7EC4\uFF09`);
+  }
+  for (const key of [...anchorIndex.keys()]) {
+    const documentId = key.slice(0, key.indexOf("|"));
+    if (!digestedIds.has(documentId)) anchorIndex.delete(key);
+  }
+  return { groups, anchorIndex, documentCount, digestedDocumentCount, totalChars, warnings };
+}
+function truncateText(text2, max2) {
+  if (text2.length <= max2) return text2;
+  return `${text2.slice(0, max2 - 1).trimEnd()}\u2026`;
+}
+async function generateGroupStructure(deps, input, context, digest, group, signal, repair) {
+  if (deps.model === void 0) {
+    return { ok: false, error: { code: "capability-missing", message: "\u6CA1\u6709\u53EF\u7528\u7684\u6A21\u578B\u5BA2\u6237\u7AEF" } };
+  }
+  const prompt = buildStructurePrompt(input, context, group, repair);
+  const request = {
+    messages: prompt.messages,
+    system: prompt.system,
+    json: prompt.json,
+    purpose: "course-draft",
+    language: input.language,
+    maxTokens: 6e3,
+    temperature: 0.2
+  };
+  let completion;
+  try {
+    completion = await deps.model.complete(request, signal);
+  } catch (cause) {
+    const mapped = mapModelFailure(cause, signal);
+    if (!mapped.ok) {
+      const code = mapped.error.code;
+      const attemptCode = code === "cancelled" ? "cancelled" : code === "capability-missing" ? "capability-missing" : "failed";
+      return { ok: false, error: { code: attemptCode, message: mapped.error.message } };
+    }
+  }
+  if (isSignalAborted(signal)) return { ok: false, error: { code: "cancelled", message: "\u8BFE\u7A0B\u8349\u6848\u751F\u6210\u5DF2\u53D6\u6D88" } };
+  const rawText = completion?.text ?? "";
+  const candidate = completion?.json !== void 0 ? completion.json : tryParseJson(rawText);
+  if (candidate === void 0) {
+    const reason = completion?.parseError ?? "\u8F93\u51FA\u4E0D\u662F\u5408\u6CD5 JSON";
+    return { ok: false, error: { code: "uncertain", message: reason, repair: { lastText: rawText, reason } } };
+  }
+  const validated = validateStructureValue(candidate, digest, input, deps.limits);
+  if (!validated.ok) {
+    return {
+      ok: false,
+      error: { code: "uncertain", message: validated.error, repair: { lastText: rawText, reason: validated.error } }
+    };
+  }
+  return { ok: true, value: validated.value };
+}
+function buildStructurePrompt(input, context, group, repair) {
+  const languageHint = input.language === "en" ? "\u4F7F\u7528\u82F1\u6587\u8F93\u51FA\u7AE0\u8282\u4E0E\u6982\u5FF5\u6807\u9898/\u6458\u8981" : input.language === "bilingual" ? "\u6807\u9898\u4F7F\u7528\u4E2D\u6587\u5E76\u4FDD\u7559\u82F1\u6587\u672F\u8BED\uFF0C\u6458\u8981\u4F7F\u7528\u4E2D\u6587" : "\u4F7F\u7528\u4E2D\u6587\u8F93\u51FA\uFF0C\u4FDD\u7559\u539F\u6587\u82F1\u6587\u672F\u8BED";
+  const roleSummary = context.detection.facts.isKnowledgeBase ? `\u8D44\u6599\u89D2\u8272\uFF1A${context.detection.facts.signals.filter((signal) => signal.matched).map((signal) => signal.label).join("\uFF1B")}` : "\u8FD9\u4E9B\u8D44\u6599\u6CA1\u6709\u77E5\u8BC6\u5E93\u7ED3\u6784\uFF08\u65E0 SCHEMA/index/frontmatter \u7ED3\u6784\uFF09\uFF0C\u8BF7\u521B\u5EFA\u865A\u62DF wiki \u7ED3\u6784\u3002";
   const userText = [
     `\u8BFE\u7A0B\uFF1A${input.courseTitle}`,
     `\u5B66\u4E60\u76EE\u6807\uFF1A${input.goal}`,
     `\u5B66\u751F\u57FA\u7840\uFF1A${input.background ?? "\u672A\u63D0\u4F9B"}`,
     `\u8F93\u51FA\u8BED\u8A00\uFF1A${languageHint}`,
     "",
-    "\u4EE5\u4E0B\u662F\u5DF2\u5BFC\u5165\u7684\u8D44\u6599\u6458\u8981\uFF08\u6BCF\u884C\u5F62\u5982 unitId=... \u4EE5\u53CA\u8BE5\u5355\u5143\u6587\u672C\uFF09\uFF1A",
-    material.promptText,
+    roleSummary,
+    `\u8D44\u6599\u5206\u7EC4\uFF1A${group.index}/${group.total}`,
     "",
-    "\u8981\u6C42\uFF1A",
-    "1. concepts \u6309\u4ECE\u57FA\u7840\u5230\u8FDB\u9636\u7EC4\u7EC7\uFF0C\u6570\u91CF\u63A7\u5236\u5728 4-12 \u4E2A\uFF08\u8D44\u6599\u5F88\u5C11\u65F6\u53EF\u4EE5\u51CF\u5C11\uFF09\uFF1B",
-    "2. \u6BCF\u4E2A concept \u7684 anchors \u53EA\u80FD\u5F15\u7528\u4E0A\u9762\u51FA\u73B0\u8FC7\u7684 documentId \u4E0E unitId\uFF0C\u4E0D\u8981\u7F16\u9020\uFF1B\u6CA1\u6709\u5408\u9002\u8D44\u6599\u65F6 anchors \u7559\u7A7A\u6570\u7EC4\uFF1B",
-    "3. prerequisites \u4F7F\u7528\u5176\u4ED6 concept \u7684 title\uFF1Bsequence \u662F\u6982\u5FF5 title \u7684\u5B66\u4E60\u987A\u5E8F\u6570\u7EC4\uFF0C\u5FC5\u987B\u8986\u76D6\u6240\u6709 concept\uFF1B",
-    "4. \u53EA\u8F93\u51FA JSON \u5BF9\u8C61\uFF0C\u5B57\u6BB5\u4E3A\uFF1Agoals(string[])\u3001concepts(\u6570\u7EC4)\u3001sequence(string[])\u3002",
+    "\u4EE5\u4E0B\u662F\u8D44\u6599\u6458\u8981\uFF08documentId / unitId \u662F\u771F\u5B9E\u6807\u8BC6\uFF0C\u951A\u70B9\u53EA\u80FD\u5F15\u7528\u8FD9\u91CC\u51FA\u73B0\u7684 id\uFF09\uFF1A",
+    group.text,
     "",
-    ...input.instruction !== void 0 && input.instruction.trim() !== "" ? [`\u5B66\u751F\u4FEE\u6539\u8981\u6C42\uFF1A${input.instruction.trim().slice(0, 1e3)}`, ""] : [],
-    "concepts \u6BCF\u9879\u5B57\u6BB5\uFF1A",
-    '{"title": string, "summary": string, "prerequisites": string[], "difficulty": "intro"|"core"|"advanced", "misconceptions": string[], "checkIdeas": string[], "anchors": [{"documentId": string, "unitId": string}]}'
+    "\u8BF7\u6309 Karpathy LLM Wiki \u65B9\u6CD5\u8F93\u51FA\u8BFE\u7A0B\u7ED3\u6784\uFF08\u53EA\u8F93\u51FA JSON \u5BF9\u8C61\uFF09\uFF1A",
+    "1. sections\uFF1A\u6309\u5B66\u4E60\u987A\u5E8F\u5206\u7AE0\uFF08\u6BCF\u7AE0 title/summary/role=chapter|appendix|tool\uFF09\uFF0C\u6BCF\u4E2A chapter \u91CC\u653E concepts\uFF1B",
+    "2. \u6982\u5FF5\u9875\u9762\u9608\u503C\uFF1A\u4E00\u4E2A\u6982\u5FF5/\u5B9E\u4F53\u5728 2+ \u4EFD\u8D44\u6599\u51FA\u73B0\uFF0C\u6216\u5BF9\u5355\u4EFD\u8D44\u6599\u7684\u6838\u5FC3\u5185\u5BB9\uFF0C\u624D\u5EFA\u7ACB\u6982\u5FF5\uFF1Bpassing mention \u4E0D\u5EFA\uFF1B",
+    "3. \u6BCF\u4E2A concept \u5FC5\u987B\u6709\uFF1Atitle\u3001\u4E00\u53E5\u8BDD summary\u3001anchors\uFF08\u4EC5\u5F15\u7528\u4E0A\u9762\u51FA\u73B0\u7684 documentId+unitId\uFF0C\u53EF 0-4 \u4E2A\uFF09\u3001difficulty=intro|core|advanced\uFF0C\u53EF\u9009 prerequisites\uFF08\u5176\u4ED6\u6982\u5FF5 title\uFF09\u3001misconceptions\u3001checkIdeas\uFF1B",
+    "4. \u6982\u5FF5\u4E4B\u95F4\u8981\u5F62\u6210\u53EF\u5B66\u4E60\u7684\u987A\u5E8F\uFF08\u7AE0\u8282\u987A\u5E8F + prerequisites \u8868\u8FBE\u4EA4\u53C9\u94FE\u63A5\uFF09\uFF0C\u8BFE\u7A0B\u6574\u4F53 4-15 \u4E2A\u7AE0\u8282\uFF08\u8D44\u6599\u5C11\u65F6\u53EF\u51CF\u5C11\uFF09\uFF1B",
+    "5. \u8D44\u6599\u4E0D\u8DB3\u65F6\u5728 notes \u91CC\u8BF4\u660E\uFF0C\u4E0D\u5F97\u7F16\u9020\u8D44\u6599\u4E2D\u4E0D\u5B58\u5728\u7684\u4E8B\u5B9E\u6216 documentId/unitId\uFF1B",
+    '6. \u53EA\u8F93\u51FA JSON\uFF1A{"sections":[{"title":"...","summary":"...","role":"chapter","concepts":[...]}],"goals":["..."],"notes":["..."]}\u3002',
+    "",
+    ...input.instruction !== void 0 && input.instruction.trim() !== "" ? [`\u5B66\u751F\u4FEE\u6539\u8981\u6C42\uFF1A${input.instruction.trim().slice(0, 1e3)}`, ""] : []
   ].join("\n");
+  const messages = [{ role: "user", text: userText }];
+  if (repair !== void 0) {
+    messages.push({ role: "assistant", text: repair.lastText.slice(0, 4e3) });
+    messages.push({
+      role: "user",
+      text: `\u4E0A\u4E00\u6B21\u8F93\u51FA\u65E0\u6CD5\u89E3\u6790\u4E3A\u6240\u9700 JSON\uFF08${repair.reason}\uFF09\u3002\u8BF7\u53EA\u91CD\u65B0\u8F93\u51FA\u4E00\u6B21\u5408\u6CD5\u7684 JSON \u5BF9\u8C61\uFF0C\u4E0D\u8981\u89E3\u91CA\u3001\u4E0D\u8981 Markdown \u4EE3\u7801\u56F4\u680F\uFF0C\u5E76\u9075\u5B88\u540C\u6837\u7684\u951A\u70B9\u7EA6\u675F\u3002`
+    });
+  }
   return {
-    system: "\u4F60\u662F\u4E25\u8C28\u7684\u8BFE\u7A0B\u7ED3\u6784\u5206\u6790\u5668\u3002\u8BFE\u7A0B\u7ED3\u6784\u5FC5\u987B\u80FD\u8FFD\u6EAF\u5230\u7ED9\u5B9A\u8D44\u6599\u5355\u5143\uFF1B\u4E0D\u786E\u5B9A\u65F6\u5B81\u53EF\u4E0D\u5F15\u7528\uFF0C\u7EDD\u4E0D\u7F16\u9020 documentId/unitId\u3002\u53EA\u8F93\u51FA\u5408\u6CD5 JSON\u3002",
-    messages: [{ role: "user", text: userText }],
+    system: "\u4F60\u662F\u4E25\u8C28\u7684\u8BFE\u7A0B\u7ED3\u6784\u8BBE\u8BA1\u5668\u3002\u9075\u5FAA Karpathy LLM Wiki \u65B9\u6CD5\uFF1A\u533A\u5206\u539F\u59CB\u8D44\u6599/\u6982\u5FF5\u9875/\u7D22\u5F15\uFF1B\u53EA\u7ED9\u8FBE\u5230\u9875\u9762\u9608\u503C\u7684\u6982\u5FF5\u5EFA\u9875\uFF1B\u6982\u5FF5\u4E4B\u95F4\u8981\u6709\u4EA4\u53C9\u94FE\u63A5\u4E0E\u5B66\u4E60\u987A\u5E8F\uFF1B\u951A\u70B9\u53EA\u80FD\u5F15\u7528\u7ED9\u5B9A\u8D44\u6599\u6458\u8981\u4E2D\u771F\u5B9E\u51FA\u73B0\u7684 documentId \u4E0E unitId\uFF0C\u4E0D\u786E\u5B9A\u65F6\u5B81\u53EF\u4E0D\u5F15\u7528\u3002\u53EA\u8F93\u51FA\u5408\u6CD5 JSON\u3002",
+    messages,
     json: {
-      name: "course-structure",
-      description: "\u8BFE\u7A0B\u7ED3\u6784\u8349\u6848\uFF1A\u76EE\u6807\u3001\u6982\u5FF5\u5217\u8868\u4E0E\u5B66\u4E60\u987A\u5E8F",
+      name: "course-structure-wiki",
+      description: "LLM-wiki \u5F0F\u8BFE\u7A0B\u7ED3\u6784\uFF1A\u7AE0\u8282\u3001\u6982\u5FF5\u3001\u4E00\u53E5\u8BDD\u6458\u8981\u3001\u8D44\u6599\u951A\u70B9",
       fields: {
+        sections: "\u7AE0\u8282\u6570\u7EC4\uFF0C\u6BCF\u7AE0\u542B title/summary/role/concepts",
+        concepts: "\u6BCF\u7AE0\u5185\u6982\u5FF5\u6570\u7EC4\uFF1Atitle/summary/anchors/prerequisites/difficulty/misconceptions/checkIdeas",
         goals: "string[] \u5B66\u4E60\u76EE\u6807",
-        concepts: "\u6982\u5FF5\u6570\u7EC4\uFF0C\u542B title/summary/prerequisites/difficulty/misconceptions/checkIdeas/anchors",
-        sequence: "string[] \u6982\u5FF5\u6807\u9898\u7684\u5B66\u4E60\u987A\u5E8F\uFF0C\u5FC5\u987B\u8986\u76D6\u6240\u6709\u6982\u5FF5"
+        notes: "string[] \u8D44\u6599\u4E0D\u8DB3\u6216\u8986\u76D6\u8BF4\u660E"
       }
     }
   };
@@ -5433,121 +6869,215 @@ function asStringArray(value, maxItems, maxLength) {
   }
   return out;
 }
-function validateDraftValue(value, material, limits, input) {
-  const record = asRecord(value);
-  if (record === void 0) return { ok: false, error: "\u6839\u8282\u70B9\u4E0D\u662F JSON \u5BF9\u8C61" };
-  const rawConcepts = record["concepts"];
-  if (!Array.isArray(rawConcepts) || rawConcepts.length === 0) {
-    return { ok: false, error: "concepts \u5FC5\u987B\u662F\u975E\u7A7A\u6570\u7EC4" };
-  }
-  const warnings = [];
-  const seenTitles = /* @__PURE__ */ new Set();
-  const concepts = [];
-  let invalidAnchors = 0;
-  let truncatedConcepts = 0;
-  for (const rawConcept of rawConcepts) {
-    if (concepts.length >= limits.draftMaxConcepts) {
-      truncatedConcepts += 1;
+function asDifficulty(value) {
+  return value === "intro" || value === "core" || value === "advanced" ? value : void 0;
+}
+function chapterRoleOf(rawRole, title) {
+  if (rawRole === "chapter" || rawRole === "appendix" || rawRole === "tool") return rawRole;
+  if (/工具|tool/i.test(title)) return "tool";
+  if (/附录|appendix|其他|补充/i.test(title)) return "appendix";
+  return "chapter";
+}
+function validateAnchors(rawAnchors, digest) {
+  const anchors = [];
+  let invalid = 0;
+  if (!Array.isArray(rawAnchors)) return { anchors, invalid };
+  for (const rawAnchor of rawAnchors.slice(0, 6)) {
+    const record = asRecord(rawAnchor);
+    if (record === void 0) {
+      invalid += 1;
       continue;
     }
-    const conceptRecord = asRecord(rawConcept);
-    if (conceptRecord === void 0) continue;
-    const title = typeof conceptRecord["title"] === "string" ? conceptRecord["title"].trim().slice(0, 120) : "";
-    if (title === "" || seenTitles.has(title)) continue;
-    seenTitles.add(title);
-    const summary = typeof conceptRecord["summary"] === "string" ? conceptRecord["summary"].trim().slice(0, 1200) : "";
-    const difficultyRaw = conceptRecord["difficulty"];
-    const difficulty = difficultyRaw === "intro" || difficultyRaw === "core" || difficultyRaw === "advanced" ? difficultyRaw : void 0;
-    const anchors = [];
-    const rawAnchors = conceptRecord["anchors"];
-    if (Array.isArray(rawAnchors)) {
-      for (const rawAnchor of rawAnchors.slice(0, 6)) {
-        const anchorRecord = asRecord(rawAnchor);
-        if (anchorRecord === void 0) {
-          invalidAnchors += 1;
-          continue;
-        }
-        const documentId = anchorRecord["documentId"];
-        const unitId2 = anchorRecord["unitId"];
-        if (typeof documentId !== "string" || typeof unitId2 !== "string") {
-          invalidAnchors += 1;
-          continue;
-        }
-        const found = material.anchorIndex.get(`${documentId}|${unitId2}`);
-        if (found === void 0) {
-          invalidAnchors += 1;
-          continue;
-        }
-        anchors.push({
-          documentId: found.document.id,
-          revisionId: found.revision.id,
-          unitId: found.unit.id,
-          locator: found.unit.locator,
-          excerpt: excerptAround(found.unit.text, [], 240),
-          confidence: found.unit.confidence,
-          label: `${found.document.title} \xB7 ${locatorDescription(found.unit.locator)}`
-        });
-      }
+    const documentId = record["documentId"];
+    const unitId2 = record["unitId"];
+    if (typeof documentId !== "string" || typeof unitId2 !== "string") {
+      invalid += 1;
+      continue;
     }
-    concepts.push({
-      title,
-      summary,
-      prerequisites: asStringArray(conceptRecord["prerequisites"], 8, 120),
-      ...difficulty !== void 0 ? { difficulty } : {},
-      misconceptions: asStringArray(conceptRecord["misconceptions"], 5, 240),
-      checkIdeas: asStringArray(conceptRecord["checkIdeas"], 5, 240),
-      anchors
+    const found = digest.anchorIndex.get(`${documentId}|${unitId2}`);
+    if (found === void 0) {
+      invalid += 1;
+      continue;
+    }
+    anchors.push({
+      documentId: found.document.id,
+      revisionId: found.revision.id,
+      unitId: found.unit.id,
+      locator: found.unit.locator,
+      excerpt: excerptAround(found.unit.text, [], 240),
+      confidence: found.unit.confidence,
+      label: `${found.document.title} \xB7 ${locatorDescription(found.unit.locator)}`
     });
   }
-  if (concepts.length === 0) {
-    return { ok: false, error: "concepts \u4E2D\u6CA1\u6709\u6709\u6548\u6982\u5FF5\uFF08\u9700\u8981\u81F3\u5C11\u4E00\u4E2A\u542B\u975E\u7A7A title \u7684\u5BF9\u8C61\uFF09" };
-  }
-  if (truncatedConcepts > 0) {
-    warnings.push(`\u6A21\u578B\u8FD4\u56DE\u7684\u6982\u5FF5\u8D85\u8FC7\u4E0A\u9650\uFF0C\u5DF2\u4FDD\u7559\u524D ${limits.draftMaxConcepts} \u4E2A\uFF08\u53E6\u6709 ${truncatedConcepts} \u4E2A\u88AB\u4E22\u5F03\uFF09`);
-  }
-  if (invalidAnchors > 0) {
-    warnings.push(`${invalidAnchors} \u4E2A\u6A21\u578B\u5F15\u7528\u65E0\u6CD5\u5BF9\u5E94\u5230\u771F\u5B9E\u8D44\u6599\u5355\u5143\uFF0C\u5DF2\u4E22\u5F03\uFF08\u4E0D\u4F2A\u9020\u6765\u6E90\u5B9A\u4F4D\uFF09`);
-  }
-  const withoutAnchors = concepts.filter((concept) => concept.anchors.length === 0);
-  if (withoutAnchors.length > 0 && material.documents.length > 0) {
-    warnings.push(`${withoutAnchors.length} \u4E2A\u6982\u5FF5\u6CA1\u6709\u8D44\u6599\u5B9A\u4F4D\uFF0C\u6559\u5B66\u65F6\u4F1A\u6807\u6CE8\u4E3A\u6A21\u578B\u77E5\u8BC6\uFF1A${withoutAnchors.slice(0, 5).map((concept) => concept.title).join("\u3001")}`);
-  }
-  const titleToOrder = /* @__PURE__ */ new Map();
-  concepts.forEach((concept, index) => titleToOrder.set(concept.title, index));
-  const sequence = [];
-  const sequenceSeen = /* @__PURE__ */ new Set();
-  const rawSequence = record["sequence"];
-  if (Array.isArray(rawSequence)) {
-    for (const item of rawSequence) {
-      let title;
-      if (typeof item === "string") title = item.trim();
-      else if (typeof item === "number" && Number.isInteger(item)) {
-        title = concepts[item]?.title;
-      }
-      if (title === void 0 || !titleToOrder.has(title) || sequenceSeen.has(title)) continue;
-      sequenceSeen.add(title);
-      sequence.push(title);
-    }
-  }
-  for (const concept of concepts) {
-    if (!sequenceSeen.has(concept.title)) {
-      sequenceSeen.add(concept.title);
-      sequence.push(concept.title);
-    }
-  }
-  if (!Array.isArray(rawSequence)) warnings.push("\u6A21\u578B\u6CA1\u6709\u7ED9\u51FA\u6709\u6548 sequence\uFF0C\u5DF2\u6309\u6982\u5FF5\u987A\u5E8F\u751F\u6210\u5B66\u4E60\u987A\u5E8F");
+  return { anchors, invalid };
+}
+function validateStructureValue(value, digest, input, limits) {
+  const record = asRecord(value);
+  if (record === void 0) return { ok: false, error: "\u6839\u8282\u70B9\u4E0D\u662F JSON \u5BF9\u8C61" };
+  const maxConcepts = Math.max(1, limits.draftLlmWikiMaxConcepts);
+  const warnings = [];
+  const notes = asStringArray(record["notes"], 8, 300);
   const goals = asStringArray(record["goals"], 10, 240);
-  if (goals.length === 0) goals.push(input.goal.trim().slice(0, 240));
-  else if (input.goal.trim() !== "" && !goals.includes(input.goal.trim())) {
-    goals.unshift(input.goal.trim().slice(0, 240));
+  const concepts = [];
+  const chapters = [];
+  const seenTitles = /* @__PURE__ */ new Set();
+  let invalidAnchors = 0;
+  let truncatedConcepts = 0;
+  let anchorlessConcepts = 0;
+  let rawSections;
+  if (Array.isArray(record["sections"])) {
+    rawSections = record["sections"];
+  } else if (Array.isArray(record["concepts"])) {
+    rawSections = [{
+      title: `${input.courseTitle} \xB7 \u8D44\u6599\u7ED3\u6784`,
+      summary: "\u6A21\u578B\u672A\u8FD4\u56DE\u7AE0\u8282\u5206\u533A\uFF0C\u6309\u6982\u5FF5\u5217\u8868\u751F\u6210\u5355\u7AE0\u7ED3\u6784",
+      role: "chapter",
+      concepts: record["concepts"]
+    }];
+    warnings.push("\u6A21\u578B\u8FD4\u56DE\u65E7\u7248\u6241\u5E73\u7ED3\u6784\uFF08\u65E0 sections\uFF09\uFF0C\u5DF2\u5F52\u5165\u5355\u7AE0\u8282");
+  } else {
+    return { ok: false, error: "sections \u5FC5\u987B\u662F\u6570\u7EC4\uFF08\u6216\u517C\u5BB9\u65E7\u7248 concepts \u6570\u7EC4\uFF09" };
   }
+  let sectionCount = 0;
+  for (const rawSection of rawSections.slice(0, 40)) {
+    sectionCount += 1;
+    const sectionRecord = asRecord(rawSection);
+    if (sectionRecord === void 0) continue;
+    const sectionTitle = typeof sectionRecord["title"] === "string" ? sectionRecord["title"].trim().slice(0, 120) : "";
+    const title = sectionTitle === "" ? `\u7B2C ${sectionCount} \u90E8\u5206` : sectionTitle;
+    const chapterConceptTitles = [];
+    const rawConcepts = Array.isArray(sectionRecord["concepts"]) ? sectionRecord["concepts"] : [];
+    for (const rawConcept of rawConcepts) {
+      if (concepts.length >= maxConcepts) {
+        truncatedConcepts += 1;
+        continue;
+      }
+      const conceptRecord = asRecord(rawConcept);
+      if (conceptRecord === void 0) continue;
+      const conceptTitle = typeof conceptRecord["title"] === "string" ? conceptRecord["title"].trim().slice(0, 120) : "";
+      if (conceptTitle === "" || seenTitles.has(conceptTitle)) continue;
+      seenTitles.add(conceptTitle);
+      const { anchors, invalid } = validateAnchors(conceptRecord["anchors"], digest);
+      invalidAnchors += invalid;
+      if (anchors.length === 0) anchorlessConcepts += 1;
+      concepts.push({
+        title: conceptTitle,
+        summary: typeof conceptRecord["summary"] === "string" ? conceptRecord["summary"].trim().slice(0, 1200) : "",
+        prerequisites: asStringArray(conceptRecord["prerequisites"], 8, 120).filter((prerequisite) => prerequisite !== conceptTitle),
+        anchors,
+        ...asDifficulty(conceptRecord["difficulty"]) !== void 0 ? { difficulty: asDifficulty(conceptRecord["difficulty"]) } : {},
+        misconceptions: asStringArray(conceptRecord["misconceptions"], 5, 240),
+        checkIdeas: asStringArray(conceptRecord["checkIdeas"], 5, 240)
+      });
+      chapterConceptTitles.push(conceptTitle);
+    }
+    const role = chapterRoleOf(sectionRecord["role"], title);
+    chapters.push({
+      title,
+      ...typeof sectionRecord["summary"] === "string" && sectionRecord["summary"].trim() !== "" ? { summary: sectionRecord["summary"].trim().slice(0, 400) } : {},
+      role,
+      conceptTitles: chapterConceptTitles
+    });
+  }
+  if (concepts.length === 0) return { ok: false, error: "sections \u4E2D\u6CA1\u6709\u6709\u6548\u6982\u5FF5\uFF08\u9700\u8981\u542B\u975E\u7A7A title \u7684\u5BF9\u8C61\uFF09" };
+  if (truncatedConcepts > 0) warnings.push(`\u6982\u5FF5\u8D85\u8FC7\u4E0A\u9650\uFF08${maxConcepts}\uFF09\uFF0C\u5DF2\u4E22\u5F03 ${truncatedConcepts} \u4E2A`);
+  if (invalidAnchors > 0) {
+    warnings.push(`${invalidAnchors} \u4E2A\u6A21\u578B\u5F15\u7528\u65E0\u6CD5\u5BF9\u5E94\u5230\u8D44\u6599\u6458\u8981\u4E2D\u7684\u771F\u5B9E\u5355\u5143\uFF0C\u5DF2\u4E22\u5F03\uFF08\u4E0D\u4F2A\u9020\u6765\u6E90\u5B9A\u4F4D\uFF09`);
+  }
+  if (anchorlessConcepts > 0 && digest.documentCount > 0) {
+    warnings.push(`${anchorlessConcepts} \u4E2A\u6982\u5FF5\u6CA1\u6709\u8D44\u6599\u951A\u70B9\uFF0C\u6559\u5B66\u65F6\u4F1A\u6807\u6CE8\u4E3A\u6A21\u578B\u77E5\u8BC6`);
+  }
+  const covered = new Set(chapters.flatMap((chapter) => chapter.conceptTitles));
+  const missing = concepts.map((concept) => concept.title).filter((title) => !covered.has(title));
+  if (missing.length > 0) {
+    const last = chapters[chapters.length - 1];
+    if (last === void 0) chapters.push({ title: "\u8BFE\u7A0B\u4E3B\u7EBF", role: "chapter", conceptTitles: missing });
+    else last.conceptTitles.push(...missing);
+    warnings.push(`${missing.length} \u4E2A\u6982\u5FF5\u672A\u5F52\u5165\u6A21\u578B\u7ED9\u51FA\u7684\u7AE0\u8282\uFF0C\u5DF2\u9644\u5230\u6700\u540E\u4E00\u7AE0`);
+  }
+  const finalChapters = chapters.filter((chapter) => chapter.conceptTitles.length > 0 || chapter.role === "tool");
   return {
     ok: true,
-    value: { goals, concepts, sequence },
-    warnings
+    value: {
+      chapters: finalChapters,
+      concepts,
+      goals,
+      notes,
+      warnings
+    }
   };
 }
-async function persistDraft(deps, input, material, draft, warnings) {
+function mergeValidatedStructures(results, input, _limits, warnings) {
+  const conceptByTitle = /* @__PURE__ */ new Map();
+  const chapterByTitle = /* @__PURE__ */ new Map();
+  const notes = [];
+  const goals = [];
+  for (const result of results) {
+    warnings.push(...result.warnings);
+    notes.push(...result.notes);
+    for (const goal of result.goals) {
+      if (!goals.includes(goal) && goals.length < 10) goals.push(goal);
+    }
+    for (const concept of result.concepts) {
+      if (conceptByTitle.has(concept.title)) {
+        warnings.push(`\u8DE8\u5206\u7EC4\u91CD\u590D\u6982\u5FF5\u300A${concept.title}\u300B\uFF0C\u4FDD\u7559\u9996\u6B21\u51FA\u73B0\u7684\u5B9A\u4E49`);
+        continue;
+      }
+      conceptByTitle.set(concept.title, {
+        title: concept.title,
+        summary: concept.summary,
+        prerequisites: concept.prerequisites,
+        anchors: concept.anchors,
+        ...concept.difficulty !== void 0 ? { difficulty: concept.difficulty } : {},
+        ...concept.misconceptions.length > 0 ? { misconceptions: concept.misconceptions } : {},
+        ...concept.checkIdeas.length > 0 ? { checkIdeas: concept.checkIdeas } : {}
+      });
+    }
+    for (const chapter of result.chapters) {
+      const key = chapter.title.toLowerCase().replace(/\s+/g, " ").trim();
+      const existing = chapterByTitle.get(key);
+      if (existing === void 0) {
+        chapterByTitle.set(key, {
+          title: chapter.title,
+          ...chapter.summary !== void 0 ? { summary: chapter.summary } : {},
+          role: chapter.role,
+          conceptTitles: [...chapter.conceptTitles]
+        });
+        continue;
+      }
+      for (const title of chapter.conceptTitles) {
+        if (!existing.conceptTitles.includes(title)) existing.conceptTitles.push(title);
+      }
+      if (existing.summary === void 0 && chapter.summary !== void 0) existing.summary = chapter.summary;
+    }
+  }
+  const knownTitles = new Set(conceptByTitle.keys());
+  const inputGoal = input.goal.trim().slice(0, 240);
+  const mergedGoals = inputGoal === "" ? goals : [inputGoal, ...goals.filter((goal) => goal !== inputGoal)];
+  const concepts = [...conceptByTitle.values()];
+  const chapterEntries = [...chapterByTitle.values()].map((chapter) => ({
+    ...chapter,
+    conceptTitles: chapter.conceptTitles.filter((title) => knownTitles.has(title))
+  }));
+  const covered = new Set(chapterEntries.flatMap((chapter) => chapter.conceptTitles));
+  const missing = concepts.map((concept) => concept.title).filter((title) => !covered.has(title));
+  if (missing.length > 0) {
+    chapterEntries.push({ title: "\u5176\u4ED6\u6982\u5FF5", role: "appendix", conceptTitles: missing });
+  }
+  const chapters = chapterEntries.map((chapter) => ({
+    title: chapter.title,
+    ...chapter.summary !== void 0 ? { summary: chapter.summary } : {},
+    role: chapter.role,
+    conceptTitles: chapter.conceptTitles
+  }));
+  return { concepts, chapters, goals: mergedGoals, notes };
+}
+function titleIdMap(concepts) {
+  const map = /* @__PURE__ */ new Map();
+  for (const concept of concepts) map.set(concept.title, conceptId());
+  return map;
+}
+async function persistStructureRevision(deps, input, data) {
   const course = await deps.courses.get(input.courseId);
   if (course === void 0) throw new Error("\u8BFE\u7A0B\u4E0D\u5B58\u5728");
   const existing = await deps.courses.listRevisions(input.courseId);
@@ -5558,66 +7088,77 @@ async function persistDraft(deps, input, material, draft, warnings) {
       await deps.courses.saveRevision({ ...oldDraft, state: "superseded" });
     }
   }
-  const titleToId = /* @__PURE__ */ new Map();
-  const concepts = draft.concepts.map((concept) => {
-    const id = conceptId();
-    titleToId.set(concept.title, id);
+  const idsByTitle = titleIdMap(data.concepts);
+  const concepts = data.concepts.map((concept) => {
+    const id = idsByTitle.get(concept.title);
+    if (id === void 0) throw new Error(`\u6982\u5FF5\u7F3A\u5C11 id\uFF1A${concept.title}`);
+    const prerequisites = concept.prerequisites.map((prerequisite) => idsByTitle.get(prerequisite)).filter((value) => value !== void 0 && value !== id);
     return {
       id,
       title: concept.title,
       summary: concept.summary,
-      prerequisites: [],
+      prerequisites: [...new Set(prerequisites)],
       sourceAnchors: concept.anchors,
       ...concept.difficulty !== void 0 ? { difficulty: concept.difficulty } : {},
-      ...concept.misconceptions.length > 0 ? { misconceptions: concept.misconceptions } : {},
-      ...concept.checkIdeas.length > 0 ? { checkIdeas: concept.checkIdeas } : {}
+      ...concept.misconceptions !== void 0 && concept.misconceptions.length > 0 ? { misconceptions: concept.misconceptions } : {},
+      ...concept.checkIdeas !== void 0 && concept.checkIdeas.length > 0 ? { checkIdeas: concept.checkIdeas } : {}
     };
   });
-  const conceptsWithPrereqs = concepts.map((concept, index) => {
-    const source = draft.concepts[index];
-    const prerequisites = source.prerequisites.map((title) => titleToId.get(title)).filter((value) => value !== void 0 && value !== concept.id);
-    const unique = [...new Set(prerequisites)];
-    return { ...concept, prerequisites: unique };
-  });
-  const sequence = draft.sequence.map((title) => titleToId.get(title)).filter((value) => value !== void 0);
-  for (const concept of conceptsWithPrereqs) {
-    if (!sequence.includes(concept.id)) sequence.push(concept.id);
+  const conceptsById = new Map(concepts.map((concept) => [concept.id, concept]));
+  const chapters = [];
+  for (const [chapterIndex, chapter] of data.chapters.entries()) {
+    const conceptIds = chapter.conceptTitles.map((title) => idsByTitle.get(title)).filter((id) => id !== void 0 && conceptsById.has(id));
+    chapters.push({
+      id: `chapter-${chapterIndex + 1}-${chapter.title.toLowerCase().replace(/[^\p{Letter}\p{Number}]+/gu, "-").replace(/^-|-$/g, "").slice(0, 40) || "section"}`,
+      title: chapter.title,
+      ...chapter.summary !== void 0 ? { summary: chapter.summary } : {},
+      conceptIds: [...new Set(conceptIds)],
+      ...chapter.anchors !== void 0 && chapter.anchors.length > 0 ? { sourceAnchors: chapter.anchors } : {},
+      role: chapter.role
+    });
   }
-  const basedOn = material.documents.filter((materialDocument) => materialDocument.document.currentRevisionId !== void 0).map((materialDocument) => ({
-    sourceId: materialDocument.document.id,
-    revisionId: materialDocument.revision.id
-  }));
-  const sources = material.documents.map((materialDocument) => ({
-    sourceId: materialDocument.document.id,
-    role: ROLE_BY_FORMAT[materialDocument.document.format]
-  }));
+  const visibleChapters = chapters.filter((chapter) => chapter.conceptIds.length > 0);
+  const chapterCovered = new Set(visibleChapters.flatMap((chapter) => chapter.conceptIds));
+  const uncovered = concepts.filter((concept) => !chapterCovered.has(concept.id));
+  if (uncovered.length > 0) {
+    if (visibleChapters.length === 0) {
+      visibleChapters.push({
+        id: "chapter-main",
+        title: "\u8BFE\u7A0B\u4E3B\u7EBF",
+        conceptIds: uncovered.map((concept) => concept.id),
+        role: "chapter"
+      });
+    } else {
+      const last = visibleChapters[visibleChapters.length - 1];
+      visibleChapters[visibleChapters.length - 1] = {
+        ...last,
+        conceptIds: [...last.conceptIds, ...uncovered.map((concept) => concept.id)]
+      };
+    }
+  }
+  const chapterConceptIds = visibleChapters.flatMap((chapter) => [...chapter.conceptIds]);
+  const requestedSequence = data.sequenceTitles !== void 0 ? data.sequenceTitles.map((title) => idsByTitle.get(title)).filter((id) => id !== void 0) : [];
+  const sequence = [.../* @__PURE__ */ new Set([...requestedSequence, ...chapterConceptIds])];
   const revision = {
     id: courseRevisionId(),
     courseId: course.id,
     version: version3,
     createdAt: nowIso(),
     state: "draft",
-    provenance: "ai-draft",
-    goals: draft.goals,
+    provenance: data.provenance,
+    goals: data.goals.length > 0 ? [...data.goals] : buildGoals(input),
     ...input.background !== void 0 && input.background.trim() !== "" ? { background: input.background.trim() } : {},
     language: input.language,
-    sources,
-    concepts: conceptsWithPrereqs,
+    sources: data.sources,
+    concepts,
     sequence,
-    changeSummary: describeDraft(material, conceptsWithPrereqs, warnings),
-    basedOn
+    ...visibleChapters.length > 0 ? { chapters: visibleChapters } : {},
+    changeSummary: data.changeSummary,
+    basedOn: data.basedOn
   };
   await deps.courses.saveRevision(revision);
   await deps.courses.save({ ...course, draftRevisionId: revision.id });
   return revision;
-}
-function describeDraft(material, concepts, warnings) {
-  const anchorCount = concepts.reduce((sum, concept) => sum + concept.sourceAnchors.length, 0);
-  const parts = [
-    `AI \u8349\u6848\uFF1A\u8BFB\u53D6 ${material.documents.length} \u4EFD\u8D44\u6599\uFF0C\u751F\u6210 ${concepts.length} \u4E2A\u6982\u5FF5\uFF08${anchorCount} \u4E2A\u8D44\u6599\u5B9A\u4F4D\uFF09`
-  ];
-  if (warnings.length > 0) parts.push(warnings.slice(0, 3).join("\uFF1B"));
-  return parts.join("\u3002");
 }
 async function buildDraftCoverage(deps, courseId2, revisionId) {
   const course = await deps.courses.get(courseId2);
@@ -5633,6 +7174,11 @@ async function buildDraftCoverage(deps, courseId2, revisionId) {
   const usedUnitCount = /* @__PURE__ */ new Map();
   for (const concept of revision.concepts) {
     for (const anchor of concept.sourceAnchors) {
+      usedUnitCount.set(anchor.documentId, (usedUnitCount.get(anchor.documentId) ?? 0) + 1);
+    }
+  }
+  for (const chapter of revision.chapters ?? []) {
+    for (const anchor of chapter.sourceAnchors ?? []) {
       usedUnitCount.set(anchor.documentId, (usedUnitCount.get(anchor.documentId) ?? 0) + 1);
     }
   }
@@ -5662,7 +7208,8 @@ async function buildDraftCoverage(deps, courseId2, revisionId) {
     if (meta?.status === "failed") {
       warnings.push(`\u300A${document2.title}\u300B\u89E3\u6790\u5931\u8D25\uFF0C\u8349\u6848\u53EF\u80FD\u7F3A\u5C11\u8BE5\u8D44\u6599\u7684\u5185\u5BB9`);
     }
-    if (usedUnits === 0 && revision.sources.some((source) => source.sourceId === document2.id)) {
+    const structuralDocument = /(^|\/)(schema|index|log|error-log)(-\d{4})?\.md$/i.test(document2.originalPath) || /overview/i.test(document2.title + document2.originalPath);
+    if (usedUnits === 0 && !structuralDocument && revision.sources.some((source) => source.sourceId === document2.id)) {
       warnings.push(`\u300A${document2.title}\u300B\u6CA1\u6709\u88AB\u4EFB\u4F55\u6982\u5FF5\u5F15\u7528\uFF0C\u53EF\u80FD\u53EA\u662F\u8F85\u52A9\u8D44\u6599`);
     }
   }
@@ -5672,6 +7219,18 @@ async function buildDraftCoverage(deps, courseId2, revisionId) {
   const withoutAnchors = revision.concepts.filter((concept) => concept.sourceAnchors.length === 0);
   if (withoutAnchors.length > 0) {
     warnings.push(`${withoutAnchors.length} \u4E2A\u6982\u5FF5\u6CA1\u6709\u8D44\u6599\u5B9A\u4F4D\uFF1A${withoutAnchors.slice(0, 5).map((concept) => concept.title).join("\u3001")}`);
+  }
+  if (revision.chapters !== void 0 && revision.chapters.length > 0) {
+    const chapterConceptIds = new Set(revision.chapters.flatMap((chapter) => chapter.conceptIds));
+    const chapterless = revision.concepts.filter((concept) => !chapterConceptIds.has(concept.id));
+    if (chapterless.length > 0) {
+      warnings.push(`${chapterless.length} \u4E2A\u6982\u5FF5\u4E0D\u5C5E\u4E8E\u4EFB\u4F55\u7AE0\u8282\uFF0C\u5B66\u4E60\u4E2D\u4F1A\u6309\u5E73\u94FA\u987A\u5E8F\u5C55\u793A`);
+    }
+  }
+  if (revision.provenance === "kb-structure") {
+    warnings.push("\u7ED3\u6784\u6765\u6E90\uFF1A\u77E5\u8BC6\u5E93\u7ED3\u6784\u76F4\u8BFB\uFF08kb-structure\uFF09\uFF1B\u8D44\u6599\u6216\u77E5\u8BC6\u5E93\u7ED3\u6784\u53D8\u5316\u540E\u5EFA\u8BAE\u91CD\u65B0\u751F\u6210");
+  } else if (revision.provenance === "llm-wiki") {
+    warnings.push("\u7ED3\u6784\u6765\u6E90\uFF1A\u6309 LLM-wiki \u89C4\u5219\u751F\u6210\u7684\u865A\u62DF\u7ED3\u6784\uFF08llm-wiki\uFF09\uFF0C\u672A\u5199\u5165\u5B66\u751F\u539F\u59CB\u77E5\u8BC6\u5E93");
   }
   const revisionIds = new Set(revision.basedOn.map((item) => item.revisionId));
   let staleAnchors = 0;
@@ -5842,15 +7401,15 @@ function describeDiff(diff, conceptCount, activityCount) {
 }
 
 // packages/teaching-core/src/corpus/parsers/index.ts
-import { extname as extname3 } from "node:path";
+import { extname as extname4 } from "node:path";
 
 // packages/teaching-core/src/corpus/parsers/plain.ts
-import { dirname as dirname3 } from "node:path";
+import { dirname as dirname4 } from "node:path";
 
 // packages/teaching-core/src/corpus/parsers/context.ts
 import { createHash as createHash2 } from "node:crypto";
-import { readFile as readFile3 } from "node:fs/promises";
-import { basename, extname, isAbsolute as isAbsolute2, resolve as resolvePath } from "node:path";
+import { readFile as readFile4 } from "node:fs/promises";
+import { basename as basename2, extname as extname2, isAbsolute as isAbsolute2, resolve as resolvePath } from "node:path";
 var IMAGE_EXTENSIONS = /* @__PURE__ */ new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp"]);
 function decodeText(bytes) {
   const text2 = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
@@ -5880,7 +7439,7 @@ function resolveLocalAssetRef(fileDir, ref) {
     cleaned = decodeURIComponent(cleaned);
   } catch {
   }
-  const extension = extname(cleaned).toLowerCase();
+  const extension = extname2(cleaned).toLowerCase();
   if (!IMAGE_EXTENSIONS.has(extension)) return void 0;
   const absolutePath = isAbsolute2(cleaned) ? cleaned : resolvePath(fileDir, cleaned);
   return { absolutePath, extension, ref };
@@ -5902,7 +7461,7 @@ async function addLocalImageAsset(budget, fileDir, ref, prefix) {
   const resolved = resolveLocalAssetRef(fileDir, ref);
   if (resolved === void 0) return void 0;
   try {
-    const bytes = new Uint8Array(await readFile3(resolved.absolutePath));
+    const bytes = new Uint8Array(await readFile4(resolved.absolutePath));
     const assetPath = addImageAsset(budget, bytes, resolved.extension, prefix);
     return { ...assetPath !== void 0 ? { assetPath } : {}, ref: resolved };
   } catch {
@@ -5910,7 +7469,7 @@ async function addLocalImageAsset(budget, fileDir, ref, prefix) {
   }
 }
 function assetNamePrefix(documentPath) {
-  const name2 = basename(documentPath, extname(documentPath)).replace(/[^\w-]+/g, "-").slice(0, 24);
+  const name2 = basename2(documentPath, extname2(documentPath)).replace(/[^\w-]+/g, "-").slice(0, 24);
   return name2 === "" ? "asset" : name2;
 }
 
@@ -6133,7 +7692,7 @@ async function parseMarkdown(context) {
   const budget = new ExtractionBudget(context.revisionId, context.limits, context.signal);
   await extractMarkdown(text2, {
     budget,
-    fileDir: dirname3(context.path),
+    fileDir: dirname4(context.path),
     assetPrefix: assetNamePrefix(context.path)
   });
   return budget.finalize("markdown", void 0, {
@@ -6420,7 +7979,7 @@ async function addFigureUnit(budget, options, input) {
 }
 
 // packages/teaching-core/src/corpus/parsers/notebook.ts
-import { dirname as dirname4 } from "node:path";
+import { dirname as dirname5 } from "node:path";
 var EXTRACTOR_VERSION2 = "1.0.0";
 function joinSource(value) {
   if (value === void 0) return "";
@@ -6464,7 +8023,7 @@ async function parseNotebook(context) {
     if (cellType === "markdown") {
       await extractMarkdown(source, {
         budget,
-        fileDir: dirname4(context.path),
+        fileDir: dirname5(context.path),
         baseLocator: { cell: index },
         assetPrefix
       });
@@ -6577,7 +8136,7 @@ function decodeBase64(value) {
 }
 
 // packages/teaching-core/src/corpus/parsers/html.ts
-import { dirname as dirname5 } from "node:path";
+import { dirname as dirname6 } from "node:path";
 var EXTRACTOR_VERSION3 = "1.0.0";
 var TOKEN_REGEX = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<![^>]*>|<\/?([a-zA-Z][\w:-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)\/?>/g;
 var ATTR_REGEX = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
@@ -6655,7 +8214,7 @@ function stripTags(html) {
 async function parseHtml(context) {
   const raw = assertTextual(context.bytes, "HTML \u6587\u4EF6");
   const budget = new ExtractionBudget(context.revisionId, context.limits, context.signal);
-  const fileDir = dirname5(context.path);
+  const fileDir = dirname6(context.path);
   const assetPrefix = assetNamePrefix(context.path);
   const lineStarts2 = computeLineStarts(raw);
   const totalLines = lineStarts2.length;
@@ -6937,7 +8496,7 @@ function computeLineStarts(text2) {
 }
 
 // packages/teaching-core/src/corpus/parsers/office.ts
-import { extname as extname2 } from "node:path";
+import { extname as extname3 } from "node:path";
 
 // packages/teaching-core/src/corpus/xml.ts
 var import_fast_xml_parser = __toESM(require_fxp(), 1);
@@ -7140,7 +8699,7 @@ function addDocxImage(budget, files, slideOrDocumentDir, rels, embedId, prefix) 
   const partPath = resolvePartPath(slideOrDocumentDir, relationship.target);
   const bytes = findZipEntry(files, partPath);
   if (bytes === void 0) return { missing: `\u56FE\u7247\u90E8\u4EF6\u7F3A\u5931\uFF1A${partPath}` };
-  const extension = extname2(partPath).toLowerCase();
+  const extension = extname3(partPath).toLowerCase();
   const assetPath = addImageAsset(budget, bytes, extension, prefix);
   return assetPath !== void 0 ? { assetPath } : { missing: "\u56FE\u7247\u8FC7\u5927\u6216\u6570\u91CF\u8D85\u9650" };
 }
@@ -9392,13 +10951,13 @@ var __webpack_modules__ = {
       var aCallable = __webpack_require__2(9306);
       var $TypeError = TypeError;
       var PromiseCapability = function(C) {
-        var resolve5, reject;
+        var resolve6, reject;
         this.promise = new C(function($$resolve, $$reject) {
-          if (resolve5 !== void 0 || reject !== void 0) throw new $TypeError("Bad Promise constructor");
-          resolve5 = $$resolve;
+          if (resolve6 !== void 0 || reject !== void 0) throw new $TypeError("Bad Promise constructor");
+          resolve6 = $$resolve;
           reject = $$reject;
         });
-        this.resolve = aCallable(resolve5);
+        this.resolve = aCallable(resolve6);
         this.reject = aCallable(reject);
       };
       module.exports.f = function(C) {
@@ -12240,7 +13799,7 @@ async function fetchData(url, type = "text") {
     }
     return response.text();
   }
-  return new Promise((resolve5, reject) => {
+  return new Promise((resolve6, reject) => {
     const request = new XMLHttpRequest();
     request.open("GET", url, true);
     request.responseType = type;
@@ -12253,10 +13812,10 @@ async function fetchData(url, type = "text") {
           case "arraybuffer":
           case "blob":
           case "json":
-            resolve5(request.response);
+            resolve6(request.response);
             return;
         }
-        resolve5(request.responseText);
+        resolve6(request.responseText);
         return;
       }
       reject(new Error(request.statusText));
@@ -12870,11 +14429,11 @@ var ImageManager = class _ImageManager {
         const mustRemoveAspectRatioPromise = _ImageManager._isSVGFittingCanvas;
         const fileReader = new FileReader();
         const imageElement = new Image();
-        const imagePromise = new Promise((resolve5, reject) => {
+        const imagePromise = new Promise((resolve6, reject) => {
           imageElement.onload = () => {
             data.bitmap = imageElement;
             data.isSvg = true;
-            resolve5();
+            resolve6();
           };
           fileReader.onload = async () => {
             const url = data.svgUrl = fileReader.result;
@@ -16723,8 +18282,8 @@ var FontLoader = class {
       if (this.isSyncFontLoadingSupported) {
         return;
       }
-      await new Promise((resolve5) => {
-        const request = this._queueLoadingCallback(resolve5);
+      await new Promise((resolve6) => {
+        const request = this._queueLoadingCallback(resolve6);
         this._prepareFontLoadEvent(font, request);
       });
     }
@@ -23156,14 +24715,14 @@ var PDFPageProxy = class {
       return this.getXfa().then((xfa) => XfaText.textContent(xfa));
     }
     const readableStream = this.streamTextContent(params);
-    return new Promise(function(resolve5, reject) {
+    return new Promise(function(resolve6, reject) {
       function pump() {
         reader.read().then(function({
           value,
           done
         }) {
           if (done) {
-            resolve5(textContent);
+            resolve6(textContent);
             return;
           }
           textContent.lang ??= value.lang;
@@ -31272,7 +32831,7 @@ var StampEditor = class _StampEditor extends AnnotationEditor {
     input.type = "file";
     input.accept = _StampEditor.supportedTypesStr;
     const signal = this._uiManager._signal;
-    this.#bitmapPromise = new Promise((resolve5) => {
+    this.#bitmapPromise = new Promise((resolve6) => {
       input.addEventListener("change", async () => {
         if (!input.files || input.files.length === 0) {
           this.remove();
@@ -31287,13 +32846,13 @@ var StampEditor = class _StampEditor extends AnnotationEditor {
           });
           this.#getBitmapFetched(data);
         }
-        resolve5();
+        resolve6();
       }, {
         signal
       });
       input.addEventListener("cancel", () => {
         this.remove();
-        resolve5();
+        resolve6();
       }, {
         signal
       });
@@ -33172,14 +34731,14 @@ async function parsePdf(context) {
 }
 
 // packages/teaching-core/src/corpus/parsers/image.ts
-import { basename as basename2 } from "node:path";
+import { basename as basename3 } from "node:path";
 var EXTRACTOR_VERSION6 = "1.0.0";
 async function parseImage(context) {
   const budget = new ExtractionBudget(context.revisionId, context.limits, context.signal);
   const assetPrefix = assetNamePrefix(context.path);
   const locator = {};
   const assetPath = addImageAsset(budget, context.bytes, context.extension, `${assetPrefix}-original`);
-  const fileName = basename2(context.path);
+  const fileName = basename3(context.path);
   budget.addUnit({
     kind: "figure",
     locator,
@@ -33272,10 +34831,10 @@ function detectSourceFormat(path2, formatHint) {
   if (formatHint !== void 0 && formatHint !== "") {
     const hint = FORMAT_ALIASES[formatHint.trim().toLowerCase()];
     if (hint !== void 0) {
-      return hint === "code" ? { format: "code", ...codeLanguageOf(extname3(path2).toLowerCase()) !== void 0 ? { detail: codeLanguageOf(extname3(path2).toLowerCase()) } : {} } : { format: hint };
+      return hint === "code" ? { format: "code", ...codeLanguageOf(extname4(path2).toLowerCase()) !== void 0 ? { detail: codeLanguageOf(extname4(path2).toLowerCase()) } : {} } : { format: hint };
     }
   }
-  const extension = extname3(path2).toLowerCase();
+  const extension = extname4(path2).toLowerCase();
   const fromExtension = EXTENSION_FORMATS[extension];
   if (fromExtension !== void 0) return { format: fromExtension };
   const language = codeLanguageOf(extension);
@@ -33420,7 +34979,7 @@ var CorpusServiceImpl = class {
   async importOne(request, signal) {
     const rawPath = typeof request.path === "string" ? request.path.trim() : "";
     if (rawPath === "") return err("invalid-input", "\u5BFC\u5165\u8DEF\u5F84\u4E3A\u7A7A");
-    const absolutePath = resolve(rawPath);
+    const absolutePath = resolve2(rawPath);
     const info2 = await statFile(absolutePath);
     if (info2 === void 0) {
       return err("not-found", `\u8D44\u6599\u6587\u4EF6\u4E0D\u5B58\u5728\u6216\u4E0D\u662F\u666E\u901A\u6587\u4EF6\uFF1A${absolutePath}`);
@@ -33432,7 +34991,7 @@ var CorpusServiceImpl = class {
     if (detected === void 0) {
       return err(
         "invalid-input",
-        `\u4E0D\u652F\u6301\u7684\u8D44\u6599\u683C\u5F0F\uFF1A${extname4(absolutePath) || "\u65E0\u6269\u5C55\u540D"}\uFF08\u652F\u6301 Markdown/\u6587\u672C/PDF/\u56FE\u7247/Word/PPT/\u4EE3\u7801/Notebook/HTML\uFF09`,
+        `\u4E0D\u652F\u6301\u7684\u8D44\u6599\u683C\u5F0F\uFF1A${extname5(absolutePath) || "\u65E0\u6269\u5C55\u540D"}\uFF08\u652F\u6301 Markdown/\u6587\u672C/PDF/\u56FE\u7247/Word/PPT/\u4EE3\u7801/Notebook/HTML\uFF09`,
         { cause: "unsupported-format", details: { path: absolutePath } }
       );
     }
@@ -33445,13 +35004,13 @@ var CorpusServiceImpl = class {
         return ok(await this.attachCourseIfNeeded(existing, request.courseId));
       }
     }
-    const bytes = new Uint8Array(await readFile4(absolutePath));
+    const bytes = new Uint8Array(await readFile5(absolutePath));
     const revisionId = sourceRevisionId();
     const parsed = await this.runParser({
       path: absolutePath,
       bytes,
       format: detected.format,
-      extension: extname4(absolutePath).toLowerCase(),
+      extension: extname5(absolutePath).toLowerCase(),
       revisionId,
       ...signal !== void 0 ? { signal } : {}
     });
@@ -33535,7 +35094,7 @@ var CorpusServiceImpl = class {
     const document2 = {
       id: documentId,
       originalPath: input.absolutePath,
-      title: input.title ?? base?.title ?? basename3(input.absolutePath),
+      title: input.title ?? base?.title ?? basename4(input.absolutePath),
       format: input.format,
       ...detail !== void 0 ? { detail } : {},
       sizeBytes: input.stat.sizeBytes,
@@ -33646,6 +35205,19 @@ var CorpusServiceImpl = class {
       );
     });
   }
+  async detectKnowledgeBase(input) {
+    return await this.guard("\u68C0\u6D4B\u77E5\u8BC6\u5E93\u7ED3\u6784\u5931\u8D25", async () => {
+      const prepared = await prepareKbContext(
+        { store: this.store, limits: this.limits },
+        {
+          courseId: input.courseId,
+          ...input.documentIds !== void 0 ? { documentIds: input.documentIds } : {}
+        }
+      );
+      if (!prepared.ok) return prepared;
+      return ok(prepared.value.detection);
+    });
+  }
   async buildCourseDraftCoverage(courseId2, revisionId) {
     return await this.guard("\u8BFB\u53D6\u8BFE\u7A0B\u8349\u6848\u8986\u76D6\u60C5\u51B5\u5931\u8D25", async () => {
       return await buildDraftCoverage(
@@ -33754,13 +35326,13 @@ var CorpusServiceImpl = class {
     const previousPayload = document2.currentRevisionId !== void 0 ? await this.store.readRevisionPayload(document2.id, document2.currentRevisionId) : void 0;
     const detectedFormat = detectSourceFormat(document2.originalPath, document2.format) ?? { format: document2.format };
     if (isSignalAborted(signal)) return err("cancelled", "\u66F4\u65B0\u8D44\u6599\u5DF2\u53D6\u6D88");
-    const bytes = new Uint8Array(await readFile4(document2.originalPath));
+    const bytes = new Uint8Array(await readFile5(document2.originalPath));
     const revisionId = sourceRevisionId();
     const parsed = await this.runParser({
       path: document2.originalPath,
       bytes,
       format: detectedFormat.format,
-      extension: extname4(document2.originalPath).toLowerCase(),
+      extension: extname5(document2.originalPath).toLowerCase(),
       revisionId,
       ...signal !== void 0 ? { signal } : {}
     });
@@ -33841,23 +35413,23 @@ var CorpusServiceImpl = class {
   /* ---------------------------------------------------------------- 其它契约 */
   async parseFile(path2, formatHint) {
     return await this.guard("\u89E3\u6790\u8D44\u6599\u5931\u8D25", async () => {
-      const absolutePath = resolve(path2);
+      const absolutePath = resolve2(path2);
       const info2 = await statFile(absolutePath);
       if (info2 === void 0) return err("not-found", `\u8D44\u6599\u6587\u4EF6\u4E0D\u5B58\u5728\uFF1A${absolutePath}`);
       if (info2.sizeBytes > this.limits.maxFileBytes) return err("limit-exceeded", "\u6587\u4EF6\u8D85\u8FC7\u5355\u4EFD\u4E0A\u9650");
       const detected = detectSourceFormat(absolutePath, formatHint);
       if (detected === void 0) {
-        return err("invalid-input", `\u4E0D\u652F\u6301\u7684\u8D44\u6599\u683C\u5F0F\uFF1A${extname4(absolutePath) || "\u65E0\u6269\u5C55\u540D"}`, {
+        return err("invalid-input", `\u4E0D\u652F\u6301\u7684\u8D44\u6599\u683C\u5F0F\uFF1A${extname5(absolutePath) || "\u65E0\u6269\u5C55\u540D"}`, {
           cause: "unsupported-format"
         });
       }
-      const bytes = new Uint8Array(await readFile4(absolutePath));
+      const bytes = new Uint8Array(await readFile5(absolutePath));
       const revisionId = sourceRevisionId();
       const parsed = await this.runParser({
         path: absolutePath,
         bytes,
         format: detected.format,
-        extension: extname4(absolutePath).toLowerCase(),
+        extension: extname5(absolutePath).toLowerCase(),
         revisionId,
         ...formatHint !== void 0 ? { formatHint } : {}
       });
@@ -34238,7 +35810,7 @@ function styleGuidance(profile) {
 }
 
 // packages/teaching-core/src/teaching/format.ts
-function truncate(text2, max2) {
+function truncate2(text2, max2) {
   const clean = text2.replace(/\s+/g, " ").trim();
   return clean.length <= max2 ? clean : `${clean.slice(0, max2)}\u2026`;
 }
@@ -34400,7 +35972,7 @@ function buildTeachingSystemPrompt(ctx) {
     "}",
     "```",
     "- evidence \u53EA\u80FD\u5F15\u7528\u672C\u8F6E\u5B9E\u9645\u7ED9\u51FA\u7684 M/C/W \u7F16\u53F7\uFF1B\u6CA1\u6709\u4F7F\u7528\u8BFE\u7A0B\u8D44\u6599\u65F6 usedMaterialRefs \u4E3A\u7A7A\u6570\u7EC4\uFF0C\u5E76\u628A usedModelKnowledge \u8BBE\u4E3A true\u3002",
-    requested !== void 0 ? `- \u5B66\u751F\u672C\u8F6E\u660E\u786E\u8981\u6C42\u7684\u5F62\u5F0F\u662F\u300C${truncate(requested, 60)}\u300D\uFF1B\u5728 requestedForm \u5B57\u6BB5\u56DE\u586B\u5B83\uFF0C\u5E76\u4FDD\u7559\u539F\u5B66\u4E60\u76EE\u6807\u3002` : ""
+    requested !== void 0 ? `- \u5B66\u751F\u672C\u8F6E\u660E\u786E\u8981\u6C42\u7684\u5F62\u5F0F\u662F\u300C${truncate2(requested, 60)}\u300D\uFF1B\u5728 requestedForm \u5B57\u6BB5\u56DE\u586B\u5B83\uFF0C\u5E76\u4FDD\u7559\u539F\u5B66\u4E60\u76EE\u6807\u3002` : ""
   ];
   return lines.filter((line) => line !== "").join("\n");
 }
@@ -34409,50 +35981,50 @@ function buildTeachingUserPrompt(ctx) {
   const concept = input.currentConceptId === void 0 ? void 0 : input.courseRevision.concepts.find((item) => item.id === input.currentConceptId);
   const learningLines = input.learning.length === 0 ? ["\uFF08\u5C1A\u65E0\u5DF2\u8BB0\u5F55\u7684\u5B66\u4E60\u72B6\u6001\uFF09"] : input.learning.map((item) => {
     const title = input.courseRevision.concepts.find((conceptItem) => conceptItem.id === item.conceptId)?.title;
-    const basis = item.basis.length === 0 ? "\u65E0\u4F9D\u636E\u8BB0\u5F55" : truncate(item.basis.join("\uFF1B"), 400);
+    const basis = item.basis.length === 0 ? "\u65E0\u4F9D\u636E\u8BB0\u5F55" : truncate2(item.basis.join("\uFF1B"), 400);
     return `- ${item.conceptId}${title === void 0 ? "" : `\uFF08${title}\uFF09`}\uFF1A${item.level}\uFF1B\u4F9D\u636E\uFF1A${basis}`;
   });
   const materialLines = materialRefs.length === 0 ? ["\uFF08\u672C\u8F6E\u6CA1\u6709\u68C0\u7D22\u5230\u8BFE\u7A0B\u8D44\u6599\uFF1B\u8BB2\u89E3\u53EA\u80FD\u4F9D\u636E\u6A21\u578B\u77E5\u8BC6/\u63A8\u5BFC\uFF0C\u5FC5\u987B\u660E\u786E\u6807\u6CE8\u3002\uFF09"] : materialRefs.map((ref) => [
     `[${ref.refId}] ${ref.documentTitle} \xB7 ${ref.label}\uFF08${ref.locator}\uFF1B\u62BD\u53D6\u7F6E\u4FE1\u5EA6 ${ref.confidence}\uFF09`,
-    `> ${truncate(ref.excerpt, excerptChars)}`
+    `> ${truncate2(ref.excerpt, excerptChars)}`
   ].join("\n"));
   const crossLines = crossCourseRefs.length === 0 ? ["\uFF08\u672C\u8F6E\u6CA1\u6709\u5141\u8BB8\u4F7F\u7528\u7684\u8DE8\u8BFE\u7A0B\u8D44\u6599\uFF09"] : crossCourseRefs.map((ref) => {
-    const anchors = ref.anchors.map((anchor) => `${formatLocator(anchor.locator)}\uFF1A${truncate(anchor.excerpt, Math.min(excerptChars, 160))}`);
+    const anchors = ref.anchors.map((anchor) => `${formatLocator(anchor.locator)}\uFF1A${truncate2(anchor.excerpt, Math.min(excerptChars, 160))}`);
     return `[${ref.refId}] \u8BFE\u7A0B\u300A${ref.courseTitle}\u300B \xB7 \u5173\u8054\u539F\u56E0\uFF1A${ref.reason}${anchors.length === 0 ? "" : `
   ${anchors.join("\n  ")}`}`;
   });
   const webLines = webRefs.length === 0 ? ["\uFF08\u672C\u8F6E\u6CA1\u6709\u5916\u90E8\u68C0\u7D22\u7ED3\u679C\uFF1B\u4E0D\u5F97\u58F0\u79F0\u5DF2\u8054\u7F51\u6838\u5B9E\uFF09"] : webRefs.map((ref) => `[${ref.refId}] ${ref.title} \u2014 ${ref.url}
-> ${truncate(ref.snippet, Math.min(excerptChars, 200))}`);
+> ${truncate2(ref.snippet, Math.min(excerptChars, 200))}`);
   const historyLines = input.history.length === 0 ? ["\uFF08\u65E0\uFF09"] : input.history.slice(-maxHistory).map((message) => {
     const role = message.role === "student" ? "\u5B66\u751F" : message.role === "teacher" ? "\u52A9\u6559" : "\u7CFB\u7EDF";
-    return `- ${role}\uFF08${message.kind}\uFF09\uFF1A${truncate(message.text, 300)}`;
+    return `- ${role}\uFF08${message.kind}\uFF09\uFF1A${truncate2(message.text, 300)}`;
   });
-  const warningLines = input.materialWarnings.length === 0 ? ["\uFF08\u65E0\uFF09"] : input.materialWarnings.map((warning) => `- ${truncate(warning, 300)}`);
+  const warningLines = input.materialWarnings.length === 0 ? ["\uFF08\u65E0\uFF09"] : input.materialWarnings.map((warning) => `- ${truncate2(warning, 300)}`);
   const lines = [
     "## \u5B66\u751F\u672C\u8F6E\u6D88\u606F",
-    truncate(input.studentText, 2e3),
+    truncate2(input.studentText, 2e3),
     "",
     "## \u5B66\u751F\u6863\u6848",
     `- \u8BED\u8A00\u504F\u597D\uFF1A${plan.language}\uFF08\u539F\u6587\u672F\u8BED${input.profile.preferences.keepOriginalTerms === false ? "\u53EF\u7701\u7565" : "\u4FDD\u7559"}\uFF09`,
-    ...input.profile.goals === void 0 ? [] : [`- \u957F\u671F\u76EE\u6807\uFF1A${truncate(input.profile.goals, 300)}`],
-    ...input.profile.background === void 0 ? [] : [`- \u81EA\u8FF0\u57FA\u7840\uFF1A${truncate(input.profile.background, 300)}`],
-    ...input.profile.preferences.style === void 0 ? [] : [`- \u6559\u5B66\u98CE\u683C\u504F\u597D\uFF1A${truncate(input.profile.preferences.style, 120)}`],
+    ...input.profile.goals === void 0 ? [] : [`- \u957F\u671F\u76EE\u6807\uFF1A${truncate2(input.profile.goals, 300)}`],
+    ...input.profile.background === void 0 ? [] : [`- \u81EA\u8FF0\u57FA\u7840\uFF1A${truncate2(input.profile.background, 300)}`],
+    ...input.profile.preferences.style === void 0 ? [] : [`- \u6559\u5B66\u98CE\u683C\u504F\u597D\uFF1A${truncate2(input.profile.preferences.style, 120)}`],
     "",
     "## \u8BFE\u7A0B",
     `- \u8BFE\u7A0B\uFF1A\u300A${input.course.title}\u300B`,
-    ...input.course.description.trim() === "" ? [] : [`- \u8BFE\u7A0B\u63CF\u8FF0\uFF1A${truncate(input.course.description, 300)}`],
+    ...input.course.description.trim() === "" ? [] : [`- \u8BFE\u7A0B\u63CF\u8FF0\uFF1A${truncate2(input.course.description, 300)}`],
     `- \u8BFE\u7A0B\u4FEE\u8BA2\uFF1Av${input.courseRevision.version}\uFF08${input.courseRevision.state}\uFF09`,
-    ...input.courseRevision.goals.length === 0 ? [] : [`- \u8BFE\u7A0B\u76EE\u6807\uFF1A${input.courseRevision.goals.map((goal) => truncate(goal, 160)).join("\uFF1B")}`],
+    ...input.courseRevision.goals.length === 0 ? [] : [`- \u8BFE\u7A0B\u76EE\u6807\uFF1A${input.courseRevision.goals.map((goal) => truncate2(goal, 160)).join("\uFF1B")}`],
     "",
     "## \u5F53\u524D\u6982\u5FF5",
     concept === void 0 ? "- \uFF08\u672A\u6307\u5B9A\u5F53\u524D\u6982\u5FF5\uFF1B\u8BF7\u6839\u636E\u5B66\u751F\u95EE\u9898\u5224\u65AD\uFF0C\u5E76\u5728 conceptIds \u4E2D\u56DE\u586B\u8BFE\u7A0B\u4FEE\u8BA2\u91CC\u6700\u76F8\u5173\u7684\u6982\u5FF5 id\uFF09" : [
       `- id\uFF1A${concept.id}`,
       `- \u6807\u9898\uFF1A${concept.title}`,
-      `- \u6458\u8981\uFF1A${truncate(concept.summary, 400)}`,
+      `- \u6458\u8981\uFF1A${truncate2(concept.summary, 400)}`,
       concept.difficulty === void 0 ? "" : `- \u96BE\u5EA6\uFF1A${concept.difficulty}`,
       concept.prerequisites.length === 0 ? "" : `- \u5148\u4FEE\u6982\u5FF5\uFF1A${concept.prerequisites.join("\u3001")}`,
-      concept.misconceptions === void 0 || concept.misconceptions.length === 0 ? "" : `- \u5E38\u89C1\u8BEF\u89E3\uFF1A${concept.misconceptions.map((item) => truncate(item, 160)).join("\uFF1B")}`,
-      concept.checkIdeas === void 0 || concept.checkIdeas.length === 0 ? "" : `- \u53EF\u68C0\u9A8C\u70B9\uFF1A${concept.checkIdeas.map((item) => truncate(item, 160)).join("\uFF1B")}`
+      concept.misconceptions === void 0 || concept.misconceptions.length === 0 ? "" : `- \u5E38\u89C1\u8BEF\u89E3\uFF1A${concept.misconceptions.map((item) => truncate2(item, 160)).join("\uFF1B")}`,
+      concept.checkIdeas === void 0 || concept.checkIdeas.length === 0 ? "" : `- \u53EF\u68C0\u9A8C\u70B9\uFF1A${concept.checkIdeas.map((item) => truncate2(item, 160)).join("\uFF1B")}`
     ].filter((line) => line !== "").join("\n"),
     "",
     "## \u5B66\u4E60\u72B6\u6001\uFF08\u6309\u6982\u5FF5\uFF09",
@@ -34493,12 +36065,12 @@ function buildClassifySystemPrompt() {
 }
 function buildClassifyUserPrompt(input) {
   const concept = input.currentConceptId === void 0 ? void 0 : input.courseRevision.concepts.find((item) => item.id === input.currentConceptId);
-  const history = input.history.slice(-4).map((message) => `${message.role === "student" ? "\u5B66\u751F" : "\u52A9\u6559"}\uFF1A${truncate(message.text, 160)}`);
+  const history = input.history.slice(-4).map((message) => `${message.role === "student" ? "\u5B66\u751F" : "\u52A9\u6559"}\uFF1A${truncate2(message.text, 160)}`);
   const fallback = heuristicClassify(input);
   return [
     `\u5B66\u4E60\u9636\u6BB5\uFF1A${input.stage}`,
     `\u5F53\u524D\u6982\u5FF5\uFF1A${concept === void 0 ? "\uFF08\u672A\u6307\u5B9A\uFF09" : `${concept.id}\uFF08${concept.title}\uFF09`}`,
-    `\u5B66\u751F\u6D88\u606F\uFF1A${truncate(input.studentText, 800)}`,
+    `\u5B66\u751F\u6D88\u606F\uFF1A${truncate2(input.studentText, 800)}`,
     `\u6700\u8FD1\u5BF9\u8BDD\uFF1A${history.length === 0 ? "\uFF08\u65E0\uFF09" : history.join(" / ")}`,
     `\u89C4\u5219\u515C\u5E95\u53C2\u8003\uFF1Aintent=${fallback.intent ?? "explain"}${fallback.requestedForm === void 0 ? "" : `\uFF0CrequestedForm=${fallback.requestedForm}`}`,
     `\u53EF\u7528\u6982\u5FF5 id\uFF1A${input.courseRevision.concepts.map((item) => item.id).join("\u3001") || "\uFF08\u65E0\uFF09"}`,
@@ -34516,7 +36088,7 @@ function buildMetadataRepairPrompt(rawText) {
   return [
     "\u4EE5\u4E0B\u662F\u539F\u59CB\u6559\u5B66\u56DE\u590D\uFF08\u6700\u591A 6000 \u5B57\uFF09\uFF1A",
     "```",
-    truncate(rawText, 6e3),
+    truncate2(rawText, 6e3),
     "```",
     "\u671F\u671B\u5B57\u6BB5\uFF1Aintent\u3001stage\u3001conceptIds\u3001requestedForm\u3001evidence\uFF08usedMaterialRefs/usedCrossCourseRefs/usedWebRefs/usedModelKnowledge/derivations\uFF09\u3001conflicts\u3001activity\u3001nextActions\u3001uncertainty\u3001diagnosis\u3002",
     "\u53EA\u8F93\u51FA JSON \u5BF9\u8C61\u3002"
@@ -34791,11 +36363,11 @@ function evidenceKey(ref) {
 function buildEvidenceReferences(meta, ctx) {
   const refs = [];
   const warnings = [];
-  const materialById = new Map(ctx.materialRefs.map((ref) => [ref.refId, ref]));
+  const materialById2 = new Map(ctx.materialRefs.map((ref) => [ref.refId, ref]));
   const crossById = new Map(ctx.crossCourseRefs.map((ref) => [ref.refId, ref]));
   const webById = new Map(ctx.webRefs.map((ref) => [ref.refId, ref]));
   for (const refId of meta?.evidence?.usedMaterialRefs ?? []) {
-    const ref = materialById.get(refId);
+    const ref = materialById2.get(refId);
     if (ref === void 0) {
       warnings.push(`\u6A21\u578B\u5F15\u7528\u4E86\u4E0D\u5B58\u5728\u7684\u8BFE\u7A0B\u8D44\u6599\u7F16\u53F7 ${refId}\uFF0C\u5DF2\u5FFD\u7565\uFF08\u4E0D\u4F2A\u9020\u6765\u6E90\uFF09\u3002`);
       continue;
@@ -34839,7 +36411,7 @@ function buildEvidenceReferences(meta, ctx) {
     });
   }
   const labelOf = (refId) => {
-    const material = materialById.get(refId);
+    const material = materialById2.get(refId);
     if (material !== void 0) return `${material.documentTitle} \xB7 ${material.label}`;
     const cross = crossById.get(refId);
     if (cross !== void 0) return `\u5176\u4ED6\u8BFE\u7A0B\u300A${cross.courseTitle}\u300B`;
@@ -36707,12 +38279,12 @@ function buildRecheckPlan(record) {
 // packages/teaching-core/src/experiments/registry.ts
 import { existsSync } from "node:fs";
 import { mkdir as mkdir3, mkdtemp as mkdtemp2, readdir as readdir2, rm as rm4, writeFile as writeFile3 } from "node:fs/promises";
-import { join as join8, resolve as resolve3 } from "node:path";
+import { join as join8, resolve as resolve4 } from "node:path";
 
 // packages/teaching-core/src/experiments/interpreters.ts
 import { createRequire as createRequire2 } from "node:module";
 import { accessSync, constants } from "node:fs";
-import { delimiter as delimiter2, dirname as dirname6, isAbsolute as isAbsolute3, join as join7, resolve as resolve2 } from "node:path";
+import { delimiter as delimiter2, dirname as dirname7, isAbsolute as isAbsolute3, join as join7, resolve as resolve3 } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // packages/teaching-core/src/experiments/process.ts
@@ -36746,7 +38318,7 @@ function killProcessTree(child, signal = "SIGKILL") {
   }
 }
 function runProcess(spec) {
-  return new Promise((resolve5) => {
+  return new Promise((resolve6) => {
     const startedAt = Date.now();
     let stdout = "";
     let stderr = "";
@@ -36766,7 +38338,7 @@ function runProcess(spec) {
         detached: detachTree
       });
     } catch (error) {
-      resolve5({
+      resolve6({
         stdout: "",
         stderr: "",
         timedOut: false,
@@ -36785,7 +38357,7 @@ function runProcess(spec) {
         spec.signal.removeEventListener("abort", abortListener);
       }
       if (killTimer !== void 0) clearTimeout(killTimer);
-      resolve5({
+      resolve6({
         stdout: truncated ? stdout + TRUNCATION_MARKER : stdout,
         stderr: truncated ? stderr + TRUNCATION_MARKER : stderr,
         timedOut,
@@ -36983,10 +38555,10 @@ function resolveBiwaschemeEntry(explicit) {
 function moduleParentBases() {
   const bases = [];
   try {
-    let dir = dirname6(fileURLToPath(import.meta.url));
+    let dir = dirname7(fileURLToPath(import.meta.url));
     for (let depth = 0; depth < 8; depth += 1) {
       bases.push(join7(dir, "index.js"));
-      const parent = dirname6(dir);
+      const parent = dirname7(dir);
       if (parent === dir) break;
       dir = parent;
     }
@@ -37269,7 +38841,7 @@ var Registry = class {
   cleanupTask;
   constructor(options) {
     this.options = options;
-    this.dataDir = resolve3(options.dataDir);
+    this.dataDir = resolve4(options.dataDir);
     this.tmpRoot = join8(this.dataDir, "experiments", "tmp");
     this.envRoot = join8(this.dataDir, "experiments", "envs");
     this.defaultTimeoutMs = clamp(options.defaultTimeoutMs ?? DEFAULT_TIMEOUT_MS, MIN_TIMEOUT_MS, MAX_TIMEOUT_MS);
@@ -37858,8 +39430,8 @@ import { isAbsolute as isAbsolute4, join as join11 } from "node:path";
 
 // packages/teaching-core/src/portability/backup.ts
 import { createHash as createHash3 } from "node:crypto";
-import { mkdir as mkdir4, mkdtemp as mkdtemp3, readFile as readFile5, readdir as readdir3, rename as rename3, rm as rm5, stat as stat4, writeFile as writeFile4 } from "node:fs/promises";
-import { dirname as dirname7, join as join9, sep as sep2 } from "node:path";
+import { mkdir as mkdir4, mkdtemp as mkdtemp3, readFile as readFile6, readdir as readdir3, rename as rename3, rm as rm5, stat as stat4, writeFile as writeFile4 } from "node:fs/promises";
+import { dirname as dirname8, join as join9, sep as sep3 } from "node:path";
 var ALWAYS_EXCLUDED_DIRS = ["exports", "backups", "cache", "tasks"];
 var DATA_DIRS = [
   "courses",
@@ -37901,7 +39473,7 @@ async function listBackupFiles(dataDir, includeUsage) {
   const excluded = /* @__PURE__ */ new Set([...ALWAYS_EXCLUDED_DIRS, ...includeUsage ? [] : ["usage"]]);
   const out = [];
   const walk = async (relativeDir) => {
-    const absoluteDir = relativeDir === "" ? dataDir : join9(dataDir, relativeDir.split("/").join(sep2));
+    const absoluteDir = relativeDir === "" ? dataDir : join9(dataDir, relativeDir.split("/").join(sep3));
     let entries;
     try {
       entries = await readdir3(absoluteDir, { withFileTypes: true });
@@ -37926,7 +39498,7 @@ async function listBackupFiles(dataDir, includeUsage) {
 }
 async function readSchemaVersion(dataDir) {
   try {
-    const meta = JSON.parse(await readFile5(join9(dataDir, META_FILE), "utf8"));
+    const meta = JSON.parse(await readFile6(join9(dataDir, META_FILE), "utf8"));
     if (typeof meta.schemaVersion === "number" && Number.isInteger(meta.schemaVersion)) return meta.schemaVersion;
   } catch {
   }
@@ -37952,7 +39524,7 @@ async function collectSourcePaths(dataDir) {
   const paths = [];
   for (const name2 of names) {
     try {
-      const document2 = JSON.parse(await readFile5(join9(sourcesDir, name2), "utf8"));
+      const document2 = JSON.parse(await readFile6(join9(sourcesDir, name2), "utf8"));
       if (typeof document2.id !== "string" || typeof document2.originalPath !== "string") continue;
       paths.push({ sourceId: document2.id, path: document2.originalPath, exists: await pathExists(document2.originalPath) });
     } catch {
@@ -37961,7 +39533,7 @@ async function collectSourcePaths(dataDir) {
   return paths.sort((a, b) => a.sourceId.localeCompare(b.sourceId));
 }
 async function writeFileAtomic(path2, data) {
-  await mkdir4(dirname7(path2), { recursive: true });
+  await mkdir4(dirname8(path2), { recursive: true });
   const tmp = `${path2}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`;
   await writeFile4(tmp, data);
   await rename3(tmp, path2);
@@ -37980,7 +39552,7 @@ async function createBackupArchive(params) {
     if (isAborted2(params.signal)) return err("cancelled", "\u5907\u4EFD\u5DF2\u53D6\u6D88");
     let bytes;
     try {
-      bytes = new Uint8Array(await readFile5(join9(dataDir, relativePath.split("/").join(sep2))));
+      bytes = new Uint8Array(await readFile6(join9(dataDir, relativePath.split("/").join(sep3))));
     } catch (cause) {
       return err("storage", `\u8BFB\u53D6\u5907\u4EFD\u6570\u636E\u5931\u8D25\uFF1A${relativePath}`, {
         details: { path: relativePath, message: cause instanceof Error ? cause.message : String(cause) }
@@ -38034,7 +39606,7 @@ function validateManifestShape(value) {
 async function readValidatedArchive(archivePath) {
   let raw;
   try {
-    raw = await readFile5(archivePath);
+    raw = await readFile6(archivePath);
   } catch (cause) {
     if (isMissingError(cause)) return err("not-found", "\u5907\u4EFD\u6587\u4EF6\u4E0D\u5B58\u5728\u6216\u5DF2\u88AB\u79FB\u52A8", { details: { archivePath } });
     return err("storage", "\u8BFB\u53D6\u5907\u4EFD\u6587\u4EF6\u5931\u8D25", {
@@ -38132,8 +39704,8 @@ async function restoreBackupArchive(params) {
       details: { schemaVersion: manifest.schemaVersion, supported: SCHEMA_VERSION }
     });
   }
-  await mkdir4(dirname7(dataDir), { recursive: true });
-  const stagingDir = await mkdtemp3(join9(dirname7(dataDir), ".teaching-restore-"));
+  await mkdir4(dirname8(dataDir), { recursive: true });
+  const stagingDir = await mkdtemp3(join9(dirname8(dataDir), ".teaching-restore-"));
   const warnings = [];
   const missingSources = [];
   let overwritten = 0;
@@ -38141,14 +39713,14 @@ async function restoreBackupArchive(params) {
   try {
     for (const [relativePath, bytes] of files) {
       if (isAborted2(params.signal)) return err("cancelled", "\u6062\u590D\u5DF2\u53D6\u6D88");
-      const stagedPath = join9(stagingDir, relativePath.split("/").join(sep2));
+      const stagedPath = join9(stagingDir, relativePath.split("/").join(sep3));
       await writeFileAtomic(stagedPath, bytes);
     }
     let unparsable = 0;
     for (const [relativePath] of files) {
       if (!relativePath.endsWith(".json")) continue;
       try {
-        JSON.parse(await readFile5(join9(stagingDir, relativePath.split("/").join(sep2)), "utf8"));
+        JSON.parse(await readFile6(join9(stagingDir, relativePath.split("/").join(sep3)), "utf8"));
       } catch {
         unparsable += 1;
         warnings.push(`\u5907\u4EFD\u4E2D\u7684\u8BB0\u5F55\u65E0\u6CD5\u89E3\u6790\uFF0C\u5DF2\u539F\u6837\u6062\u590D\uFF1A${relativePath}`);
@@ -38166,7 +39738,7 @@ async function restoreBackupArchive(params) {
       const path2 = join9(stagedSourcesDir, name2);
       let document2;
       try {
-        document2 = JSON.parse(await readFile5(path2, "utf8"));
+        document2 = JSON.parse(await readFile6(path2, "utf8"));
       } catch {
         continue;
       }
@@ -38187,7 +39759,7 @@ async function restoreBackupArchive(params) {
     const stagedMetaPath = join9(stagingDir, META_FILE);
     let meta;
     try {
-      meta = JSON.parse(await readFile5(stagedMetaPath, "utf8"));
+      meta = JSON.parse(await readFile6(stagedMetaPath, "utf8"));
     } catch {
       meta = {
         schemaVersion: SCHEMA_VERSION,
@@ -38226,10 +39798,10 @@ async function restoreBackupArchive(params) {
     try {
       for (const relativePath of ordered) {
         if (isAborted2(params.signal)) return err("cancelled", "\u6062\u590D\u5DF2\u53D6\u6D88\uFF08\u5DF2\u5199\u5165\u90E8\u5206\u6587\u4EF6\uFF0C\u672A\u5199\u5165\u7684\u8BB0\u5F55\u4FDD\u6301\u539F\u72B6\uFF09");
-        const target = join9(dataDir, relativePath.split("/").join(sep2));
+        const target = join9(dataDir, relativePath.split("/").join(sep3));
         if (await pathExists(target)) overwritten += 1;
-        const stagedPath = join9(stagingDir, relativePath.split("/").join(sep2));
-        await writeFileAtomic(target, await readFile5(stagedPath));
+        const stagedPath = join9(stagingDir, relativePath.split("/").join(sep3));
+        await writeFileAtomic(target, await readFile6(stagedPath));
         restored.push(relativePath);
       }
     } catch (cause) {
@@ -56949,7 +58521,7 @@ function markdownHtml(document2, source) {
   appendMarkdownBlocks(container, document2, parseMarkdown2(source), { document: document2 });
   return serializeInner(container);
 }
-function truncateText(text2, label, warnings, limit = OFFLINE_LIMITS.maxMessageChars) {
+function truncateText2(text2, label, warnings, limit = OFFLINE_LIMITS.maxMessageChars) {
   if (text2.length <= limit) return text2;
   warnings.push(`${label} \u8D85\u8FC7 ${limit} \u5B57\u7B26\uFF0C\u5BFC\u51FA\u9875\u5DF2\u622A\u65AD\uFF08\u5B8C\u6574\u5185\u5BB9\u4FDD\u7559\u5728\u63D2\u4EF6\u6570\u636E\u4E2D\uFF09`);
   return `${text2.slice(0, limit)}
@@ -57280,7 +58852,7 @@ function buildSessionSection(document2, sessionData, warnings, limitations, entr
     head.appendChild(el(document2, "span", { text: message.kind }));
     article.appendChild(head);
     const body = el(document2, "div", { className: "tp-message-body" });
-    const text2 = truncateText(message.text, `\u6D88\u606F ${message.id}`, warnings);
+    const text2 = truncateText2(message.text, `\u6D88\u606F ${message.id}`, warnings);
     if (message.markdown === false) {
       body.appendChild(el(document2, "div", { className: "tp-plain-text", text: text2 }));
     } else {
@@ -57330,7 +58902,7 @@ function buildCourseSection(document2, input, warnings) {
   section.appendChild(el(document2, "h2", { text: "\u8BFE\u7A0B\u4FE1\u606F" }));
   if (input.course.description !== "") {
     section.appendChild(el(document2, "p", {
-      text: truncateText(input.course.description, "\u8BFE\u7A0B\u8BF4\u660E", warnings)
+      text: truncateText2(input.course.description, "\u8BFE\u7A0B\u8BF4\u660E", warnings)
     }));
   }
   if (input.revision === void 0) {
@@ -57444,7 +59016,7 @@ function buildLearningSection(document2, input, warnings) {
       const card = el(document2, "div", { className: "tp-note-card" });
       card.appendChild(el(document2, "time", { text: note.updatedAt }));
       const body = el(document2, "div");
-      asOfflineElement(body).innerHTML = markdownHtml(document2, truncateText(note.markdown, "\u7B14\u8BB0", warnings));
+      asOfflineElement(body).innerHTML = markdownHtml(document2, truncateText2(note.markdown, "\u7B14\u8BB0", warnings));
       card.appendChild(body);
       notes.appendChild(card);
     }
@@ -57947,7 +59519,7 @@ function createPortabilityService(dependencies) {
 // packages/teaching-core/src/environments/manager.ts
 import { accessSync as accessSync2, constants as constants2, existsSync as existsSync3 } from "node:fs";
 import { mkdir as mkdir6, mkdtemp as mkdtemp4, readdir as readdir4, rm as rm6, writeFile as writeFile6 } from "node:fs/promises";
-import { delimiter as delimiter3, isAbsolute as isAbsolute5, join as join14, resolve as resolve4, sep as sep3 } from "node:path";
+import { delimiter as delimiter3, isAbsolute as isAbsolute5, join as join14, resolve as resolve5, sep as sep4 } from "node:path";
 
 // packages/teaching-core/src/environments/catalog.ts
 import { join as join12 } from "node:path";
@@ -58153,7 +59725,7 @@ function findInstallPlan(language, plans = DEFAULT_INSTALL_PLANS) {
 
 // packages/teaching-core/src/environments/persistence.ts
 import { existsSync as existsSync2 } from "node:fs";
-import { mkdir as mkdir5, readFile as readFile6, rename as rename4, writeFile as writeFile5 } from "node:fs/promises";
+import { mkdir as mkdir5, readFile as readFile7, rename as rename4, writeFile as writeFile5 } from "node:fs/promises";
 import { join as join13 } from "node:path";
 var ENVIRONMENT_STATE_SCHEMA_VERSION = 1;
 var VALID_STATUS = /* @__PURE__ */ new Set([
@@ -58205,7 +59777,7 @@ var EnvironmentStore = class {
   async load() {
     let raw;
     try {
-      raw = await readFile6(this.statePath, "utf8");
+      raw = await readFile7(this.statePath, "utf8");
     } catch (error) {
       if (error.code !== "ENOENT") {
         this.logger?.("environments.state-read-failed", { message: error.message });
@@ -58920,7 +60492,7 @@ var Manager = class {
   constructor(options) {
     this.options = options;
     this.runners = options.runners;
-    this.store = new EnvironmentStore(resolve4(options.dataDir), options.logger);
+    this.store = new EnvironmentStore(resolve5(options.dataDir), options.logger);
     this.logger = options.logger ?? (() => void 0);
     this.adapters = mergeAdapters(options.adapters);
     this.installPlans = mergeInstallPlans(options.installPlans);
@@ -59613,9 +61185,9 @@ var Manager = class {
     }
   }
   isInsideManagedRoot(path2) {
-    const root = resolve4(this.store.managedRoot);
-    const target = resolve4(path2);
-    return target !== root && target.startsWith(`${root}${sep3}`);
+    const root = resolve5(this.store.managedRoot);
+    const target = resolve5(path2);
+    return target !== root && target.startsWith(`${root}${sep4}`);
   }
   // ---- probing -----------------------------------------------------------
   isBuiltin(language) {
@@ -60122,11 +61694,11 @@ ${outcome.stderr}`);
       const referenced = /* @__PURE__ */ new Set();
       for (const record of this.records.values()) {
         if (record.status !== "ready" || record.isolation.path === void 0) continue;
-        referenced.add(resolve4(record.isolation.path));
+        referenced.add(resolve5(record.isolation.path));
       }
       for (const entry of managedEntries) {
         const path2 = join14(this.store.managedRoot, entry);
-        if (referenced.has(resolve4(path2))) continue;
+        if (referenced.has(resolve5(path2))) continue;
         if ([...this.preparing.values()].some((active) => path2.includes(active.environmentId))) continue;
         const cleaned = await this.cleanupDirectory(path2);
         if (cleaned.cleanup === "cleaned") removed.push(path2);
@@ -60511,14 +62083,14 @@ function toSearchQuery(text2) {
 // packages/dsh-plugin/src/host/routes.ts
 import { randomUUID as randomUUID2 } from "node:crypto";
 import { readdir as readdir5, stat as stat6 } from "node:fs/promises";
-import { basename as basename5, extname as extname6, join as join15 } from "node:path";
+import { basename as basename6, extname as extname7, join as join15 } from "node:path";
 
 // packages/dsh-plugin/src/host/minimal.ts
 import "node:crypto";
 import { createHash as createHash4 } from "node:crypto";
-import { readFile as readFile7, stat as stat5 } from "node:fs/promises";
+import { readFile as readFile8, stat as stat5 } from "node:fs/promises";
 import { spawn as spawn3 } from "node:child_process";
-import { basename as basename4, extname as extname5 } from "node:path";
+import { basename as basename5, extname as extname6 } from "node:path";
 function hitToEvidence(hit) {
   return {
     kind: "course-source",
@@ -60892,7 +62464,7 @@ function registerRoutes(services) {
     const handle = services.tasks.start({
       kind: "source-import",
       label: `\u5BFC\u5165 ${files.length} \u4EFD\u8D44\u6599`,
-      steps: files.slice(0, 20).map((path2, index) => ({ id: `file-${index}`, label: basename5(path2) })),
+      steps: files.slice(0, 20).map((path2, index) => ({ id: `file-${index}`, label: basename6(path2) })),
       resumable: true
     }, async (context) => {
       for (const warning of expanded.warnings) context.warn(warning);
@@ -61029,14 +62601,23 @@ function registerRoutes(services) {
         goal: goalText,
         ...(active?.background ?? draftRevision?.background) === void 0 ? {} : { background: active?.background ?? draftRevision?.background },
         language: profile.language,
-        ...input.instruction === void 0 ? {} : { instruction: input.instruction }
+        ...input.instruction === void 0 ? {} : { instruction: input.instruction },
+        ...input.strategy === void 0 ? {} : { strategy: input.strategy }
       }, context.signal);
       if (!proposed.ok) {
         throw appError(proposed.error.code, proposed.error.message, proposed.error.details);
       }
-      context.step("structure", { status: "done", detail: `${proposed.value.concepts.length} \u4E2A\u6982\u5FF5` });
+      context.step("structure", {
+        status: "done",
+        detail: `${proposed.value.concepts.length} \u4E2A\u6982\u5FF5${proposed.value.chapters === void 0 ? "" : ` \xB7 ${proposed.value.chapters.length} \u4E2A\u7AE0\u8282`}`
+      });
       context.step("save", { status: "done" });
-      context.result({ revisionId: proposed.value.id, conceptCount: proposed.value.concepts.length });
+      context.result({
+        revisionId: proposed.value.id,
+        conceptCount: proposed.value.concepts.length,
+        ...proposed.value.chapters === void 0 ? {} : { chapterCount: proposed.value.chapters.length },
+        provenance: proposed.value.provenance
+      });
       return { revisionId: proposed.value.id };
     });
     return envelope({ task: handle });
@@ -61072,6 +62653,10 @@ function registerRoutes(services) {
       const requested = edits.sequence.filter((id) => concepts.some((concept) => concept.id === id));
       sequence = [...requested, ...concepts.map((concept) => concept.id).filter((id) => !requested.includes(id))];
     }
+    const chapters = draft.chapters === void 0 ? void 0 : draft.chapters.map((chapter) => ({
+      ...chapter,
+      conceptIds: chapter.conceptIds.filter((id) => concepts.some((concept) => concept.id === id))
+    })).filter((chapter) => chapter.conceptIds.length > 0);
     const confirmed = {
       ...draft,
       state: "confirmed",
@@ -61079,6 +62664,7 @@ function registerRoutes(services) {
       provenance: "student-edit",
       concepts,
       sequence,
+      ...chapters === void 0 ? {} : { chapters },
       goals: edits?.goals ?? draft.goals
     };
     await services.courses.saveRevision(confirmed);
@@ -62053,7 +63639,7 @@ async function collectImportFiles(paths) {
         continue;
       }
       if (!entry.isFile()) continue;
-      if (!IMPORTABLE_EXTENSIONS.has(extname6(entry.name).toLowerCase())) continue;
+      if (!IMPORTABLE_EXTENSIONS.has(extname7(entry.name).toLowerCase())) continue;
       files.push(full);
     }
   };
@@ -62078,16 +63664,27 @@ async function collectImportFiles(paths) {
   return { files, warnings };
 }
 async function buildDraftView(services, course, revision) {
+  const origin = revision.provenance === "kb-structure" ? "kb-structure" : revision.provenance === "llm-wiki" ? "llm-wiki" : "ai";
+  const structureNotes = revision.provenance === "kb-structure" || revision.provenance === "llm-wiki" ? revision.changeSummary === void 0 ? [] : [revision.changeSummary] : [];
   const coverage = await services.corpus.buildCourseDraftCoverage(course.id, revision.id);
   if (!coverage.ok) {
     return {
       course,
       revision,
       coverage: [],
-      warnings: [`\u65E0\u6CD5\u8BFB\u53D6\u8D44\u6599\u8986\u76D6\u60C5\u51B5\uFF1A${coverage.error.message}`]
+      warnings: [`\u65E0\u6CD5\u8BFB\u53D6\u8D44\u6599\u8986\u76D6\u60C5\u51B5\uFF1A${coverage.error.message}`],
+      origin,
+      ...structureNotes.length > 0 ? { structureNotes } : {}
     };
   }
-  return { course, revision, coverage: coverage.value.coverage, warnings: coverage.value.warnings };
+  return {
+    course,
+    revision,
+    coverage: coverage.value.coverage,
+    warnings: coverage.value.warnings,
+    origin,
+    ...structureNotes.length > 0 ? { structureNotes } : {}
+  };
 }
 async function runExperiment(services, input) {
   const runId2 = input.runId ?? `run-${randomUUID2().slice(0, 12)}`;

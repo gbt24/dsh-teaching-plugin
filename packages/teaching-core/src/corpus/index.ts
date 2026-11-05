@@ -29,3 +29,16 @@ export { buildEffects, describeDiff, diffUnits, resolveReferences } from './chan
 export type { ReferenceResolution, UnitDiff } from './change-utils.ts'
 export { CorpusCancelledError, CorpusFailure, CorpusParseError } from './errors.ts'
 export type { ParseAsset } from './budget.ts'
+
+/* 课程结构 v2：知识库结构识别/角色判定/确定性构建（模式 A） */
+export type {
+  KbBuiltChapter, KbBuiltConcept, KbContext, KbDetection, KbDetectionFacts, KbDetectionSignal,
+  KbFrontmatterValue, KbIndex, KbIndexEntry, KbIndexSection, KbLink, KbPage, KbSourceRole,
+  KbStructureBuild, MaterialDocument, MaterialLoadResult, ParsedFrontmatter, RoleClassifyInput,
+} from './structure.ts'
+export {
+  buildKbStructureData, buildKbStructureFromContext, classifySourceRole, cleanHeadingText,
+  describeKbDetection, detectWikiKnowledgeBase, kbRoleToSourceRole, loadKbPages,
+  loadMaterialDocuments, normalizeSlug, parseFrontmatter, parseIndexSections, prepareKbContext,
+  reconstructMarkdownFromUnits, scanMarkdownPage, summarizeRoles,
+} from './structure.ts'

@@ -537,13 +537,22 @@ export function registerRoutes(services: RouteServices): void {
           : { background: (active?.background ?? draftRevision?.background) as string }),
         language: profile.language,
         ...(input.instruction === undefined ? {} : { instruction: input.instruction }),
+        ...(input.strategy === undefined ? {} : { strategy: input.strategy }),
       }, context.signal)
       if (!proposed.ok) {
         throw appError(proposed.error.code, proposed.error.message, proposed.error.details)
       }
-      context.step('structure', { status: 'done', detail: `${proposed.value.concepts.length} 个概念` })
+      context.step('structure', {
+        status: 'done',
+        detail: `${proposed.value.concepts.length} 个概念${proposed.value.chapters === undefined ? '' : ` · ${proposed.value.chapters.length} 个章节`}`,
+      })
       context.step('save', { status: 'done' })
-      context.result({ revisionId: proposed.value.id, conceptCount: proposed.value.concepts.length })
+      context.result({
+        revisionId: proposed.value.id,
+        conceptCount: proposed.value.concepts.length,
+        ...(proposed.value.chapters === undefined ? {} : { chapterCount: proposed.value.chapters.length }),
+        provenance: proposed.value.provenance,
+      })
       return { revisionId: proposed.value.id }
     })
     return envelope({ task: handle })
@@ -583,6 +592,15 @@ export function registerRoutes(services: RouteServices): void {
       const requested = edits.sequence.filter(id => concepts.some(concept => concept.id === id))
       sequence = [...requested, ...concepts.map(concept => concept.id).filter(id => !requested.includes(id))]
     }
+    // Keep optional chapter groupings consistent with the edited concept set.
+    const chapters = draft.chapters === undefined
+      ? undefined
+      : draft.chapters
+        .map(chapter => ({
+          ...chapter,
+          conceptIds: chapter.conceptIds.filter(id => concepts.some(concept => concept.id === id)),
+        }))
+        .filter(chapter => chapter.conceptIds.length > 0)
     const confirmed: CourseRevision = {
       ...draft,
       state: 'confirmed',
@@ -590,6 +608,7 @@ export function registerRoutes(services: RouteServices): void {
       provenance: 'student-edit',
       concepts,
       sequence,
+      ...(chapters === undefined ? {} : { chapters }),
       goals: edits?.goals ?? draft.goals,
     }
     await services.courses.saveRevision(confirmed)
@@ -1673,6 +1692,14 @@ async function buildDraftView(
   course: Course,
   revision: CourseRevision,
 ): Promise<CourseDraftView> {
+  const origin: CourseDraftView['origin'] = revision.provenance === 'kb-structure'
+    ? 'kb-structure'
+    : revision.provenance === 'llm-wiki'
+      ? 'llm-wiki'
+      : 'ai'
+  const structureNotes = revision.provenance === 'kb-structure' || revision.provenance === 'llm-wiki'
+    ? (revision.changeSummary === undefined ? [] : [revision.changeSummary])
+    : []
   const coverage = await services.corpus.buildCourseDraftCoverage(course.id, revision.id)
   if (!coverage.ok) {
     return {
@@ -1680,9 +1707,18 @@ async function buildDraftView(
       revision,
       coverage: [],
       warnings: [`无法读取资料覆盖情况：${coverage.error.message}`],
+      origin,
+      ...(structureNotes.length > 0 ? { structureNotes } : {}),
     }
   }
-  return { course, revision, coverage: coverage.value.coverage, warnings: coverage.value.warnings }
+  return {
+    course,
+    revision,
+    coverage: coverage.value.coverage,
+    warnings: coverage.value.warnings,
+    origin,
+    ...(structureNotes.length > 0 ? { structureNotes } : {}),
+  }
 }
 
 /** Run code through the experiments registry and persist the run record. */

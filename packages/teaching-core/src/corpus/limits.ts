@@ -30,12 +30,26 @@ export interface CorpusLimits {
   readonly ocrMinConfidence: number
   /** 扫描页渲染 DPI。 */
   readonly ocrRenderDpi: number
-  /** 课程草案提示中材料摘要的最大字符数。 */
+  /** （旧版单次提示）课程草案提示中材料摘要的最大字符数；v2 llm-wiki 路径改用下方预算。 */
   readonly draftMaxChars: number
   /** 课程草案每份资料最多包含的单元数。 */
   readonly draftUnitsPerDoc: number
-  /** 课程草案最多概念数（超出丢弃并警告）。 */
+  /** 旧版扁平草案最多概念数（超出丢弃并警告）。 */
   readonly draftMaxConcepts: number
+  /** LLM-wiki 回退路径单次调用材料摘要预算（字符）；超过则按资料分组 map 后合并。 */
+  readonly draftLlmWikiBudgetChars: number
+  /** LLM-wiki 回退路径每份资料摘要的最大字符数。 */
+  readonly draftLlmWikiDocChars: number
+  /** LLM-wiki 回退路径最多模型调用次数（含单组修复调用）；有界，不无限重试。 */
+  readonly draftLlmWikiGroupCallsMax: number
+  /** LLM-wiki 回退路径最多概念数（超出丢弃并警告）。 */
+  readonly draftLlmWikiMaxConcepts: number
+  /** 知识库结构直读最多概念数（真实课程可能上百；超出丢弃并警告）。 */
+  readonly kbMaxConcepts: number
+  /** 知识库结构直读最多章节数（含工具/附录章节）。 */
+  readonly kbMaxChapters: number
+  /** 课程草案最多生成/读取的单元摘要数量（单文档标题树）。 */
+  readonly draftLlmWikiHeadingsPerDoc: number
   /** search 默认返回条数。 */
   readonly searchDefaultLimit: number
   /** search 最大返回条数。 */
@@ -62,6 +76,13 @@ export const DEFAULT_LIMITS: CorpusLimits = Object.freeze({
   draftMaxChars: 18_000,
   draftUnitsPerDoc: 80,
   draftMaxConcepts: 40,
+  draftLlmWikiBudgetChars: 80_000,
+  draftLlmWikiDocChars: 1_400,
+  draftLlmWikiGroupCallsMax: 6,
+  draftLlmWikiMaxConcepts: 200,
+  kbMaxConcepts: 500,
+  kbMaxChapters: 80,
+  draftLlmWikiHeadingsPerDoc: 24,
   searchDefaultLimit: 10,
   searchMaxLimit: 100,
   searchMaxQueryTerms: 24,

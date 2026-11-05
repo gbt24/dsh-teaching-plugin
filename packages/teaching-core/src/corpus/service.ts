@@ -33,6 +33,7 @@ import { sourcePaths } from './paths.ts'
 import { buildSearchIndex, SearchIndexCache, searchCorpus } from './search.ts'
 import { CorpusStore } from './store.ts'
 import { proposeCourseRevision, buildDraftCoverage, type DraftCoverageData } from './draft.ts'
+import { prepareKbContext, type KbDetection } from './structure.ts'
 import {
   buildEffects, describeDiff, diffUnits, resolveReferences,
 } from './change-utils.ts'
@@ -47,6 +48,14 @@ export interface CorpusServiceApi extends CorpusService {
   readonly limits: CorpusLimits
   /** 生成 CourseDraftView 的 coverage/warnings（Host 负责组装视图）。 */
   buildCourseDraftCoverage(courseId: string, revisionId?: string): Promise<Result<DraftCoverageData>>
+  /**
+   * 检测课程资料是否构成 LLM-wiki 知识库结构（不调用模型）。
+   * 返回检测事实、结构信号与每个文档的资料角色，供 Host 在生成前展示/记录。
+   */
+  detectKnowledgeBase(input: {
+    readonly courseId: CourseId
+    readonly documentIds?: readonly SourceId[]
+  }): Promise<Result<KbDetection>>
 }
 
 /** 解析所需参数。 */
@@ -476,6 +485,23 @@ export class CorpusServiceImpl implements CorpusServiceApi {
         input,
         signal,
       )
+    })
+  }
+
+  async detectKnowledgeBase(input: {
+    readonly courseId: CourseId
+    readonly documentIds?: readonly SourceId[]
+  }): Promise<Result<KbDetection>> {
+    return await this.guard('检测知识库结构失败', async () => {
+      const prepared = await prepareKbContext(
+        { store: this.store, limits: this.limits },
+        {
+          courseId: input.courseId,
+          ...(input.documentIds !== undefined ? { documentIds: input.documentIds } : {}),
+        },
+      )
+      if (!prepared.ok) return prepared
+      return ok(prepared.value.detection)
     })
   }
 

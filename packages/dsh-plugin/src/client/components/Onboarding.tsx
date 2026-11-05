@@ -308,7 +308,7 @@ export function Onboarding(props: OnboardingProps): React.ReactElement {
                 {draftPhase === 'running' && <span className="ai-badge">生成中</span>}
                 {draftPhase === 'error' && <span className="ai-badge" style={{ color: 'var(--dsw-alias-state-error-primary, #b91c1c)' }}>生成失败</span>}
               </div>
-              {draftPhase === 'running' && <Spinner label="正在分析资料并生成课程结构…" />}
+              {draftPhase === 'running' && <Spinner label="正在读取/生成课程结构…（结构直读较快；LLM-wiki 生成可能需要几十秒）" />}
               {draftPhase === 'error' && (
                 <>
                   <div className="ai-banner" data-kind="error" role="alert" style={{ margin: '8px 0', borderRadius: 8 }}>

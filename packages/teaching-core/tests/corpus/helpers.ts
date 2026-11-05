@@ -4,7 +4,7 @@
  * 测试只通过公开 seam（createCorpusService / CorpusService 方法）验证行为；
  * 临时目录放在系统临时区，绝不写用户资料或 ~/.dsh。
  */
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -20,12 +20,39 @@ import type { SourceAnchor } from '../../src/contracts/source.ts'
 import type { Result } from '../../src/contracts/result.ts'
 import { expectOk } from '../../src/contracts/result.ts'
 
-/** 仓库内可分发样例目录。 */
+/** 仓库内可分发样例目录（多格式语料）。 */
 export const SAMPLE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../samples/corpus')
 
-/** 样例绝对路径。 */
+/** 仓库内可分发 LLM-wiki fixture 目录（课程结构 v2）。 */
+export const KB_SAMPLE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../samples/kb')
+
+/** 样例绝对路径（samples/corpus）。 */
 export function samplePath(...parts: readonly string[]): string {
   return join(SAMPLE_DIR, ...parts)
+}
+
+/** LLM-wiki fixture 绝对路径（samples/kb）。 */
+export function kbSamplePath(...parts: readonly string[]): string {
+  return join(KB_SAMPLE_DIR, ...parts)
+}
+
+/** 递归列出 fixture 中需要导入的 Markdown 文件（排除 README）。 */
+export async function listKbFixtureFiles(): Promise<string[]> {
+  const files: string[] = []
+  const walk = async (directory: string): Promise<void> => {
+    const entries = await readdir(directory, { withFileTypes: true })
+    for (const entry of entries) {
+      if (entry.name.startsWith('.')) continue
+      const full = join(directory, entry.name)
+      if (entry.isDirectory()) {
+        await walk(full)
+        continue
+      }
+      if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'README.md') files.push(full)
+    }
+  }
+  await walk(KB_SAMPLE_DIR)
+  return files.sort()
 }
 
 /** 测试上下文。 */

@@ -262,6 +262,25 @@ export const TEACHING_CSS = `
 .ai-badge[data-run-status="succeeded"] { color: var(--dsw-alias-state-success-primary, #16a34a); border-color: currentColor; }
 .ai-badge[data-run-status="failed"], .ai-badge[data-run-status="timed-out"] { color: var(--dsw-alias-state-error-primary, #b91c1c); border-color: currentColor; }
 .ai-badge[data-run-status="cancelled"] { color: var(--dsw-alias-state-warn-primary, #b45309); border-color: currentColor; }
+.ai-draft-origin { margin: 0 0 6px; }
+.ai-badge[data-origin="kb-structure"] { color: var(--dsw-alias-state-success-primary, #16a34a);
+  border-color: currentColor; opacity: 1; }
+.ai-badge[data-origin="llm-wiki"] { color: var(--dsw-alias-state-business-primary, #2563eb);
+  border-color: currentColor; opacity: 1; }
+.ai-badge[data-origin="ai"] { border-style: dashed; opacity: 0.85; }
+.ai-structure-notes { margin: 4px 0 0; padding-left: 18px; font-size: 11px; opacity: 0.72; }
+.ai-structure-notes li { margin: 1px 0; }
+.ai-chapter-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 2px; }
+.ai-chapter { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22));
+  border-radius: 8px; padding: 8px 10px; background: var(--dsw-alias-bg-base, transparent); }
+.ai-chapter-head { margin-bottom: 2px; }
+.ai-chapter-title { font-weight: 600; font-size: 13px; }
+.ai-chapter-summary { font-size: 12px; opacity: 0.78; margin-top: 2px; }
+.ai-chapter-anchors { font-size: 11px; opacity: 0.6; margin-top: 2px; }
+.ai-chapter-concepts { margin-top: 4px; }
+.ai-badge[data-chapter-role="appendix"] { border-style: dashed; opacity: 0.85; }
+.ai-badge[data-chapter-role="tool"] { color: var(--dsw-alias-state-warn-primary, #b45309);
+  border-color: currentColor; opacity: 1; }
 .ai-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:60}
 .ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
 .ai-modal h3{margin:0 0 8px;font-size:15px}

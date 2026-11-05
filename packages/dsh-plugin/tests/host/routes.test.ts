@@ -7,14 +7,14 @@
  * session -> chat SSE -> activity -> attempt) plus the error/conflict paths the
  * client depends on.
  */
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import assert from 'node:assert/strict'
 import { after, describe, it } from 'node:test'
 import {
   CourseRepository, LearningRepository, LocalState, ProfileRepository, SessionRepository,
-  ScriptedModelClient,
+  ScriptedModelClient, conceptId as newConceptId, courseRevisionId as newCourseRevisionId,
 } from '@deepseek-teaching/core'
 import { createCorpusService } from '@deepseek-teaching/core/corpus'
 import { createTeachingService } from '@deepseek-teaching/core/teaching'
@@ -513,6 +513,119 @@ describe('teaching host routes', () => {
       body: { activityId: staleTarget.id, expectedRevision: 99 },
     })
     assert.equal((stale.json as { error: { code: string } }).error.code, 'conflict')
+  })
+
+  it('builds a draft directly from a detected LLM-wiki structure without calling the model', async () => {
+    const harness = await createHarness([])
+    const created = unwrap<{ course: { id: string } }>((
+      await harness.call('courses.create', { body: { title: '知识库测试课程' } })
+    ).json)
+    const courseId = created.course.id
+    const entries = await readdir(join(process.cwd(), 'samples', 'kb'), { recursive: true, withFileTypes: true })
+    const files = entries
+      .filter(entry => entry.isFile() && entry.name.endsWith('.md'))
+      .map(entry => join(entry.parentPath, entry.name))
+    assert.ok(files.length >= 8)
+    const imported = unwrap<{ task: { id: string } }>((
+      await harness.call('sources.import', { body: { courseId, paths: files } })
+    ).json)
+    await harness.services.tasks.wait(imported.task.id)
+
+    const generated = unwrap<{ task: { id: string } }>((
+      await harness.call('courseDraft.generate', { body: { courseId } })
+    ).json)
+    await harness.services.tasks.wait(generated.task.id)
+    const snapshot = await harness.services.tasks.get(generated.task.id)
+    assert.equal(snapshot?.status, 'completed')
+    const view = unwrap<{
+      draft: {
+        origin: string
+        revision: { chapters?: { title: string; role?: string; conceptIds: string[] }[]; concepts: { id: string }[] }
+      }
+    }>((await harness.call('courseDraft.get', { method: 'GET', query: { courseId } })).json)
+    assert.equal(view.draft.origin, 'kb-structure')
+    const chapters = view.draft.revision.chapters ?? []
+    assert.ok(chapters.length >= 3, 'expected two chapters plus the cross-chapter tool')
+    assert.ok(chapters.some(chapter => chapter.role === 'tool'))
+    const conceptIds = new Set(view.draft.revision.concepts.map(concept => concept.id))
+    for (const chapter of chapters) {
+      for (const conceptId of chapter.conceptIds) assert.ok(conceptIds.has(conceptId), `${conceptId} exists`)
+    }
+    assert.equal(new Set(chapters.flatMap(chapter => chapter.conceptIds)).size, conceptIds.size, 'every concept is grouped')
+
+    // Explicit kb-structure requires a detected knowledge base.
+    const plainCourse = unwrap<{ course: { id: string } }>((
+      await harness.call('courses.create', { body: { title: '普通资料课程' } })
+    ).json)
+    const plainFile = join(harness.dir, 'plain-only.md')
+    await writeFile(plainFile, '# 普通章节\n\n这不是 wiki 结构。\n', 'utf8')
+    const plainImport = unwrap<{ task: { id: string } }>((
+      await harness.call('sources.import', { body: { courseId: plainCourse.course.id, paths: [plainFile] } })
+    ).json)
+    await harness.services.tasks.wait(plainImport.task.id)
+    const strict = unwrap<{ task: { id: string } }>((
+      await harness.call('courseDraft.generate', { body: { courseId: plainCourse.course.id, strategy: 'kb-structure' } })
+    ).json)
+    await harness.services.tasks.wait(strict.task.id)
+    const strictSnapshot = await harness.services.tasks.get(strict.task.id)
+    assert.equal(strictSnapshot?.status, 'failed')
+    assert.equal(strictSnapshot?.error?.code, 'capability-missing')
+  })
+
+  it('exposes structure origin/chapters in the draft view and keeps them consistent on confirm', async () => {
+    const harness = await createHarness([])
+    const created = unwrap<{ course: { id: string } }>((
+      await harness.call('courses.create', { body: { title: '结构课' } })
+    ).json)
+    const courseId = created.course.id
+    const first = newConceptId()
+    const second = newConceptId()
+    const revision = {
+      id: newCourseRevisionId(),
+      courseId,
+      version: 2,
+      createdAt: new Date().toISOString(),
+      state: 'draft',
+      provenance: 'kb-structure',
+      goals: ['理解结构'],
+      language: 'zh',
+      sources: [],
+      concepts: [
+        { id: first, title: '概念 A', summary: 'a', prerequisites: [], sourceAnchors: [] },
+        { id: second, title: '概念 B', summary: 'b', prerequisites: [], sourceAnchors: [] },
+      ],
+      sequence: [first, second],
+      chapters: [
+        { id: 'chapter-1', title: '第 1 章', summary: '第一章', conceptIds: [first] },
+        { id: 'chapter-2', title: '第 2 章', summary: '第二章', conceptIds: [second] },
+      ],
+      changeSummary: '知识库直读：2 个章节 / 2 个概念',
+      basedOn: [],
+    }
+    await harness.services.courses.saveRevision(revision as never)
+    const course = await harness.services.courses.get(courseId)
+    assert.ok(course !== undefined)
+    await harness.services.courses.save({ ...course, draftRevisionId: revision.id as never })
+
+    const view = unwrap<{
+      draft: {
+        origin: string
+        structureNotes: string[]
+        revision: { chapters: { id: string; conceptIds: string[] }[] }
+      }
+    }>((await harness.call('courseDraft.get', { method: 'GET', query: { courseId } })).json)
+    assert.equal(view.draft.origin, 'kb-structure')
+    assert.ok(view.draft.structureNotes.length > 0)
+    assert.equal(view.draft.revision.chapters.length, 2)
+
+    const confirmed = unwrap<{
+      revision: { provenance: string; chapters: { id: string; conceptIds: string[] }[] }
+    }>((await harness.call('courseDraft.confirm', {
+      body: { courseId, revisionId: revision.id, edits: { removeConceptIds: [second] } },
+    })).json)
+    assert.equal(confirmed.revision.provenance, 'student-edit')
+    assert.equal(confirmed.revision.chapters.length, 1)
+    assert.deepEqual(confirmed.revision.chapters[0]?.conceptIds, [first])
   })
 
   it('rejects positions pointing at activities from another session and clears on null', async () => {

@@ -53,7 +53,7 @@ export function CourseSetupCard(props: CourseSetupCardProps): React.ReactElement
             <span>{props.error}</span>
           </div>
         )}
-        {props.phase === 'loading' && <Spinner label="正在生成/读取课程结构…（模型分析资料可能需要几十秒）" />}
+        {props.phase === 'loading' && <Spinner label="正在生成/读取课程结构…（知识库结构直读较快；LLM-wiki 生成可能需要几十秒）" />}
         {props.phase === 'draft' && props.draft !== undefined && (
           <DraftReview
             draft={props.draft}

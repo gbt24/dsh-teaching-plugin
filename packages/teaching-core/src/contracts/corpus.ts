@@ -42,7 +42,19 @@ export interface CorpusSearchResult {
   readonly empty: boolean
 }
 
-/** Input for AI-proposed course structure. */
+/**
+ * How a course structure draft should be produced.
+ *
+ * - `auto` (default): use the knowledge-base structure when the materials look
+ *   like an LLM wiki (schema/index/frontmatter/layers); otherwise fall back to
+ *   the llm-wiki style generation.
+ * - `kb-structure`: require a detected knowledge base; error when none.
+ * - `llm-wiki`: always build a virtual wiki-style outline from the materials
+ *   (used for unstructured sources and for regeneration).
+ */
+export type CourseDraftStrategy = 'auto' | 'kb-structure' | 'llm-wiki'
+
+/** Input for course structure proposals (knowledge-base direct or llm-wiki AI). */
 export interface CourseDraftInput {
   readonly courseId: CourseId
   readonly courseTitle: string
@@ -53,6 +65,8 @@ export interface CourseDraftInput {
   readonly documentIds?: readonly SourceId[]
   /** Student instruction refining a previous draft. */
   readonly instruction?: string
+  /** Structure source strategy; default `auto`. */
+  readonly strategy?: CourseDraftStrategy
 }
 
 /** Outcome of one import task. */

@@ -1,21 +1,25 @@
 /**
- * 课程草案生成。
+ * 课程结构草案 v2：知识库结构直读（确定性）+ LLM-wiki 回退（模型生成虚拟 wiki）。
  *
- * 用注入的 ModelClient 从已导入资料产出不可变 CourseRevision（draft 状态）：
- * - 提示中给出带真实 documentId/unitId 的材料摘要；模型必须引用这些 id；
- * - 解析失败/字段缺失时做**一次**修复调用，仍失败返回 `uncertain`，不编造草案；
- * - 模型给出的无效 anchor 一律丢弃（宁缺失、不伪造），并在 changeSummary 中说明；
- * - 只写 draftRevisionId，不碰 activeRevisionId（确认由 Host/学生完成）。
+ * 路由（`CourseDraftInput.strategy`）：
+ * - `auto`（默认）：检测到 LLM-wiki 结构 → 确定性构建（不调用模型）；否则按 LLM-wiki 规则生成；
+ * - `kb-structure`：要求检测到知识库结构，否则返回 capability-missing；
+ * - `llm-wiki`：强制按 LLM-wiki 规则生成虚拟结构（即使资料本身有 wiki 结构）。
  *
- * 同时提供 CourseDraftView 需要的 coverage/warnings 数据来源（Host 组装视图）。
+ * 共同约束：
+ * - 模型只能引用 digest 中真实出现的 documentId/unitId，无效 anchor 一律丢弃并警告（不伪造来源）；
+ * - 结构化 JSON 解析失败只做有界修复（不超过 `draftLlmWikiGroupCallsMax` 次调用）；
+ * - 只写 `Course.draftRevisionId`，不修改 activeRevisionId（确认由 Host/学生完成）；
+ * - 原文件只读，不写用户知识库目录。
  */
-import type { CourseDraftInput, CorpusService } from '../contracts/corpus.ts'
-import type { Concept, CourseRevision, SourceRole } from '../contracts/course.ts'
-import type { CourseDraftView } from '../contracts/course.ts'
+import type { CourseDraftInput, CorpusService, CourseDraftStrategy } from '../contracts/corpus.ts'
+import type {
+  Concept, ConceptDifficulty, CourseChapter, CourseDraftView, CourseRevision, CourseSourceRef,
+  SourceRole,
+} from '../contracts/course.ts'
 import type { SourceAnchor, SourceDocument, SourceRevision, SourceUnit } from '../contracts/source.ts'
-import {
-  conceptId as newConceptId, courseRevisionId as newCourseRevisionId, nowIso,
-} from '../contracts/ids.ts'
+import { conceptId as newConceptId, courseRevisionId as newCourseRevisionId, nowIso } from '../contracts/ids.ts'
+import type { SourceId } from '../contracts/ids.ts'
 import type { ModelClient, ModelRequest } from '../model/types.ts'
 import { err, ok, toAppError, type Result } from '../contracts/result.ts'
 import type { CourseRepository } from '../storage/repositories.ts'
@@ -23,6 +27,10 @@ import type { CorpusLimits } from './limits.ts'
 import type { CorpusStore } from './store.ts'
 import { isSignalAborted } from './budget.ts'
 import { excerptAround, locatorDescription } from './text-utils.ts'
+import {
+  buildKbStructureFromContext, kbRoleToSourceRole, prepareKbContext,
+  type KbContext, type KbPage, type KbSourceRole, type KbStructureBuild, type MaterialDocument,
+} from './structure.ts'
 
 /** 草案生成依赖。 */
 export interface DraftDeps {
@@ -32,19 +40,36 @@ export interface DraftDeps {
   readonly limits: CorpusLimits
 }
 
-/** 一份被读取的资料。 */
-interface MaterialDocument {
-  readonly document: SourceDocument
-  readonly revision: SourceRevision
-  readonly units: readonly SourceUnit[]
+/** 未分配 id 的概念（由持久化层分配）。 */
+interface StructureConceptInput {
+  readonly title: string
+  readonly summary: string
+  readonly prerequisites: readonly string[]
+  readonly anchors: readonly SourceAnchor[]
+  readonly difficulty?: ConceptDifficulty
+  readonly misconceptions?: readonly string[]
+  readonly checkIdeas?: readonly string[]
 }
 
-/** 材料摘要与可引用单元集合。 */
-interface MaterialDigest {
-  readonly documents: readonly MaterialDocument[]
-  readonly anchorIndex: ReadonlyMap<string, { document: SourceDocument; revision: SourceRevision; unit: SourceUnit }>
-  readonly promptText: string
-  readonly warnings: string[]
+/** 未分配 id 的章节。 */
+interface StructureChapterInput {
+  readonly title: string
+  readonly summary?: string
+  readonly role: 'chapter' | 'appendix' | 'tool'
+  readonly conceptTitles: readonly string[]
+  readonly anchors?: readonly SourceAnchor[]
+}
+
+/** 两种模式共用的一份待持久化结构数据。 */
+interface StructureData {
+  readonly goals: readonly string[]
+  readonly concepts: readonly StructureConceptInput[]
+  readonly chapters: readonly StructureChapterInput[]
+  readonly sequenceTitles?: readonly string[]
+  readonly sources: readonly CourseSourceRef[]
+  readonly basedOn: readonly { readonly sourceId: SourceId; readonly revisionId: string }[]
+  readonly provenance: 'kb-structure' | 'llm-wiki'
+  readonly changeSummary: string
 }
 
 const ROLE_BY_FORMAT: Readonly<Record<SourceDocument['format'], SourceRole>> = {
@@ -59,7 +84,9 @@ const ROLE_BY_FORMAT: Readonly<Record<SourceDocument['format'], SourceRole>> = {
   image: 'other',
 }
 
-/** 生成课程草案并持久化为 draft 修订。 */
+/* ------------------------------------------------------------------ 入口 */
+
+/** 生成课程结构草案并按策略路由到知识库直读或 LLM-wiki 回退。 */
 export async function proposeCourseRevision(
   deps: DraftDeps,
   input: CourseDraftInput,
@@ -71,263 +98,527 @@ export async function proposeCourseRevision(
   if (isSignalAborted(signal)) return err('cancelled', '课程草案生成已取消')
   const course = await deps.courses.get(input.courseId)
   if (course === undefined) return err('not-found', '课程不存在或已被删除')
-  if (deps.model === undefined) {
-    return err('capability-missing', '当前没有可用的模型客户端，无法生成课程草案')
-  }
+  const strategy: CourseDraftStrategy = input.strategy ?? 'auto'
 
-  let material: MaterialDigest
+  let prepared: Result<KbContext>
   try {
-    material = await gatherMaterial(deps, input)
+    prepared = await prepareKbContext(deps, input, signal)
   } catch (cause) {
     return toResultError(cause, '读取课程资料失败，无法生成课程草案')
   }
-  const requestBase = buildDraftPrompt(deps, input, material)
-  const parseFailureLimit = 2
-  let lastReason = ''
-  let lastText = ''
-  for (let attempt = 0; attempt < parseFailureLimit; attempt += 1) {
-    if (isSignalAborted(signal)) return err('cancelled', '课程草案生成已取消')
-    const messages = attempt === 0
-      ? requestBase.messages
-      : [
-          ...requestBase.messages,
-          { role: 'assistant' as const, text: lastText.slice(0, 4000) },
-          {
-            role: 'user' as const,
-            text: `上一次输出无法解析为所需 JSON（${lastReason}）。请只输出一次合法的 JSON 对象，不要解释，不要 Markdown 代码围栏。`,
-          },
-        ]
-    const request: ModelRequest = {
-      messages,
-      system: requestBase.system,
-      json: requestBase.json,
-      purpose: 'course-draft',
-      language: input.language,
-      maxTokens: 4000,
-      temperature: 0.2,
-    }
-    let completion
-    try {
-      completion = await deps.model.complete(request, signal)
-    } catch (cause) {
-      return mapModelFailure(cause, signal)
-    }
-    if (isSignalAborted(signal)) return err('cancelled', '课程草案生成已取消')
-    lastText = completion.text
-    const candidate = completion.json !== undefined ? completion.json : tryParseJson(completion.text)
-    if (candidate === undefined) {
-      lastReason = completion.parseError ?? '输出不是合法 JSON'
-      continue
-    }
-    const validated = validateDraftValue(candidate, material, deps.limits, input)
-    if (!validated.ok) {
-      lastReason = validated.error
-      continue
-    }
-    try {
-      const revision = await persistDraft(deps, input, material, validated.value, [...material.warnings, ...validated.warnings])
-      return ok(revision)
-    } catch (cause) {
-      return toResultError(cause, '课程草案保存失败')
-    }
-  }
-  return err('uncertain', '模型返回的课程结构无法解析或缺少必要字段（已尝试一次修复），未保存草案；可重新生成或先用已读内容随问随学', {
-    details: { reason: lastReason },
-    retryable: true,
-  })
-}
+  if (!prepared.ok) return prepared
+  const context = prepared.value
+  const detected = context.detection.facts.isKnowledgeBase
 
-/** 读取某课程/指定文档的当前修订作为材料。 */
-async function gatherMaterial(deps: DraftDeps, input: CourseDraftInput): Promise<MaterialDigest> {
-  const warnings: string[] = []
-  let documents: SourceDocument[]
-  if (input.documentIds !== undefined && input.documentIds.length > 0) {
-    documents = []
-    for (const documentId of input.documentIds) {
-      const document = await deps.store.readDocument(documentId)
-      if (document === undefined) {
-        warnings.push(`资料 ${documentId} 不存在，已跳过`)
-        continue
+  if (strategy !== 'llm-wiki' && detected) {
+    const built = await buildKbStructureFromContext(deps, input, context, signal)
+    if (built.ok) {
+      try {
+        const revision = await persistStructureRevision(deps, input, structureDataFromKb(built.value, input, deps.limits))
+        return ok(revision)
+      } catch (cause) {
+        return toResultError(cause, '课程草案保存失败')
       }
-      documents.push(document)
     }
-  } else {
-    const ids = await deps.store.documentIdsForCourses([input.courseId])
-    documents = []
-    for (const id of ids) {
-      const document = await deps.store.readDocument(id)
-      if (document !== undefined) documents.push(document)
-    }
+    if (strategy === 'kb-structure') return built
+    // auto：知识库解析不出概念时回退到 LLM-wiki（有模型才回退）
+    if (built.error.code !== 'uncertain' || deps.model === undefined) return built
+    const fallback = await runLlmWikiPath(deps, input, context, signal)
+    return fallback.ok ? fallback : built
   }
-  const ready: MaterialDocument[] = []
-  for (const document of documents) {
-    if (document.currentRevisionId === undefined) {
-      warnings.push(`《${document.title}》尚未成功解析，未纳入课程草案`)
-      continue
-    }
-    const revision = await deps.store.readRevision(document.id, document.currentRevisionId)
-    if (revision === undefined) {
-      warnings.push(`《${document.title}》的当前修订缺失，未纳入课程草案`)
-      continue
-    }
-    if (revision.units.length === 0) {
-      warnings.push(`《${document.title}》没有可读单元，未纳入课程草案`)
-      continue
-    }
-    ready.push({ document, revision, units: revision.units })
-  }
-  if (ready.length === 0) {
-    warnings.push('该课程还没有可读资料，课程草案将只基于学生目标与模型知识，不包含资料定位')
+  if (strategy === 'kb-structure') {
+    return err(
+      'capability-missing',
+      `未检测到 LLM-wiki 知识库结构，无法使用 kb-structure 策略：${context.detection.facts.reason}`,
+      {
+        details: {
+          strategy,
+          signals: context.detection.facts.signals.map(item => ({ id: item.id, matched: item.matched })),
+          pageCount: context.detection.facts.pageCount,
+        },
+      },
+    )
   }
 
-  const anchorIndex = new Map<string, { document: SourceDocument; revision: SourceRevision; unit: SourceUnit }>()
-  const lines: string[] = []
-  let budgetChars = deps.limits.draftMaxChars
-  let usedDocuments = 0
-  for (let index = 0; index < ready.length; index += 1) {
-    const material = ready[index] as MaterialDocument
-    const label = `D${index + 1}`
-    const selected = selectUnits(material.units, deps.limits.draftUnitsPerDoc)
-    const header = `[${label}] 《${material.document.title}》 格式=${material.document.format} 状态=${material.revision.status} documentId=${material.document.id}`
-    if (budgetChars - header.length < 200) {
-      warnings.push(`材料较多，课程草案只使用了前 ${usedDocuments} 份资料的摘要`)
-      break
-    }
-    lines.push(header)
-    budgetChars -= header.length
-    for (const unit of selected) {
-      const locator = locatorDescription(unit.locator)
-      const excerpt = excerptAround(unit.text, [], Math.min(320, deps.limits.maxUnitChars))
-      const line = `  - unitId=${unit.id} (${unit.kind}${locator !== '原文定位' ? ` ${locator}` : ''}) ${excerpt}`
-      if (line.length > budgetChars) break
-      lines.push(line)
-      budgetChars -= line.length
-      anchorIndex.set(`${material.document.id}|${unit.id}`, {
-        document: material.document,
-        revision: material.revision,
-        unit,
-      })
-    }
-    usedDocuments += 1
-  }
-  if (usedDocuments < ready.length) {
-    warnings.push(`课程草案摘要达到长度上限，只使用了 ${usedDocuments}/${ready.length} 份资料`)
-  }
-  const promptText = lines.length > 0 ? lines.join('\n') : '（暂无可用资料：本课程尚未导入或解析出可读内容）'
-  return { documents: ready.slice(0, usedDocuments), anchorIndex, promptText, warnings }
+  return await runLlmWikiPath(deps, input, context, signal)
 }
 
-/** 每份资料选哪些单元进入提示：标题优先 + 均匀采样 + 公式/图表/代码保底。 */
-function selectUnits(units: readonly SourceUnit[], maxUnits: number): SourceUnit[] {
-  if (units.length <= maxUnits) return [...units]
-  const selected: SourceUnit[] = []
-  const seen = new Set<string>()
-  const push = (unit: SourceUnit): void => {
-    if (selected.length >= maxUnits || seen.has(unit.id)) return
-    seen.add(unit.id)
-    selected.push(unit)
+/** 由知识库直读结果组装可持久化的结构数据。 */
+function structureDataFromKb(
+  build: KbStructureBuild,
+  input: CourseDraftInput,
+  _limits: CorpusLimits,
+): StructureData {
+  const concepts: StructureConceptInput[] = build.concepts.map(concept => ({
+    title: concept.title,
+    summary: concept.summary,
+    prerequisites: concept.prerequisites,
+    anchors: concept.anchors,
+    ...(concept.difficulty !== undefined ? { difficulty: concept.difficulty } : {}),
+  }))
+  const chapters: StructureChapterInput[] = build.chapters.map(chapter => ({
+    title: chapter.title,
+    ...(chapter.summary !== undefined ? { summary: chapter.summary } : {}),
+    role: chapter.role,
+    conceptTitles: chapter.conceptTitles,
+    anchors: chapter.anchors,
+  }))
+  const coveredTitles = new Set(chapters.flatMap(chapter => chapter.conceptTitles))
+  const missing = concepts.filter(concept => !coveredTitles.has(concept.title)).map(concept => concept.title)
+  if (missing.length > 0) {
+    chapters.push({ title: '未分章内容', role: 'appendix', conceptTitles: missing, anchors: [] })
   }
-  // 所有标题（至多 1/3 名额）
-  for (const unit of units) {
-    if (unit.kind === 'heading' && selected.length < Math.floor(maxUnits / 3)) push(unit)
+  return {
+    goals: buildGoals(input),
+    concepts,
+    chapters,
+    sequenceTitles: build.sequence.length > 0 ? build.sequence : undefined,
+    sources: build.sources,
+    basedOn: build.basedOn,
+    provenance: 'kb-structure',
+    changeSummary: describeKbBuild(build),
   }
-  // 公式/图表/代码各保底少量
-  for (const kind of ['formula', 'figure', 'table', 'code'] as const) {
-    let count = 0
-    for (const unit of units) {
-      if (unit.kind !== kind || count >= Math.max(2, Math.floor(maxUnits / 10))) continue
-      push(unit)
-      count += 1
-    }
-  }
-  // 其余按均匀间隔采样
-  const remaining = maxUnits - selected.length
-  const step = Math.max(1, Math.floor(units.length / Math.max(1, remaining)))
-  for (let index = 0; index < units.length && selected.length < maxUnits; index += step) {
-    push(units[index] as SourceUnit)
-  }
-  for (const unit of units) {
-    if (selected.length >= maxUnits) break
-    push(unit)
-  }
-  return selected.sort((a, b) => units.indexOf(a) - units.indexOf(b))
 }
 
-interface DraftPrompt {
+function buildGoals(input: CourseDraftInput): string[] {
+  const goal = input.goal.trim().slice(0, 240)
+  return goal === '' ? [] : [goal]
+}
+
+function describeKbBuild(build: KbStructureBuild): string {
+  const facts = build.detection.facts
+  const chapterCount = build.chapters.filter(chapter => chapter.role === 'chapter').length
+  const toolCount = build.chapters.filter(chapter => chapter.role === 'tool').length
+  const anchorCount = build.concepts.reduce((sum, concept) => sum + concept.anchors.length, 0)
+  const warningPart = build.warnings.length > 0
+    ? `结构警告 ${build.warnings.length} 条（${build.warnings.slice(0, 2).join('；')}）`
+    : '未发现结构问题'
+  return [
+    `知识库结构直读（kb-structure）：${chapterCount} 章 + ${toolCount} 个工具章节 + ${build.concepts.length} 个概念`,
+    `${anchorCount} 个原文锚点；读取 ${facts.pageCount} 个页面（index=${facts.hasIndex ? '有' : '无'}、frontmatter=${facts.frontmatterPageCount}、chapter-overview=${facts.chapterOverviewCount}、可解析链接=${facts.resolvableWikilinkCount}）`,
+    warningPart,
+  ].join('；')
+}
+
+/* ------------------------------------------------------------------ LLM-wiki 回退 */
+
+/** digest 中可引用的一个单元。 */
+interface DigestUnitRef {
+  readonly document: SourceDocument
+  readonly revision: SourceRevision
+  readonly unit: SourceUnit
+}
+
+/** 一组模型调用对应的资料摘要。 */
+interface DigestGroup {
+  readonly index: number
+  readonly total: number
+  readonly text: string
+  readonly documentIds: readonly string[]
+}
+
+/** LLM-wiki 回退的资料摘要（digest）。 */
+interface StructureDigest {
+  readonly groups: readonly DigestGroup[]
+  readonly anchorIndex: ReadonlyMap<string, DigestUnitRef>
+  readonly documentCount: number
+  readonly digestedDocumentCount: number
+  readonly totalChars: number
+  readonly warnings: readonly string[]
+}
+
+interface StructurePrompt {
   readonly system: string
-  readonly messages: readonly { role: 'user'; text: string }[]
+  readonly messages: readonly { role: 'user' | 'assistant'; text: string }[]
   readonly json: NonNullable<ModelRequest['json']>
 }
 
-function buildDraftPrompt(deps: DraftDeps, input: CourseDraftInput, material: MaterialDigest): DraftPrompt {
+/** LLM-wiki 回退：生成虚拟 wiki 式章节/概念结构并持久化。 */
+async function runLlmWikiPath(
+  deps: DraftDeps,
+  input: CourseDraftInput,
+  context: KbContext,
+  signal?: AbortSignal,
+): Promise<Result<CourseRevision>> {
+  if (deps.model === undefined) {
+    return err('capability-missing', '当前没有可用的模型客户端，无法生成课程草案')
+  }
+  const digest = buildStructureDigest(context, input, deps.limits)
+  if (digest.groups.length === 0) {
+    return err('invalid-input', '课程没有可用于生成结构的资料摘要')
+  }
+  const maxCalls = Math.max(1, deps.limits.draftLlmWikiGroupCallsMax)
+  let calls = 0
+  const results: ValidatedStructure[] = []
+  const warnings: string[] = [...digest.warnings]
+  const notes: string[] = []
+  for (const group of digest.groups) {
+    if (isSignalAborted(signal)) return err('cancelled', '课程草案生成已取消')
+    if (calls >= maxCalls) {
+      warnings.push(`模型调用次数达到上限（${maxCalls}），剩余 ${digest.groups.length - group.index + 1} 组资料未覆盖`)
+      break
+    }
+    calls += 1
+    let attempt = await generateGroupStructure(deps, input, context, digest, group, signal)
+    if (!attempt.ok && attempt.error.code === 'uncertain' && calls < maxCalls) {
+      calls += 1
+      attempt = await generateGroupStructure(deps, input, context, digest, group, signal, attempt.error.repair)
+    }
+    if (!attempt.ok) {
+      if (attempt.error.code === 'cancelled') return err('cancelled', '课程草案生成已取消')
+      warnings.push(`资料分组 ${group.index}/${group.total} 的结构生成失败：${attempt.error.message}`)
+      notes.push(`分组 ${group.index}/${group.total} 未覆盖`)
+      continue
+    }
+    results.push(attempt.value)
+  }
+  if (results.length === 0) {
+    return err('uncertain', '模型未能生成可用的课程结构（JSON 无效或缺少概念），未保存草案；可重试或先用随问随学', {
+      details: { calls, groups: digest.groups.length },
+      retryable: true,
+    })
+  }
+  const merged = mergeValidatedStructures(results, input, deps.limits, warnings)
+  if (merged.concepts.length === 0) {
+    return err('uncertain', '模型返回的结构中没有有效概念，未保存草案', { details: { calls } })
+  }
+  const digestedDocIds = new Set(digest.groups.flatMap(group => [...group.documentIds]))
+  const sources: CourseSourceRef[] = context.material.documents
+    .filter(material => digestedDocIds.has(material.document.id))
+    .map(material => {
+      const role: KbSourceRole = context.detection.roleByDocumentId.get(material.document.id) ?? 'unknown'
+      return {
+        sourceId: material.document.id,
+        role: role === 'unknown' ? ROLE_BY_FORMAT[material.document.format] : kbRoleToSourceRole(role),
+      }
+    })
+  const basedOn = context.material.documents
+    .filter(material => digestedDocIds.has(material.document.id))
+    .map(material => ({ sourceId: material.document.id, revisionId: material.revision.id }))
+  const changeSummary = describeLlmWikiResult({
+    input,
+    digest,
+    merged,
+    calls,
+    warnings,
+  })
+  const data: StructureData = {
+    goals: merged.goals,
+    concepts: merged.concepts,
+    chapters: merged.chapters,
+    sources,
+    basedOn,
+    provenance: 'llm-wiki',
+    changeSummary,
+  }
+  try {
+    return ok(await persistStructureRevision(deps, input, data))
+  } catch (cause) {
+    return toResultError(cause, '课程草案保存失败')
+  }
+}
+
+function describeLlmWikiResult(input: {
+  readonly input: CourseDraftInput
+  readonly digest: StructureDigest
+  readonly merged: { readonly concepts: readonly StructureConceptInput[]; readonly chapters: readonly StructureChapterInput[]; readonly notes: readonly string[] }
+  readonly calls: number
+  readonly warnings: readonly string[]
+}): string {
+  const chapterCount = input.merged.chapters.filter(chapter => chapter.role === 'chapter').length
+  const toolCount = input.merged.chapters.filter(chapter => chapter.role === 'tool').length
+  const anchorCount = input.merged.concepts.reduce((sum, concept) => sum + concept.anchors.length, 0)
+  const coverage = `${input.digest.digestedDocumentCount}/${input.digest.documentCount} 份资料`
+  const parts = [
+    `LLM-wiki 回退（llm-wiki）：按 skill 规则从 ${coverage} 生成 ${chapterCount} 章 + ${toolCount} 个工具章节 + ${input.merged.concepts.length} 个概念`,
+    `${anchorCount} 个资料锚点；模型调用 ${input.calls} 次`,
+  ]
+  const noteText = [...input.merged.notes, ...(input.input.instruction === undefined ? [] : [`学生修改要求：${input.input.instruction.trim().slice(0, 80)}`])]
+  if (noteText.length > 0) parts.push(`说明：${noteText.slice(0, 2).join('；')}`)
+  if (input.warnings.length > 0) parts.push(`警告：${input.warnings.slice(0, 2).join('；')}`)
+  return parts.join('；').slice(0, 600)
+}
+
+/* ------------------------------------------------------------------ digest */
+
+function normalizeHeadingPath(unit: SourceUnit): string {
+  const path = unit.locator.sectionPath
+  if (path !== undefined && path.length > 0) return path.join(' > ')
+  return unit.text
+}
+
+/** 从全部资料生成 LLM-wiki 式 digest：标题树 + 首段 + 可引用单元。 */
+function buildStructureDigest(
+  context: KbContext,
+  _input: CourseDraftInput,
+  limits: CorpusLimits,
+): StructureDigest {
+  const pageByDocumentId = new Map<string, KbPage>()
+  for (const page of context.pages) pageByDocumentId.set(page.document.id, page)
+  const warnings: string[] = []
+  const anchorIndex = new Map<string, DigestUnitRef>()
+  const blocks: { readonly documentId: string; readonly text: string }[] = []
+  const documentCount = context.material.documents.length
+  const docCharLimit = Math.max(300, limits.draftLlmWikiDocChars)
+  const headingLimit = Math.max(4, limits.draftLlmWikiHeadingsPerDoc)
+  let truncatedDocs = 0
+  let skippedDocuments = 0
+
+  for (let index = 0; index < context.material.documents.length; index += 1) {
+    const material = context.material.documents[index] as MaterialDocument
+    const document = material.document
+    const role: KbSourceRole = context.detection.roleByDocumentId.get(document.id) ?? 'unknown'
+    // 日志/图片资产不是教学结构来源：跳过以避免占满摘要预算（不计入 digestedDocumentCount）
+    if (role === 'log' || role === 'raw-asset' || role === 'visual-asset') {
+      skippedDocuments += 1
+      continue
+    }
+    const page = pageByDocumentId.get(document.id)
+    const headingUnits = material.units.filter(unit => unit.kind === 'heading')
+    const paragraphUnit = material.units.find(unit => unit.kind === 'paragraph')
+      ?? material.units.find(unit => unit.kind !== 'heading')
+    const specialUnit = material.units.find(unit => unit.kind === 'formula' || unit.kind === 'table'
+      || unit.kind === 'code' || unit.kind === 'figure')
+    const representative = [headingUnits[0], paragraphUnit, specialUnit]
+      .filter((unit): unit is SourceUnit => unit !== undefined)
+      .filter((unit, position, all) => all.findIndex(item => item.id === unit.id) === position)
+      .slice(0, 4)
+    const header = `[D${index + 1}] documentId=${document.id} role=${role} format=${document.format} revision=${material.revision.id} title=《${document.title}》`
+    const headingLines: string[] = []
+    for (const unit of headingUnits.slice(0, headingLimit)) {
+      const path = normalizeHeadingPath(unit)
+      if (path !== '') headingLines.push(`  - ${path}`)
+    }
+    const firstParagraph = page?.firstParagraph
+      ?? (paragraphUnit === undefined ? '' : excerptAround(paragraphUnit.text, [], 260))
+    const unitLines: string[] = []
+    for (const unit of representative) {
+      const key = `${document.id}|${unit.id}`
+      anchorIndex.set(key, { document, revision: material.revision, unit })
+      unitLines.push(`  可引用单元: unitId=${unit.id} (${locatorDescription(unit.locator)}) ${excerptAround(unit.text, [], 160)}`)
+    }
+    const pieces = [header, ...unitLines]
+    if (headingLines.length > 0) pieces.push('  标题树:', ...headingLines)
+    if (firstParagraph !== '') pieces.push(`  首段: ${truncateText(firstParagraph, 260)}`)
+    let block = pieces.join('\n')
+    if (block.length > docCharLimit) {
+      block = `${block.slice(0, Math.max(0, docCharLimit - 12)).trimEnd()}\n…（截断）`
+      truncatedDocs += 1
+    }
+    blocks.push({ documentId: document.id, text: block })
+  }
+  if (truncatedDocs > 0) warnings.push(`${truncatedDocs} 份资料的摘要被截断（单份上限 ${docCharLimit} 字符）`)
+  if (skippedDocuments > 0) warnings.push(`${skippedDocuments} 份日志/图片资产资料未纳入结构摘要（不参与概念生成）`)
+
+  const budget = Math.max(2_000, limits.draftLlmWikiBudgetChars)
+  const totalChars = blocks.reduce((sum, block) => sum + block.text.length + 1, 0)
+  const maxCalls = Math.max(1, limits.draftLlmWikiGroupCallsMax)
+  const rawGroups: { index: number; text: string; documentIds: string[] }[] = []
+  if (totalChars <= budget || maxCalls === 1) {
+    rawGroups.push({ index: 1, text: blocks.map(block => block.text).join('\n'), documentIds: blocks.map(block => block.documentId) })
+  } else {
+    const needed = Math.ceil(totalChars / budget)
+    const groupCount = Math.min(maxCalls, Math.max(1, needed))
+    const buckets: { chars: number; blocks: { documentId: string; text: string }[] }[] = Array.from(
+      { length: groupCount },
+      () => ({ chars: 0, blocks: [] }),
+    )
+    for (const block of [...blocks].sort((a, b) => b.text.length - a.text.length)) {
+      let target = buckets[0] as { chars: number; blocks: { documentId: string; text: string }[] }
+      for (const bucket of buckets) {
+        if (bucket.chars < target.chars) target = bucket
+      }
+      target.blocks.push(block)
+      target.chars += block.text.length + 1
+    }
+    for (const bucket of buckets) {
+      if (bucket.blocks.length === 0) continue
+      let text = ''
+      const documentIds: string[] = []
+      let droppedHere = 0
+      for (const block of bucket.blocks) {
+        if (text.length > 0 && text.length + block.text.length > budget) {
+          droppedHere += 1
+          continue
+        }
+        if (text.length > 0) text += '\n'
+        text += block.text
+        documentIds.push(block.documentId)
+      }
+      if (droppedHere > 0) {
+        warnings.push(`资料分组 ${rawGroups.length + 1} 超出摘要预算，${droppedHere} 份资料未覆盖`)
+        text += `\n（本组还有 ${droppedHere} 份资料因预算未列出）`
+      }
+      rawGroups.push({ index: rawGroups.length + 1, text, documentIds })
+    }
+  }
+  const groups: DigestGroup[] = rawGroups.map(group => ({
+    index: group.index,
+    total: rawGroups.length,
+    text: group.text,
+    documentIds: group.documentIds,
+  }))
+  const digestedIds = new Set(groups.flatMap(group => [...group.documentIds]))
+  const digestedDocumentCount = digestedIds.size
+  if (digestedDocumentCount < documentCount) {
+    warnings.push(`digest 覆盖 ${digestedDocumentCount}/${documentCount} 份资料（预算 ${budget} 字符/组，最多 ${maxCalls} 组）`)
+  }
+  // 只允许引用实际出现在分组中的资料单元
+  for (const key of [...anchorIndex.keys()]) {
+    const documentId = key.slice(0, key.indexOf('|'))
+    if (!digestedIds.has(documentId)) anchorIndex.delete(key)
+  }
+  return { groups, anchorIndex, documentCount, digestedDocumentCount, totalChars, warnings }
+}
+
+function truncateText(text: string, max: number): string {
+  if (text.length <= max) return text
+  return `${text.slice(0, max - 1).trimEnd()}…`
+}
+
+/* ------------------------------------------------------------------ 模型调用与校验 */
+
+interface ValidatedConceptDraft {
+  readonly title: string
+  readonly summary: string
+  readonly prerequisites: readonly string[]
+  readonly anchors: readonly SourceAnchor[]
+  readonly difficulty?: ConceptDifficulty
+  readonly misconceptions: readonly string[]
+  readonly checkIdeas: readonly string[]
+}
+
+interface ValidatedStructure {
+  readonly chapters: readonly StructureChapterInput[]
+  readonly concepts: readonly ValidatedConceptDraft[]
+  readonly goals: readonly string[]
+  readonly notes: readonly string[]
+  readonly warnings: readonly string[]
+}
+
+interface StructureAttemptError {
+  readonly code: 'uncertain' | 'cancelled' | 'failed' | 'capability-missing'
+  readonly message: string
+  readonly repair?: { readonly lastText: string; readonly reason: string }
+}
+
+type StructureAttempt = { readonly ok: true; readonly value: ValidatedStructure } | { readonly ok: false; readonly error: StructureAttemptError }
+
+/** 对一组资料调用一次模型并校验结构 JSON。 */
+async function generateGroupStructure(
+  deps: DraftDeps,
+  input: CourseDraftInput,
+  context: KbContext,
+  digest: StructureDigest,
+  group: DigestGroup,
+  signal?: AbortSignal,
+  repair?: { readonly lastText: string; readonly reason: string },
+): Promise<StructureAttempt> {
+  if (deps.model === undefined) {
+    return { ok: false, error: { code: 'capability-missing', message: '没有可用的模型客户端' } }
+  }
+  const prompt = buildStructurePrompt(input, context, group, repair)
+  const request: ModelRequest = {
+    messages: prompt.messages,
+    system: prompt.system,
+    json: prompt.json,
+    purpose: 'course-draft',
+    language: input.language,
+    maxTokens: 6_000,
+    temperature: 0.2,
+  }
+  let completion
+  try {
+    completion = await deps.model.complete(request, signal)
+  } catch (cause) {
+    const mapped = mapModelFailure(cause, signal)
+    if (!mapped.ok) {
+      const code = mapped.error.code
+      const attemptCode: StructureAttemptError['code'] = code === 'cancelled'
+        ? 'cancelled'
+        : code === 'capability-missing'
+          ? 'capability-missing'
+          : 'failed'
+      return { ok: false, error: { code: attemptCode, message: mapped.error.message } }
+    }
+  }
+  if (isSignalAborted(signal)) return { ok: false, error: { code: 'cancelled', message: '课程草案生成已取消' } }
+  const rawText = completion?.text ?? ''
+  const candidate = completion?.json !== undefined ? completion.json : tryParseJson(rawText)
+  if (candidate === undefined) {
+    const reason = completion?.parseError ?? '输出不是合法 JSON'
+    return { ok: false, error: { code: 'uncertain', message: reason, repair: { lastText: rawText, reason } } }
+  }
+  const validated = validateStructureValue(candidate, digest, input, deps.limits)
+  if (!validated.ok) {
+    return {
+      ok: false,
+      error: { code: 'uncertain', message: validated.error, repair: { lastText: rawText, reason: validated.error } },
+    }
+  }
+  return { ok: true, value: validated.value }
+}
+
+function buildStructurePrompt(
+  input: CourseDraftInput,
+  context: KbContext,
+  group: DigestGroup,
+  repair?: { readonly lastText: string; readonly reason: string },
+): StructurePrompt {
   const languageHint = input.language === 'en'
-    ? '使用英文输出概念标题与摘要'
+    ? '使用英文输出章节与概念标题/摘要'
     : input.language === 'bilingual'
-      ? '概念标题使用中文并保留英文术语，摘要使用中文'
+      ? '标题使用中文并保留英文术语，摘要使用中文'
       : '使用中文输出，保留原文英文术语'
+  const roleSummary = context.detection.facts.isKnowledgeBase
+    ? `资料角色：${context.detection.facts.signals.filter(signal => signal.matched).map(signal => signal.label).join('；')}`
+    : '这些资料没有知识库结构（无 SCHEMA/index/frontmatter 结构），请创建虚拟 wiki 结构。'
   const userText = [
     `课程：${input.courseTitle}`,
     `学习目标：${input.goal}`,
     `学生基础：${input.background ?? '未提供'}`,
     `输出语言：${languageHint}`,
     '',
-    '以下是已导入的资料摘要（每行形如 unitId=... 以及该单元文本）：',
-    material.promptText,
+    roleSummary,
+    `资料分组：${group.index}/${group.total}`,
     '',
-    '要求：',
-    '1. concepts 按从基础到进阶组织，数量控制在 4-12 个（资料很少时可以减少）；',
-    '2. 每个 concept 的 anchors 只能引用上面出现过的 documentId 与 unitId，不要编造；没有合适资料时 anchors 留空数组；',
-    '3. prerequisites 使用其他 concept 的 title；sequence 是概念 title 的学习顺序数组，必须覆盖所有 concept；',
-    '4. 只输出 JSON 对象，字段为：goals(string[])、concepts(数组)、sequence(string[])。',
+    '以下是资料摘要（documentId / unitId 是真实标识，锚点只能引用这里出现的 id）：',
+    group.text,
+    '',
+    '请按 Karpathy LLM Wiki 方法输出课程结构（只输出 JSON 对象）：',
+    '1. sections：按学习顺序分章（每章 title/summary/role=chapter|appendix|tool），每个 chapter 里放 concepts；',
+    '2. 概念页面阈值：一个概念/实体在 2+ 份资料出现，或对单份资料的核心内容，才建立概念；passing mention 不建；',
+    '3. 每个 concept 必须有：title、一句话 summary、anchors（仅引用上面出现的 documentId+unitId，可 0-4 个）、difficulty=intro|core|advanced，可选 prerequisites（其他概念 title）、misconceptions、checkIdeas；',
+    '4. 概念之间要形成可学习的顺序（章节顺序 + prerequisites 表达交叉链接），课程整体 4-15 个章节（资料少时可减少）；',
+    '5. 资料不足时在 notes 里说明，不得编造资料中不存在的事实或 documentId/unitId；',
+    '6. 只输出 JSON：{"sections":[{"title":"...","summary":"...","role":"chapter","concepts":[...]}],"goals":["..."],"notes":["..."]}。',
     '',
     ...(input.instruction !== undefined && input.instruction.trim() !== ''
       ? [`学生修改要求：${input.instruction.trim().slice(0, 1000)}`, '']
       : []),
-    'concepts 每项字段：',
-    '{"title": string, "summary": string, "prerequisites": string[], "difficulty": "intro"|"core"|"advanced", "misconceptions": string[], "checkIdeas": string[], "anchors": [{"documentId": string, "unitId": string}]}',
   ].join('\n')
+  const messages: { role: 'user' | 'assistant'; text: string }[] = [{ role: 'user', text: userText }]
+  if (repair !== undefined) {
+    messages.push({ role: 'assistant', text: repair.lastText.slice(0, 4_000) })
+    messages.push({
+      role: 'user',
+      text: `上一次输出无法解析为所需 JSON（${repair.reason}）。请只重新输出一次合法的 JSON 对象，不要解释、不要 Markdown 代码围栏，并遵守同样的锚点约束。`,
+    })
+  }
   return {
-    system: '你是严谨的课程结构分析器。课程结构必须能追溯到给定资料单元；不确定时宁可不引用，绝不编造 documentId/unitId。只输出合法 JSON。',
-    messages: [{ role: 'user', text: userText }],
+    system: '你是严谨的课程结构设计器。遵循 Karpathy LLM Wiki 方法：区分原始资料/概念页/索引；只给达到页面阈值的概念建页；概念之间要有交叉链接与学习顺序；锚点只能引用给定资料摘要中真实出现的 documentId 与 unitId，不确定时宁可不引用。只输出合法 JSON。',
+    messages,
     json: {
-      name: 'course-structure',
-      description: '课程结构草案：目标、概念列表与学习顺序',
+      name: 'course-structure-wiki',
+      description: 'LLM-wiki 式课程结构：章节、概念、一句话摘要、资料锚点',
       fields: {
+        sections: '章节数组，每章含 title/summary/role/concepts',
+        concepts: '每章内概念数组：title/summary/anchors/prerequisites/difficulty/misconceptions/checkIdeas',
         goals: 'string[] 学习目标',
-        concepts: '概念数组，含 title/summary/prerequisites/difficulty/misconceptions/checkIdeas/anchors',
-        sequence: 'string[] 概念标题的学习顺序，必须覆盖所有概念',
+        notes: 'string[] 资料不足或覆盖说明',
       },
     },
   }
-}
-
-/* ------------------------------------------------------------------ 校验 */
-
-interface ValidatedConcept {
-  readonly title: string
-  readonly summary: string
-  readonly prerequisites: readonly string[]
-  readonly difficulty?: 'intro' | 'core' | 'advanced'
-  readonly misconceptions: readonly string[]
-  readonly checkIdeas: readonly string[]
-  readonly anchors: readonly SourceAnchor[]
-}
-
-interface ValidatedDraft {
-  readonly goals: readonly string[]
-  readonly concepts: readonly ValidatedConcept[]
-  readonly sequence: readonly string[]
-}
-
-interface ValidationSuccess {
-  readonly ok: true
-  readonly value: ValidatedDraft
-  readonly warnings: string[]
-}
-
-interface ValidationFailure {
-  readonly ok: false
-  readonly error: string
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
@@ -349,141 +640,283 @@ function asStringArray(value: unknown, maxItems: number, maxLength: number): str
   return out
 }
 
-function validateDraftValue(
+function asDifficulty(value: unknown): ConceptDifficulty | undefined {
+  return value === 'intro' || value === 'core' || value === 'advanced' ? value : undefined
+}
+
+function chapterRoleOf(rawRole: unknown, title: string): 'chapter' | 'appendix' | 'tool' {
+  if (rawRole === 'chapter' || rawRole === 'appendix' || rawRole === 'tool') return rawRole
+  if (/工具|tool/i.test(title)) return 'tool'
+  if (/附录|appendix|其他|补充/i.test(title)) return 'appendix'
+  return 'chapter'
+}
+
+function validateAnchors(
+  rawAnchors: unknown,
+  digest: StructureDigest,
+): { anchors: SourceAnchor[]; invalid: number } {
+  const anchors: SourceAnchor[] = []
+  let invalid = 0
+  if (!Array.isArray(rawAnchors)) return { anchors, invalid }
+  for (const rawAnchor of rawAnchors.slice(0, 6)) {
+    const record = asRecord(rawAnchor)
+    if (record === undefined) {
+      invalid += 1
+      continue
+    }
+    const documentId = record['documentId']
+    const unitId = record['unitId']
+    if (typeof documentId !== 'string' || typeof unitId !== 'string') {
+      invalid += 1
+      continue
+    }
+    const found = digest.anchorIndex.get(`${documentId}|${unitId}`)
+    if (found === undefined) {
+      invalid += 1
+      continue
+    }
+    anchors.push({
+      documentId: found.document.id,
+      revisionId: found.revision.id,
+      unitId: found.unit.id,
+      locator: found.unit.locator,
+      excerpt: excerptAround(found.unit.text, [], 240),
+      confidence: found.unit.confidence,
+      label: `${found.document.title} · ${locatorDescription(found.unit.locator)}`,
+    })
+  }
+  return { anchors, invalid }
+}
+
+interface ValidationFailure {
+  readonly ok: false
+  readonly error: string
+}
+
+interface ValidationSuccess {
+  readonly ok: true
+  readonly value: ValidatedStructure
+}
+
+/** 校验模型输出的结构 JSON（支持新 sections 结构与旧版扁平 concepts 兼容）。 */
+function validateStructureValue(
   value: unknown,
-  material: MaterialDigest,
-  limits: CorpusLimits,
+  digest: StructureDigest,
   input: CourseDraftInput,
+  limits: CorpusLimits,
 ): ValidationSuccess | ValidationFailure {
   const record = asRecord(value)
   if (record === undefined) return { ok: false, error: '根节点不是 JSON 对象' }
-  const rawConcepts = record['concepts']
-  if (!Array.isArray(rawConcepts) || rawConcepts.length === 0) {
-    return { ok: false, error: 'concepts 必须是非空数组' }
-  }
+  const maxConcepts = Math.max(1, limits.draftLlmWikiMaxConcepts)
   const warnings: string[] = []
+  const notes = asStringArray(record['notes'], 8, 300)
+  const goals = asStringArray(record['goals'], 10, 240)
+  const concepts: ValidatedConceptDraft[] = []
+  interface MutableChapterDraft {
+    title: string
+    summary?: string
+    role: 'chapter' | 'appendix' | 'tool'
+    conceptTitles: string[]
+  }
+  const chapters: MutableChapterDraft[] = []
   const seenTitles = new Set<string>()
-  const concepts: ValidatedConcept[] = []
   let invalidAnchors = 0
   let truncatedConcepts = 0
-  for (const rawConcept of rawConcepts) {
-    if (concepts.length >= limits.draftMaxConcepts) {
-      truncatedConcepts += 1
-      continue
-    }
-    const conceptRecord = asRecord(rawConcept)
-    if (conceptRecord === undefined) continue
-    const title = typeof conceptRecord['title'] === 'string' ? conceptRecord['title'].trim().slice(0, 120) : ''
-    if (title === '' || seenTitles.has(title)) continue
-    seenTitles.add(title)
-    const summary = typeof conceptRecord['summary'] === 'string'
-      ? conceptRecord['summary'].trim().slice(0, 1200)
+  let anchorlessConcepts = 0
+  let rawSections: unknown
+  if (Array.isArray(record['sections'])) {
+    rawSections = record['sections']
+  } else if (Array.isArray(record['concepts'])) {
+    // 兼容旧版扁平输出：视为单章节结构
+    rawSections = [{
+      title: `${input.courseTitle} · 资料结构`,
+      summary: '模型未返回章节分区，按概念列表生成单章结构',
+      role: 'chapter',
+      concepts: record['concepts'],
+    }]
+    warnings.push('模型返回旧版扁平结构（无 sections），已归入单章节')
+  } else {
+    return { ok: false, error: 'sections 必须是数组（或兼容旧版 concepts 数组）' }
+  }
+  let sectionCount = 0
+  for (const rawSection of (rawSections as unknown[]).slice(0, 40)) {
+    sectionCount += 1
+    const sectionRecord = asRecord(rawSection)
+    if (sectionRecord === undefined) continue
+    const sectionTitle = typeof sectionRecord['title'] === 'string'
+      ? sectionRecord['title'].trim().slice(0, 120)
       : ''
-    const difficultyRaw = conceptRecord['difficulty']
-    const difficulty = difficultyRaw === 'intro' || difficultyRaw === 'core' || difficultyRaw === 'advanced'
-      ? difficultyRaw
-      : undefined
-    const anchors: SourceAnchor[] = []
-    const rawAnchors = conceptRecord['anchors']
-    if (Array.isArray(rawAnchors)) {
-      for (const rawAnchor of rawAnchors.slice(0, 6)) {
-        const anchorRecord = asRecord(rawAnchor)
-        if (anchorRecord === undefined) {
-          invalidAnchors += 1
-          continue
-        }
-        const documentId = anchorRecord['documentId']
-        const unitId = anchorRecord['unitId']
-        if (typeof documentId !== 'string' || typeof unitId !== 'string') {
-          invalidAnchors += 1
-          continue
-        }
-        const found = material.anchorIndex.get(`${documentId}|${unitId}`)
-        if (found === undefined) {
-          // 不伪造：模型引用了不存在的资料单元
-          invalidAnchors += 1
-          continue
-        }
-        anchors.push({
-          documentId: found.document.id,
-          revisionId: found.revision.id,
-          unitId: found.unit.id,
-          locator: found.unit.locator,
-          excerpt: excerptAround(found.unit.text, [], 240),
-          confidence: found.unit.confidence,
-          label: `${found.document.title} · ${locatorDescription(found.unit.locator)}`,
-        })
+    const title = sectionTitle === '' ? `第 ${sectionCount} 部分` : sectionTitle
+    const chapterConceptTitles: string[] = []
+    const rawConcepts = Array.isArray(sectionRecord['concepts']) ? sectionRecord['concepts'] : []
+    for (const rawConcept of rawConcepts) {
+      if (concepts.length >= maxConcepts) {
+        truncatedConcepts += 1
+        continue
       }
+      const conceptRecord = asRecord(rawConcept)
+      if (conceptRecord === undefined) continue
+      const conceptTitle = typeof conceptRecord['title'] === 'string' ? conceptRecord['title'].trim().slice(0, 120) : ''
+      if (conceptTitle === '' || seenTitles.has(conceptTitle)) continue
+      seenTitles.add(conceptTitle)
+      const { anchors, invalid } = validateAnchors(conceptRecord['anchors'], digest)
+      invalidAnchors += invalid
+      if (anchors.length === 0) anchorlessConcepts += 1
+      concepts.push({
+        title: conceptTitle,
+        summary: typeof conceptRecord['summary'] === 'string'
+          ? conceptRecord['summary'].trim().slice(0, 1_200)
+          : '',
+        prerequisites: asStringArray(conceptRecord['prerequisites'], 8, 120)
+          .filter(prerequisite => prerequisite !== conceptTitle),
+        anchors,
+        ...(asDifficulty(conceptRecord['difficulty']) !== undefined
+          ? { difficulty: asDifficulty(conceptRecord['difficulty']) }
+          : {}),
+        misconceptions: asStringArray(conceptRecord['misconceptions'], 5, 240),
+        checkIdeas: asStringArray(conceptRecord['checkIdeas'], 5, 240),
+      })
+      chapterConceptTitles.push(conceptTitle)
     }
-    concepts.push({
+    const role = chapterRoleOf(sectionRecord['role'], title)
+    chapters.push({
       title,
-      summary,
-      prerequisites: asStringArray(conceptRecord['prerequisites'], 8, 120),
-      ...(difficulty !== undefined ? { difficulty } : {}),
-      misconceptions: asStringArray(conceptRecord['misconceptions'], 5, 240),
-      checkIdeas: asStringArray(conceptRecord['checkIdeas'], 5, 240),
-      anchors,
+      ...(typeof sectionRecord['summary'] === 'string' && sectionRecord['summary'].trim() !== ''
+        ? { summary: sectionRecord['summary'].trim().slice(0, 400) }
+        : {}),
+      role,
+      conceptTitles: chapterConceptTitles,
     })
   }
-  if (concepts.length === 0) {
-    return { ok: false, error: 'concepts 中没有有效概念（需要至少一个含非空 title 的对象）' }
-  }
-  if (truncatedConcepts > 0) {
-    warnings.push(`模型返回的概念超过上限，已保留前 ${limits.draftMaxConcepts} 个（另有 ${truncatedConcepts} 个被丢弃）`)
-  }
+  if (concepts.length === 0) return { ok: false, error: 'sections 中没有有效概念（需要含非空 title 的对象）' }
+  if (truncatedConcepts > 0) warnings.push(`概念超过上限（${maxConcepts}），已丢弃 ${truncatedConcepts} 个`)
   if (invalidAnchors > 0) {
-    warnings.push(`${invalidAnchors} 个模型引用无法对应到真实资料单元，已丢弃（不伪造来源定位）`)
+    warnings.push(`${invalidAnchors} 个模型引用无法对应到资料摘要中的真实单元，已丢弃（不伪造来源定位）`)
   }
-  const withoutAnchors = concepts.filter(concept => concept.anchors.length === 0)
-  if (withoutAnchors.length > 0 && material.documents.length > 0) {
-    warnings.push(`${withoutAnchors.length} 个概念没有资料定位，教学时会标注为模型知识：${withoutAnchors.slice(0, 5).map(concept => concept.title).join('、')}`)
+  if (anchorlessConcepts > 0 && digest.documentCount > 0) {
+    warnings.push(`${anchorlessConcepts} 个概念没有资料锚点，教学时会标注为模型知识`)
   }
-
-  // sequence 校验：title 或数字索引，缺失的按概念顺序补齐
-  const titleToOrder = new Map<string, number>()
-  concepts.forEach((concept, index) => titleToOrder.set(concept.title, index))
-  const sequence: string[] = []
-  const sequenceSeen = new Set<string>()
-  const rawSequence = record['sequence']
-  if (Array.isArray(rawSequence)) {
-    for (const item of rawSequence) {
-      let title: string | undefined
-      if (typeof item === 'string') title = item.trim()
-      else if (typeof item === 'number' && Number.isInteger(item)) {
-        title = concepts[item]?.title
-      }
-      if (title === undefined || !titleToOrder.has(title) || sequenceSeen.has(title)) continue
-      sequenceSeen.add(title)
-      sequence.push(title)
-    }
+  // 章节必须覆盖所有概念：未分配的概念补到最后一章（或新建章节）
+  const covered = new Set(chapters.flatMap(chapter => chapter.conceptTitles))
+  const missing = concepts.map(concept => concept.title).filter(title => !covered.has(title))
+  if (missing.length > 0) {
+    const last = chapters[chapters.length - 1]
+    if (last === undefined) chapters.push({ title: '课程主线', role: 'chapter', conceptTitles: missing })
+    else last.conceptTitles.push(...missing)
+    warnings.push(`${missing.length} 个概念未归入模型给出的章节，已附到最后一章`)
   }
-  for (const concept of concepts) {
-    if (!sequenceSeen.has(concept.title)) {
-      sequenceSeen.add(concept.title)
-      sequence.push(concept.title)
-    }
-  }
-  if (!Array.isArray(rawSequence)) warnings.push('模型没有给出有效 sequence，已按概念顺序生成学习顺序')
-
-  const goals = asStringArray(record['goals'], 10, 240)
-  if (goals.length === 0) goals.push(input.goal.trim().slice(0, 240))
-  else if (input.goal.trim() !== '' && !goals.includes(input.goal.trim())) {
-    goals.unshift(input.goal.trim().slice(0, 240))
-  }
+  const finalChapters = chapters.filter(chapter => chapter.conceptTitles.length > 0 || chapter.role === 'tool')
   return {
     ok: true,
-    value: { goals, concepts, sequence },
-    warnings,
+    value: {
+      chapters: finalChapters,
+      concepts,
+      goals,
+      notes,
+      warnings,
+    },
   }
 }
 
-/** 把校验后的草案组装为 CourseRevision 并持久化。 */
-async function persistDraft(
+/* ------------------------------------------------------------------ 分组合并 */
+
+interface MergedStructure {
+  readonly concepts: readonly StructureConceptInput[]
+  readonly chapters: readonly StructureChapterInput[]
+  readonly goals: readonly string[]
+  readonly notes: readonly string[]
+}
+
+function mergeValidatedStructures(
+  results: readonly ValidatedStructure[],
+  input: CourseDraftInput,
+  _limits: CorpusLimits,
+  warnings: string[],
+): MergedStructure {
+  const conceptByTitle = new Map<string, StructureConceptInput>()
+  interface MergedChapterDraft {
+    title: string
+    summary?: string
+    role: 'chapter' | 'appendix' | 'tool'
+    conceptTitles: string[]
+  }
+  const chapterByTitle = new Map<string, MergedChapterDraft>()
+  const notes: string[] = []
+  const goals: string[] = []
+  for (const result of results) {
+    warnings.push(...result.warnings)
+    notes.push(...result.notes)
+    for (const goal of result.goals) {
+      if (!goals.includes(goal) && goals.length < 10) goals.push(goal)
+    }
+    for (const concept of result.concepts) {
+      if (conceptByTitle.has(concept.title)) {
+        warnings.push(`跨分组重复概念《${concept.title}》，保留首次出现的定义`)
+        continue
+      }
+      conceptByTitle.set(concept.title, {
+        title: concept.title,
+        summary: concept.summary,
+        prerequisites: concept.prerequisites,
+        anchors: concept.anchors,
+        ...(concept.difficulty !== undefined ? { difficulty: concept.difficulty } : {}),
+        ...(concept.misconceptions.length > 0 ? { misconceptions: concept.misconceptions } : {}),
+        ...(concept.checkIdeas.length > 0 ? { checkIdeas: concept.checkIdeas } : {}),
+      })
+    }
+    for (const chapter of result.chapters) {
+      const key = chapter.title.toLowerCase().replace(/\s+/g, ' ').trim()
+      const existing = chapterByTitle.get(key)
+      if (existing === undefined) {
+        chapterByTitle.set(key, {
+          title: chapter.title,
+          ...(chapter.summary !== undefined ? { summary: chapter.summary } : {}),
+          role: chapter.role,
+          conceptTitles: [...chapter.conceptTitles],
+        })
+        continue
+      }
+      for (const title of chapter.conceptTitles) {
+        if (!existing.conceptTitles.includes(title)) existing.conceptTitles.push(title)
+      }
+      if (existing.summary === undefined && chapter.summary !== undefined) existing.summary = chapter.summary
+    }
+  }
+  const knownTitles = new Set(conceptByTitle.keys())
+  const inputGoal = input.goal.trim().slice(0, 240)
+  const mergedGoals = inputGoal === '' ? goals : [inputGoal, ...goals.filter(goal => goal !== inputGoal)]
+  const concepts = [...conceptByTitle.values()]
+  const chapterEntries = [...chapterByTitle.values()].map(chapter => ({
+    ...chapter,
+    conceptTitles: chapter.conceptTitles.filter(title => knownTitles.has(title)),
+  }))
+  const covered = new Set(chapterEntries.flatMap(chapter => chapter.conceptTitles))
+  const missing = concepts.map(concept => concept.title).filter(title => !covered.has(title))
+  if (missing.length > 0) {
+    chapterEntries.push({ title: '其他概念', role: 'appendix', conceptTitles: missing })
+  }
+  const chapters: StructureChapterInput[] = chapterEntries.map(chapter => ({
+    title: chapter.title,
+    ...(chapter.summary !== undefined ? { summary: chapter.summary } : {}),
+    role: chapter.role,
+    conceptTitles: chapter.conceptTitles,
+  }))
+  return { concepts, chapters, goals: mergedGoals, notes }
+}
+
+/* ------------------------------------------------------------------ 持久化 */
+
+function titleIdMap(concepts: readonly StructureConceptInput[]): Map<string, ReturnType<typeof newConceptId>> {
+  const map = new Map<string, ReturnType<typeof newConceptId>>()
+  for (const concept of concepts) map.set(concept.title, newConceptId())
+  return map
+}
+
+/** 把结构数据持久化为不可变 draft 修订（两种模式共用）。 */
+async function persistStructureRevision(
   deps: DraftDeps,
   input: CourseDraftInput,
-  material: MaterialDigest,
-  draft: ValidatedDraft,
-  warnings: readonly string[],
+  data: StructureData,
 ): Promise<CourseRevision> {
   const course = await deps.courses.get(input.courseId)
   if (course === undefined) throw new Error('课程不存在')
@@ -496,80 +929,92 @@ async function persistDraft(
       await deps.courses.saveRevision({ ...oldDraft, state: 'superseded' })
     }
   }
-  const titleToId = new Map<string, ReturnType<typeof newConceptId>>()
-  const concepts: Concept[] = draft.concepts.map(concept => {
-    const id = newConceptId()
-    titleToId.set(concept.title, id)
+  const idsByTitle = titleIdMap(data.concepts)
+  const concepts: Concept[] = data.concepts.map(concept => {
+    const id = idsByTitle.get(concept.title)
+    if (id === undefined) throw new Error(`概念缺少 id：${concept.title}`)
+    const prerequisites = concept.prerequisites
+      .map(prerequisite => idsByTitle.get(prerequisite))
+      .filter((value): value is ReturnType<typeof newConceptId> => value !== undefined && value !== id)
     return {
       id,
       title: concept.title,
       summary: concept.summary,
-      prerequisites: [],
+      prerequisites: [...new Set(prerequisites)],
       sourceAnchors: concept.anchors,
       ...(concept.difficulty !== undefined ? { difficulty: concept.difficulty } : {}),
-      ...(concept.misconceptions.length > 0 ? { misconceptions: concept.misconceptions } : {}),
-      ...(concept.checkIdeas.length > 0 ? { checkIdeas: concept.checkIdeas } : {}),
+      ...(concept.misconceptions !== undefined && concept.misconceptions.length > 0
+        ? { misconceptions: concept.misconceptions }
+        : {}),
+      ...(concept.checkIdeas !== undefined && concept.checkIdeas.length > 0
+        ? { checkIdeas: concept.checkIdeas }
+        : {}),
     }
   })
-  // prerequisites 需要 id：按 title→id 映射二次回填
-  const conceptsWithPrereqs: Concept[] = concepts.map((concept, index) => {
-    const source = draft.concepts[index] as ValidatedConcept
-    const prerequisites = source.prerequisites
-      .map(title => titleToId.get(title))
-      .filter((value): value is ReturnType<typeof newConceptId> => value !== undefined && value !== concept.id)
-    const unique = [...new Set(prerequisites)]
-    return { ...concept, prerequisites: unique }
-  })
-  const sequence = draft.sequence
-    .map(title => titleToId.get(title))
-    .filter((value): value is ReturnType<typeof newConceptId> => value !== undefined)
-  for (const concept of conceptsWithPrereqs) {
-    if (!sequence.includes(concept.id)) sequence.push(concept.id)
+  const conceptsById = new Map(concepts.map(concept => [concept.id, concept]))
+  const chapters: CourseChapter[] = []
+  for (const [chapterIndex, chapter] of data.chapters.entries()) {
+    const conceptIds = chapter.conceptTitles
+      .map(title => idsByTitle.get(title))
+      .filter((id): id is ReturnType<typeof newConceptId> => id !== undefined && conceptsById.has(id))
+    chapters.push({
+      id: `chapter-${chapterIndex + 1}-${chapter.title.toLowerCase().replace(/[^\p{Letter}\p{Number}]+/gu, '-').replace(/^-|-$/g, '').slice(0, 40) || 'section'}`,
+      title: chapter.title,
+      ...(chapter.summary !== undefined ? { summary: chapter.summary } : {}),
+      conceptIds: [...new Set(conceptIds)],
+      ...(chapter.anchors !== undefined && chapter.anchors.length > 0 ? { sourceAnchors: chapter.anchors } : {}),
+      role: chapter.role,
+    })
   }
-  const basedOn = material.documents
-    .filter(materialDocument => materialDocument.document.currentRevisionId !== undefined)
-    .map(materialDocument => ({
-      sourceId: materialDocument.document.id,
-      revisionId: materialDocument.revision.id,
-    }))
-  const sources = material.documents.map(materialDocument => ({
-    sourceId: materialDocument.document.id,
-    role: ROLE_BY_FORMAT[materialDocument.document.format],
-  }))
+  const visibleChapters = chapters.filter(chapter => chapter.conceptIds.length > 0)
+  // 防御：确实存在章节时，保证每个概念恰好出现在一个章节
+  const chapterCovered = new Set(visibleChapters.flatMap(chapter => chapter.conceptIds))
+  const uncovered = concepts.filter(concept => !chapterCovered.has(concept.id))
+  if (uncovered.length > 0) {
+    if (visibleChapters.length === 0) {
+      visibleChapters.push({
+        id: 'chapter-main',
+        title: '课程主线',
+        conceptIds: uncovered.map(concept => concept.id),
+        role: 'chapter',
+      })
+    } else {
+      const last = visibleChapters[visibleChapters.length - 1] as CourseChapter
+      visibleChapters[visibleChapters.length - 1] = {
+        ...last,
+        conceptIds: [...last.conceptIds, ...uncovered.map(concept => concept.id)],
+      }
+    }
+  }
+  const chapterConceptIds = visibleChapters.flatMap(chapter => [...chapter.conceptIds])
+  const requestedSequence = data.sequenceTitles !== undefined
+    ? data.sequenceTitles
+      .map(title => idsByTitle.get(title))
+      .filter((id): id is ReturnType<typeof newConceptId> => id !== undefined)
+    : []
+  const sequence = [...new Set([...requestedSequence, ...chapterConceptIds])]
   const revision: CourseRevision = {
     id: newCourseRevisionId(),
     courseId: course.id,
     version,
     createdAt: nowIso(),
     state: 'draft',
-    provenance: 'ai-draft',
-    goals: draft.goals,
+    provenance: data.provenance,
+    goals: data.goals.length > 0 ? [...data.goals] : buildGoals(input),
     ...(input.background !== undefined && input.background.trim() !== ''
       ? { background: input.background.trim() }
       : {}),
     language: input.language,
-    sources,
-    concepts: conceptsWithPrereqs,
+    sources: data.sources,
+    concepts,
     sequence,
-    changeSummary: describeDraft(material, conceptsWithPrereqs, warnings),
-    basedOn,
+    ...(visibleChapters.length > 0 ? { chapters: visibleChapters } : {}),
+    changeSummary: data.changeSummary,
+    basedOn: data.basedOn,
   }
   await deps.courses.saveRevision(revision)
   await deps.courses.save({ ...course, draftRevisionId: revision.id })
   return revision
-}
-
-function describeDraft(
-  material: MaterialDigest,
-  concepts: readonly Concept[],
-  warnings: readonly string[],
-): string {
-  const anchorCount = concepts.reduce((sum, concept) => sum + concept.sourceAnchors.length, 0)
-  const parts = [
-    `AI 草案：读取 ${material.documents.length} 份资料，生成 ${concepts.length} 个概念（${anchorCount} 个资料定位）`,
-  ]
-  if (warnings.length > 0) parts.push(warnings.slice(0, 3).join('；'))
-  return parts.join('。')
 }
 
 /* ------------------------------------------------------------------ Coverage */
@@ -602,6 +1047,12 @@ export async function buildDraftCoverage(
       usedUnitCount.set(anchor.documentId, (usedUnitCount.get(anchor.documentId) ?? 0) + 1)
     }
   }
+  // 章节锚点（章节概览页）也算作被使用的资料单元
+  for (const chapter of revision.chapters ?? []) {
+    for (const anchor of chapter.sourceAnchors ?? []) {
+      usedUnitCount.set(anchor.documentId, (usedUnitCount.get(anchor.documentId) ?? 0) + 1)
+    }
+  }
   const sourceIds = [...new Set([
     ...revision.sources.map(source => source.sourceId),
     ...revision.concepts.flatMap(concept => concept.sourceAnchors.map(anchor => anchor.documentId)),
@@ -630,7 +1081,9 @@ export async function buildDraftCoverage(
     if (meta?.status === 'failed') {
       warnings.push(`《${document.title}》解析失败，草案可能缺少该资料的内容`)
     }
-    if (usedUnits === 0 && revision.sources.some(source => source.sourceId === document.id)) {
+    const structuralDocument = /(^|\/)(schema|index|log|error-log)(-\d{4})?\.md$/i.test(document.originalPath)
+      || /overview/i.test(document.title + document.originalPath)
+    if (usedUnits === 0 && !structuralDocument && revision.sources.some(source => source.sourceId === document.id)) {
       warnings.push(`《${document.title}》没有被任何概念引用，可能只是辅助资料`)
     }
   }
@@ -640,6 +1093,18 @@ export async function buildDraftCoverage(
   const withoutAnchors = revision.concepts.filter(concept => concept.sourceAnchors.length === 0)
   if (withoutAnchors.length > 0) {
     warnings.push(`${withoutAnchors.length} 个概念没有资料定位：${withoutAnchors.slice(0, 5).map(concept => concept.title).join('、')}`)
+  }
+  if (revision.chapters !== undefined && revision.chapters.length > 0) {
+    const chapterConceptIds = new Set(revision.chapters.flatMap(chapter => chapter.conceptIds))
+    const chapterless = revision.concepts.filter(concept => !chapterConceptIds.has(concept.id))
+    if (chapterless.length > 0) {
+      warnings.push(`${chapterless.length} 个概念不属于任何章节，学习中会按平铺顺序展示`)
+    }
+  }
+  if (revision.provenance === 'kb-structure') {
+    warnings.push('结构来源：知识库结构直读（kb-structure）；资料或知识库结构变化后建议重新生成')
+  } else if (revision.provenance === 'llm-wiki') {
+    warnings.push('结构来源：按 LLM-wiki 规则生成的虚拟结构（llm-wiki），未写入学生原始知识库')
   }
   const revisionIds = new Set(revision.basedOn.map(item => item.revisionId))
   let staleAnchors = 0
