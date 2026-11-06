@@ -112,6 +112,11 @@ export const TEACHING_CSS = `
 .ai-msg-meta { font-size: 10px; opacity: 0.6; margin-top: 4px; display: flex; gap: 8px;
   flex-wrap: wrap; align-items: center; }
 .ai-msg-student .ai-msg-meta { opacity: 0.85; }
+.ai-msg-feedback { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.28));
+  background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.06)); border-radius: 10px;
+  padding: 10px 12px; }
+.ai-msg-feedback .ai-markdown h3 { margin-top: 0; }
+.ai-feedback-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .ai-evidence-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
 .ai-evidence-chip { font-size: 10px; border-radius: 999px; padding: 1px 8px; cursor: pointer;
   border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.35)); background: transparent;

@@ -12,6 +12,7 @@ import type {
   ExperimentNotePayload, FigurePayload, GraphPayload, LessonActivity, OpenQuestionPayload,
   ProofTaskPayload, QuizPayload, ReadingTaskPayload, RubricCriterion, VisualPayload,
 } from '../contracts/activity.ts'
+import type { AttemptFeedback } from '../contracts/learning.ts'
 import type { ActivityId } from '../contracts/ids.ts'
 import { err, ok, type Result } from '../contracts/result.ts'
 import type { SourceAnchor } from '../contracts/source.ts'
@@ -77,6 +78,8 @@ export interface ActivityCallbacks {
 export interface MountActivityOptions extends RenderEnvironment {
   /** Restored activity state from the Host. */
   readonly state?: ActivityState
+  /** Persisted attempt result; quiz activities render the graded state. */
+  readonly attempt?: AttemptFeedback
   readonly callbacks?: ActivityCallbacks
   /** Offline export: native code execution is disabled and says so. */
   readonly offline?: boolean
@@ -466,6 +469,7 @@ export function mountActivity(
     case 'quiz': {
       const handle = mountQuiz(content, payload, {
         document,
+        ...(options.attempt !== undefined ? { result: options.attempt } : {}),
         ...(callbacks.onQuizSubmit !== undefined ? { onSubmit: callbacks.onQuizSubmit } : {}),
         ...(callbacks.onHelpExposure !== undefined
           ? { onHelpExposed: (help: { level: 1 | 'full-answer'; answer: string }) => callbacks.onHelpExposure?.(help) }

@@ -314,6 +314,15 @@ describe('teaching host routes', () => {
       attempt: { independence: string }
       validation: { kind: string; passed?: boolean }
       mastery: { level: string; basis: string[] }[]
+      feedback?: {
+        passed: boolean
+        selectedLabels: string[]
+        correctLabels: string[]
+        explanation?: string
+        nextActions: { id: string; label: string }[]
+        mastery: { level: string; previousLevel?: string }[]
+      }
+      feedbackMessage?: { kind: string; text: string; activityIds: string[]; feedback?: { passed: boolean } }
     }>((await harness.call('attempts.submit', {
       body: {
         sessionId: session.session.id,
@@ -331,6 +340,19 @@ describe('teaching host routes', () => {
     assert.equal(attempt.validation.passed, true)
     assert.ok(['practiced', 'checked'].includes(attempt.mastery[0]?.level ?? ''))
     assert.ok(attempt.mastery[0]?.basis.join('').includes('独立'))
+    assert.equal(attempt.feedback?.passed, true)
+    assert.deepEqual(attempt.feedback?.selectedLabels, ['模型 B'])
+    assert.deepEqual(attempt.feedback?.correctLabels, ['模型 B'])
+    assert.ok((attempt.feedback?.explanation ?? '').includes('过拟合'))
+    assert.ok((attempt.feedback?.nextActions ?? []).some(action => action.id === 'explain-attempt'))
+    assert.equal(attempt.feedbackMessage?.kind, 'teacher-feedback')
+    assert.equal(attempt.feedbackMessage?.activityIds[0], activity.id)
+    assert.ok((attempt.feedbackMessage?.text ?? '').includes('回答正确'))
+    assert.equal(attempt.feedbackMessage?.feedback?.passed, true)
+    const afterAttempt = unwrap<{ messages: { kind: string }[] }>((
+      await harness.call('sessions.get', { method: 'GET', query: { sessionId: session.session.id } })
+    ).json)
+    assert.equal(afterAttempt.messages.at(-1)?.kind, 'teacher-feedback')
   })
 
   it('does not count an answer-shown attempt as independent mastery', async () => {

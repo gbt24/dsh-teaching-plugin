@@ -4439,9 +4439,9 @@ function collapseWhitespace(text2) {
   return text2.replace(/\s+/g, " ").trim();
 }
 function excerptAround(text2, terms, max2 = 240) {
-  const clean = collapseWhitespace(text2);
-  if (clean.length <= max2) return clean;
-  const lower = clean.toLowerCase();
+  const clean2 = collapseWhitespace(text2);
+  if (clean2.length <= max2) return clean2;
+  const lower = clean2.toLowerCase();
   let index = -1;
   for (const term of terms) {
     const display = term.startsWith("sym:") ? term.slice(4) : term;
@@ -4452,10 +4452,10 @@ function excerptAround(text2, terms, max2 = 240) {
     }
   }
   const keep = Math.max(20, max2 - 2);
-  if (index === -1) return `${clean.slice(0, keep)}\u2026`;
-  const start = Math.max(0, Math.min(index - Math.floor(keep / 3), clean.length - keep));
-  const body = clean.slice(start, start + keep);
-  return `${start > 0 ? "\u2026" : ""}${body}${start + keep < clean.length ? "\u2026" : ""}`;
+  if (index === -1) return `${clean2.slice(0, keep)}\u2026`;
+  const start = Math.max(0, Math.min(index - Math.floor(keep / 3), clean2.length - keep));
+  const body = clean2.slice(start, start + keep);
+  return `${start > 0 ? "\u2026" : ""}${body}${start + keep < clean2.length ? "\u2026" : ""}`;
 }
 var STRONG_MATH_CHARS = /[=^∫∑√≤≥≠≈∞∂∇→←↔πλθαβγδσφωμ×÷±∈∉⊂⊆∪∩]/g;
 var TEX_COMMAND = /\\(?:frac|lim|sum|int|sqrt|alpha|beta|theta|lambda|mu|pi|sigma|phi|omega|cdot|times|div|leq|geq|neq|approx|infty|partial|nabla|rightarrow|leftarrow|leftrightarrow|forall|exists|in|notin|subset|subseteq|cup|cap|left|right)\b/;
@@ -35812,8 +35812,8 @@ function styleGuidance(profile) {
 
 // packages/teaching-core/src/teaching/format.ts
 function truncate2(text2, max2) {
-  const clean = text2.replace(/\s+/g, " ").trim();
-  return clean.length <= max2 ? clean : `${clean.slice(0, max2)}\u2026`;
+  const clean2 = text2.replace(/\s+/g, " ").trim();
+  return clean2.length <= max2 ? clean2 : `${clean2.slice(0, max2)}\u2026`;
 }
 function truncatePreserveLines(text2, max2) {
   const normalized = text2.replace(/\r\n?/g, "\n").trim();
@@ -56719,8 +56719,8 @@ function normaliseRange(range, fallbackFrom, fallbackTo) {
 function mountQuiz(container, payload, options = {}) {
   const document2 = resolveDocument(options);
   const disposers = [];
-  const selected = new Set(options.selectedOptionIds ?? []);
-  let revealed = options.answerRevealed === true;
+  const selected = new Set(options.result?.selectedOptionIds ?? options.selectedOptionIds ?? []);
+  let revealed = options.answerRevealed === true || options.result !== void 0;
   let hintShown = options.hintRevealed === true;
   const wrapper = createElement(document2, "div", { className: "teaching-quiz" });
   const question = createElement(document2, "div", {
@@ -56883,10 +56883,22 @@ function mountQuiz(container, payload, options = {}) {
   wrapper.appendChild(hintBox);
   wrapper.appendChild(feedback);
   wrapper.appendChild(explanation);
-  if (hintShown) showHint();
-  if (revealed) {
-    revealed = false;
-    doReveal();
+  if (options.result !== void 0) {
+    const result = options.result;
+    feedback.textContent = result.passed === true ? "\u2705 \u5DF2\u63D0\u4EA4\uFF1A\u56DE\u7B54\u6B63\u786E" : result.passed === false ? "\u274C \u5DF2\u63D0\u4EA4\uFF1A\u56DE\u7B54\u4E0D\u6B63\u786E" : "\u5DF2\u63D0\u4EA4\uFF0C\u53CD\u9988\u89C1\u5BF9\u8BDD\u3002";
+    const explanationText = payload.explanation ?? result.explanation;
+    if (explanationText !== void 0) {
+      appendMarkdownBlocks(explanation, document2, parseMarkdown2(explanationText), options);
+    }
+    submitButton.disabled = true;
+    if (hintButton !== void 0) hintButton.style.display = "none";
+    if (revealButton !== void 0) revealButton.style.display = "none";
+  } else {
+    if (hintShown) showHint();
+    if (revealed) {
+      revealed = false;
+      doReveal();
+    }
   }
   container.appendChild(wrapper);
   return {
@@ -57807,6 +57819,7 @@ function mountActivity(container, input, options = {}) {
     case "quiz": {
       const handle = mountQuiz(content, payload, {
         document: document2,
+        ...options.attempt !== void 0 ? { result: options.attempt } : {},
         ...callbacks.onQuizSubmit !== void 0 ? { onSubmit: callbacks.onQuizSubmit } : {},
         ...callbacks.onHelpExposure !== void 0 ? { onHelpExposed: (help) => callbacks.onHelpExposure?.(help) } : {}
       });
@@ -62635,6 +62648,91 @@ async function generateVisual(model, input, signal) {
   return { payload, provider: info2.provider, model: info2.model };
 }
 
+// packages/dsh-plugin/src/host/attempt-feedback.ts
+var INDEPENDENCE_LABELS = {
+  independent: "\u72EC\u7ACB\u5B8C\u6210",
+  assisted: "\u4F7F\u7528\u4E86\u63D0\u793A",
+  skipped: "\u8DF3\u8FC7",
+  "answer-shown": "\u770B\u8FC7\u7B54\u6848"
+};
+var MASTERY_LABELS = {
+  unseen: "\u672A\u63A5\u89E6",
+  exposed: "\u63A5\u89E6\u8FC7",
+  practiced: "\u7EC3\u4E60\u8FC7",
+  checked: "\u5DF2\u68C0\u9A8C",
+  mastered: "\u5DF2\u638C\u63E1"
+};
+function quizLabels(payload, ids) {
+  if (payload.type !== "quiz") return [];
+  return ids.map((id) => payload.options.find((option) => option.id === id)?.label ?? id);
+}
+function clean(text2, max2 = 1200) {
+  const trimmed = text2.trim();
+  return trimmed.length > max2 ? `${trimmed.slice(0, max2)}\u2026` : trimmed;
+}
+function composeAttemptFeedback(input) {
+  const { activity, attempt, outcome } = input;
+  const payload = activity?.payload;
+  const quiz = payload?.type === "quiz" ? payload : void 0;
+  const selectedIds = attempt.selectedOptionIds ?? [];
+  const correctIds = quiz?.correctOptionIds ?? [];
+  const selectedLabels = quizLabels(payload ?? { type: "explanation", markdown: "" }, selectedIds);
+  const correctLabels = quizLabels(payload ?? { type: "explanation", markdown: "" }, correctIds);
+  const passed = outcome.validation.passed;
+  const explanation = quiz?.explanation !== void 0 && quiz.explanation.trim() !== "" ? clean(quiz.explanation) : outcome.validation.notes !== void 0 && outcome.validation.notes.length > 0 ? clean(outcome.validation.notes.join("\uFF1B")) : void 0;
+  const nextReviewAt = [...outcome.review].sort((a, b) => a.dueAt.localeCompare(b.dueAt))[0]?.dueAt;
+  const mastery = outcome.mastery.map((record) => ({
+    conceptId: record.conceptId,
+    ...input.conceptTitles?.get(record.conceptId) === void 0 ? {} : { conceptTitle: input.conceptTitles?.get(record.conceptId) },
+    level: record.level,
+    ...input.previousLevels.get(record.conceptId) === void 0 ? {} : { previousLevel: input.previousLevels.get(record.conceptId) }
+  }));
+  const nextActions = passed === true ? [
+    { id: "practice-variant", label: "\u518D\u505A\u4E00\u9053\u53D8\u5F0F\u9898" },
+    { id: "explain-attempt", label: "\u8BA9 AI \u6DF1\u5165\u8BB2\u8BB2" }
+  ] : [
+    { id: "explain-attempt", label: "\u8BA9 AI \u8BB2\u8BB2\u9519\u56E0" },
+    { id: "practice-variant", label: "\u518D\u505A\u4E00\u9053\u53D8\u5F0F\u9898" }
+  ];
+  const feedback = {
+    attemptId: attempt.id,
+    ...activity === void 0 ? {} : { activityId: activity.id, activityTitle: activity.title },
+    ...passed === void 0 ? {} : { passed },
+    selectedOptionIds: selectedIds,
+    correctOptionIds: correctIds,
+    selectedLabels,
+    correctLabels,
+    ...explanation === void 0 ? {} : { explanation },
+    independence: attempt.independence,
+    helpLevel: attempt.helpExposure.level,
+    mastery,
+    ...nextReviewAt === void 0 ? {} : { nextReviewAt },
+    nextActions
+  };
+  const lines = [];
+  if (passed === true) lines.push("### \u4F5C\u7B54\u53CD\u9988\uFF1A\u2705 \u56DE\u7B54\u6B63\u786E");
+  else if (passed === false) lines.push("### \u4F5C\u7B54\u53CD\u9988\uFF1A\u274C \u56DE\u7B54\u4E0D\u6B63\u786E");
+  else lines.push("### \u4F5C\u7B54\u53CD\u9988\uFF1A\u5DF2\u8BB0\u5F55\u672C\u6B21\u4F5C\u7B54");
+  if (activity !== void 0) lines.push(`- \u9898\u76EE\uFF1A${activity.title}`);
+  if (correctLabels.length > 0) lines.push(`- \u6B63\u786E\u7B54\u6848\uFF1A${correctLabels.join("\u3001")}`);
+  if (selectedLabels.length > 0) lines.push(`- \u4F60\u7684\u9009\u62E9\uFF1A${selectedLabels.join("\u3001")}`);
+  if (explanation !== void 0) lines.push(`- \u89E3\u6790\uFF1A${explanation}`);
+  const independence = INDEPENDENCE_LABELS[attempt.independence] ?? attempt.independence;
+  const help = attempt.helpExposure.level === 0 ? "" : `\uFF08\u5E2E\u52A9\u7B49\u7EA7 ${String(attempt.helpExposure.level)}\uFF09`;
+  lines.push(`- \u5B8C\u6210\u65B9\u5F0F\uFF1A${independence}${help}`);
+  if (outcome.independenceNote !== void 0) lines.push(`- \u8BF4\u660E\uFF1A${outcome.independenceNote}`);
+  const changed = mastery.filter((item) => item.previousLevel !== item.level);
+  if (changed.length > 0) {
+    lines.push(`- \u638C\u63E1\u53D8\u5316\uFF1A${changed.map(
+      (item) => `${item.conceptTitle ?? item.conceptId} ${MASTERY_LABELS[item.previousLevel ?? "unseen"] ?? item.previousLevel} \u2192 ${MASTERY_LABELS[item.level] ?? item.level}`
+    ).join("\uFF1B")}`);
+  }
+  if (nextReviewAt !== void 0) lines.push(`- \u4E0B\u6B21\u590D\u4E60\uFF1A${nextReviewAt.slice(0, 16).replace("T", " ")}`);
+  if (activity === void 0) lines.push("- \u8FD9\u6761\u53CD\u9988\u9488\u5BF9\u5BF9\u8BDD\u4E2D\u7684\u81EA\u7531\u4F5C\u7B54\uFF1B\u53EF\u5728\u4E0B\u4E00\u8F6E\u7EE7\u7EED\u8FFD\u95EE\u3002");
+  const markdown = lines.join("\n");
+  return { feedback, markdown, nextActions };
+}
+
 // packages/dsh-plugin/src/host/context.ts
 var CHARS_PER_TOKEN = 2.5;
 var RESERVED_COMPLETION_TOKENS = 12e3;
@@ -64324,6 +64422,14 @@ ${buildSummaryInput(selection.compacted)}
     }
     const validation = activity === void 0 ? void 0 : await validateAttempt(services, activity, input);
     const conceptIds = activity?.conceptIds ?? (session.position.conceptId === void 0 ? [] : [session.position.conceptId]);
+    const learningRecordBefore = await services.learning.get(session.courseId);
+    const previousLevels = new Map(
+      (learningRecordBefore?.mastery ?? []).map((record) => [record.conceptId, record.level])
+    );
+    const revisionForFeedback = await services.courses.getRevision(session.courseId, session.courseRevisionId);
+    const conceptTitles = new Map(
+      (revisionForFeedback?.concepts ?? []).map((concept) => [concept.id, concept.title])
+    );
     const learning = services.createLearningFor(activity);
     const outcome = await learning.submitAttempt({
       sessionId: session.id,
@@ -64342,6 +64448,47 @@ ${buildSummaryInput(selection.compacted)}
       ...input.runId === void 0 ? {} : { runId: input.runId }
     });
     if (!outcome.ok) return failure(outcome.error);
+    if (activity !== void 0) {
+      const composed = composeAttemptFeedback({
+        activity,
+        attempt: outcome.value.attempt,
+        outcome: outcome.value,
+        previousLevels,
+        conceptTitles
+      });
+      const feedbackMessage = {
+        id: messageId(),
+        sessionId: session.id,
+        role: "teacher",
+        kind: "teacher-feedback",
+        text: composed.markdown,
+        markdown: true,
+        createdAt: nowIso(),
+        activityIds: [activity.id],
+        teaching: {
+          intent: "feedback",
+          stage: session.position.stage,
+          conceptIds,
+          nextActions: composed.nextActions,
+          uncertainty: outcome.value.independenceNote === void 0 ? [] : [outcome.value.independenceNote]
+        },
+        feedback: composed.feedback
+      };
+      await services.sessions.appendMessage(feedbackMessage);
+      const latest = await services.sessions.get(session.id);
+      if (latest !== void 0) {
+        await services.sessions.save({
+          ...latest,
+          messageIds: [...latest.messageIds, feedbackMessage.id],
+          updatedAt: nowIso()
+        });
+      }
+      return envelope({
+        ...outcome.value,
+        feedback: composed.feedback,
+        feedbackMessage
+      });
+    }
     return envelope(outcome.value);
   });
   route("attempts.list", async ({ query }) => {

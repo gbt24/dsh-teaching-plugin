@@ -414,7 +414,7 @@ export interface ApiResponses {
     /** True when the deleted activity was the session's current activity. */
     readonly positionCleared: boolean
   }
-  'attempts.submit': AttemptOutcome
+  'attempts.submit': AttemptOutcome & { readonly feedbackMessage?: ChatMessage }
   'attempts.list': { readonly attempts: readonly LearningAttempt[] }
   'mastery.list': { readonly mastery: readonly MasteryRecord[] }
   'mastery.dispute': { readonly mastery: MasteryRecord }

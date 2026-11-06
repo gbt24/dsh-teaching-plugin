@@ -10,6 +10,7 @@ import type {
   ActivityId, ConceptId, CourseId, CourseRevisionId, MessageId, SessionId,
 } from './ids.ts'
 import type { SourceAnchor } from './source.ts'
+import type { AttemptFeedback } from './learning.ts'
 
 /** Language preference for explanations. */
 export type LanguagePreference = 'zh' | 'en' | 'bilingual'
@@ -165,6 +166,8 @@ export interface ChatMessage {
   readonly error?: { readonly code: string; readonly message: string }
   /** Structured teaching intent recorded for audit and resume. */
   readonly teaching?: TeachingTurnMeta
+  /** Present on teacher-feedback messages to render a structured feedback card. */
+  readonly feedback?: AttemptFeedback
 }
 
 /** Structured metadata a teaching turn may carry. */

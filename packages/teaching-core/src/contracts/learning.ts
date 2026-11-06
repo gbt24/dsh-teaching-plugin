@@ -57,6 +57,31 @@ export interface AttemptValidation {
   readonly createdAt?: string
 }
 
+/** Composed, student-facing feedback for one attempt. */
+export interface AttemptFeedback {
+  readonly attemptId: AttemptId
+  readonly activityId?: ActivityId
+  readonly activityTitle?: string
+  /** Objective pass/fail; absent for rubric/open judgements without a pass flag. */
+  readonly passed?: boolean
+  readonly selectedOptionIds: readonly string[]
+  readonly correctOptionIds: readonly string[]
+  readonly selectedLabels: readonly string[]
+  readonly correctLabels: readonly string[]
+  readonly explanation?: string
+  readonly independence: AttemptIndependence
+  readonly helpLevel: 0 | 1 | 2 | 3 | 'full-answer'
+  /** Mastery changes caused by this attempt (previous level when known). */
+  readonly mastery: readonly {
+    readonly conceptId: ConceptId
+    readonly conceptTitle?: string
+    readonly level: MasteryLevel
+    readonly previousLevel?: MasteryLevel
+  }[]
+  readonly nextReviewAt?: string
+  readonly nextActions: readonly { readonly id: string; readonly label: string }[]
+}
+
 /** How the student did on one activity. */
 export interface LearningAttempt {
   readonly id: AttemptId
@@ -169,6 +194,8 @@ export interface AttemptOutcome {
   readonly mastery: readonly MasteryRecord[]
   /** Updated review suggestions. */
   readonly review: readonly ReviewItem[]
+  /** Honest, student-facing feedback composed by the Host (attempts.submit). */
+  readonly feedback?: AttemptFeedback
   /** Honest note when the attempt cannot count as independent evidence. */
   readonly independenceNote?: string
 }

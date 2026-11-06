@@ -9,7 +9,7 @@
 import type {
   ActivityState, AppError, BootstrapInfo, ChatMessage, ChatStreamEvent,
   CourseDetail, CourseDraftView, CourseSummary, EnvironmentDirectory, EvidenceReference,
-  ExperimentRun, LearningStage, LessonActivity, MasteryRecord, ReviewItem,
+  AttemptFeedback, ExperimentRun, LearningStage, LessonActivity, MasteryRecord, ReviewItem,
   SessionSummary, SessionView, TaskSnapshot, TeachingSession,
 } from '@deepseek-teaching/core/contracts'
 // The model/context views are exported by the core root barrel; the frozen
@@ -54,6 +54,8 @@ export interface WorkspaceState {
   readonly activities: readonly LessonActivity[]
   /** Student-editable activity state keyed by activity id. */
   readonly activityStates: Readonly<Record<string, ActivityState>>
+  /** Latest structured attempt feedback per activity id (drives quiz result view). */
+  readonly attemptFeedback: Readonly<Record<string, AttemptFeedback>>
   /** Latest persisted run per activity id (from `runs.latest`). */
   readonly latestRuns: Readonly<Record<string, ExperimentRun>>
   readonly mastery: readonly MasteryRecord[]
@@ -86,6 +88,7 @@ export const INITIAL_WORKSPACE_STATE: WorkspaceState = {
   messages: [],
   activities: [],
   activityStates: {},
+  attemptFeedback: {},
   latestRuns: {},
   mastery: [],
   review: [],
@@ -118,6 +121,8 @@ export type WorkspaceAction =
   | { readonly type: 'runs/loaded'; readonly runs: readonly ExperimentRun[] }
   | { readonly type: 'session/position'; readonly session: TeachingSession }
   | { readonly type: 'learning/updated'; readonly mastery?: readonly MasteryRecord[]; readonly review?: readonly ReviewItem[] }
+  | { readonly type: 'message/appended'; readonly message: ChatMessage }
+  | { readonly type: 'attempt/result'; readonly feedback: AttemptFeedback }
   | { readonly type: 'chat/stream-event'; readonly event: ChatStreamEvent }
   | { readonly type: 'chat/cancel-requested' }
   | { readonly type: 'chat/local-error'; readonly error: AppError }
@@ -155,6 +160,19 @@ export function appendMessage(
 ): readonly ChatMessage[] {
   if (messages.some(existing => existing.id === message.id)) return messages
   return [...messages, message]
+}
+
+/** Derive quiz result views from persisted feedback messages (reload-safe). */
+export function deriveAttemptFeedback(
+  messages: readonly ChatMessage[],
+): Readonly<Record<string, AttemptFeedback>> {
+  const result: Record<string, AttemptFeedback> = {}
+  for (const message of messages) {
+    const feedback = message.feedback
+    if (feedback?.activityId === undefined) continue
+    result[feedback.activityId] = feedback
+  }
+  return result
 }
 
 /** Merge evidence refs, dropping exact duplicates. */
@@ -317,6 +335,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         messages: [],
         activities: [],
         activityStates: {},
+        attemptFeedback: {},
         latestRuns: {},
         mastery: [],
         review: [],
@@ -343,6 +362,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         messages: [...action.session.messages],
         activities: [...action.session.activities],
         activityStates,
+        attemptFeedback: deriveAttemptFeedback(action.session.messages),
         latestRuns: {},
         contextUsage: undefined,
         mastery: [...action.session.mastery],
@@ -361,6 +381,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         messages: [],
         activities: [],
         activityStates: {},
+        attemptFeedback: {},
         latestRuns: {},
         mastery: [],
         review: [],
@@ -431,6 +452,29 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
         ...state,
         ...(action.mastery !== undefined ? { mastery: action.mastery } : {}),
         ...(action.review !== undefined ? { review: action.review } : {}),
+      }
+    case 'message/appended': {
+      const messages = appendMessage(state.messages, action.message)
+      const feedback = action.message.feedback
+      const nextFeedback = feedback?.activityId === undefined
+        ? state.attemptFeedback
+        : { ...state.attemptFeedback, [feedback.activityId]: feedback }
+      return {
+        ...state,
+        messages,
+        attemptFeedback: nextFeedback,
+        ...(state.session === undefined
+          ? {}
+          : { session: { ...state.session, messages: appendMessage(state.session.messages, action.message) } }),
+      }
+    }
+    case 'attempt/result':
+      return {
+        ...state,
+        attemptFeedback: {
+          ...state.attemptFeedback,
+          ...(action.feedback.activityId === undefined ? {} : { [action.feedback.activityId]: action.feedback }),
+        },
       }
     case 'chat/stream-event':
       return applyChatStreamEvent(state, action.event)

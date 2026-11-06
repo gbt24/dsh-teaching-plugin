@@ -10,7 +10,7 @@
  */
 import React, { useEffect, useRef, useState } from 'react'
 import type {
-  ActivityState, CodeRunPayload, CodeRunResultView, CourseDetail, EnvironmentDirectory,
+  ActivityState, AttemptFeedback, CodeRunPayload, CodeRunResultView, CourseDetail, EnvironmentDirectory,
   EvidenceReference, ExperimentRun, LessonActivity, MountedActivityState, SessionView,
   SourceAnchor, SourceView,
 } from './activity-types.ts'
@@ -50,6 +50,8 @@ export interface TeachingAreaProps extends ActivityInteractionCallbacks {
   readonly currentActivityId?: string
   readonly selectedDocumentId?: string
   readonly activityStates: Readonly<Record<string, ActivityState>>
+  /** Latest structured attempt feedback per activity id (quiz result view). */
+  readonly attemptFeedback?: Readonly<Record<string, AttemptFeedback>>
   /** Latest persisted run per activity id (`runs.latest`). */
   readonly latestRuns: Readonly<Record<string, ExperimentRun>>
   readonly selectedTab: TeachingTab
@@ -180,6 +182,7 @@ function RunSummary(props: {
 function ActivityView(props: {
   readonly activity: LessonActivity
   readonly state?: ActivityState
+  readonly attempt?: AttemptFeedback
   readonly callbacks: ActivityInteractionCallbacks
 }): React.ReactElement {
   const host = useRef<HTMLDivElement | null>(null)
@@ -211,6 +214,7 @@ function ActivityView(props: {
       verification: activity.verification,
     }, {
       ...(stateRef.current !== undefined ? { state: stateRef.current } : {}),
+      ...(props.attempt !== undefined ? { attempt: props.attempt } : {}),
       callbacks: {
         onStateChange: patch => callbacksRef.current.onStateChange(activity, patch),
         onRunCode: request => callbacksRef.current.onRunCode(activity, request),
@@ -228,7 +232,7 @@ function ActivityView(props: {
     // Only a different activity/revision remounts; metadata updates (updatedAt)
     // and editable-state saves do not rebuild the live handle, so an in-flight
     // code run keeps its cancel control.
-  }, [activity.id, activity.revision])
+  }, [activity.id, activity.revision, props.attempt])
   return <div ref={host} />
 }
 
@@ -270,6 +274,7 @@ function ActivityTab(props: {
   readonly activities: readonly LessonActivity[]
   readonly currentActivityId?: string
   readonly activityStates: Readonly<Record<string, ActivityState>>
+  readonly attemptFeedback?: Readonly<Record<string, AttemptFeedback>>
   readonly latestRuns: Readonly<Record<string, ExperimentRun>>
   readonly callbacks: ActivityInteractionCallbacks
   readonly busy: boolean
@@ -322,6 +327,7 @@ function ActivityTab(props: {
             key={`${current.id}:${current.revision}`}
             activity={current}
             {...(props.activityStates[current.id] !== undefined ? { state: props.activityStates[current.id] } : {})}
+            {...(props.attemptFeedback?.[current.id] !== undefined ? { attempt: props.attemptFeedback[current.id] } : {})}
             callbacks={props.callbacks}
           />
           <div className="ai-muted" style={{ marginTop: 6 }}>
@@ -664,6 +670,7 @@ export function TeachingArea(props: TeachingAreaProps): React.ReactElement {
         {tab === 'activity' && (
           <ActivityTab
             activities={props.activities}
+            {...(props.attemptFeedback !== undefined ? { attemptFeedback: props.attemptFeedback } : {})}
             {...(props.currentActivityId !== undefined ? { currentActivityId: props.currentActivityId } : {})}
             activityStates={props.activityStates}
             latestRuns={props.latestRuns}

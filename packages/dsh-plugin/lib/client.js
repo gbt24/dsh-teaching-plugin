@@ -153,6 +153,11 @@ window.__ModuleLoader__.load({
     .ai-msg-meta { font-size: 10px; opacity: 0.6; margin-top: 4px; display: flex; gap: 8px;
       flex-wrap: wrap; align-items: center; }
     .ai-msg-student .ai-msg-meta { opacity: 0.85; }
+    .ai-msg-feedback { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.28));
+      background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.06)); border-radius: 10px;
+      padding: 10px 12px; }
+    .ai-msg-feedback .ai-markdown h3 { margin-top: 0; }
+    .ai-feedback-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
     .ai-evidence-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
     .ai-evidence-chip { font-size: 10px; border-radius: 999px; padding: 1px 8px; cursor: pointer;
       border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.35)); background: transparent;
@@ -741,6 +746,7 @@ window.__ModuleLoader__.load({
       messages: [],
       activities: [],
       activityStates: {},
+      attemptFeedback: {},
       latestRuns: {},
       mastery: [],
       review: [],
@@ -760,6 +766,15 @@ window.__ModuleLoader__.load({
     function appendMessage(messages, message) {
       if (messages.some((existing) => existing.id === message.id)) return messages;
       return [...messages, message];
+    }
+    function deriveAttemptFeedback(messages) {
+      const result = {};
+      for (const message of messages) {
+        const feedback = message.feedback;
+        if (feedback?.activityId === void 0) continue;
+        result[feedback.activityId] = feedback;
+      }
+      return result;
     }
     function mergeEvidence(existing, incoming) {
       const seen = new Set(existing.map((ref) => JSON.stringify(ref)));
@@ -903,6 +918,7 @@ window.__ModuleLoader__.load({
             messages: [],
             activities: [],
             activityStates: {},
+            attemptFeedback: {},
             latestRuns: {},
             mastery: [],
             review: [],
@@ -924,6 +940,7 @@ window.__ModuleLoader__.load({
             messages: [...action.session.messages],
             activities: [...action.session.activities],
             activityStates,
+            attemptFeedback: deriveAttemptFeedback(action.session.messages),
             latestRuns: {},
             contextUsage: void 0,
             mastery: [...action.session.mastery],
@@ -942,6 +959,7 @@ window.__ModuleLoader__.load({
             messages: [],
             activities: [],
             activityStates: {},
+            attemptFeedback: {},
             latestRuns: {},
             mastery: [],
             review: [],
@@ -1010,6 +1028,25 @@ window.__ModuleLoader__.load({
             ...state,
             ...action.mastery !== void 0 ? { mastery: action.mastery } : {},
             ...action.review !== void 0 ? { review: action.review } : {}
+          };
+        case "message/appended": {
+          const messages = appendMessage(state.messages, action.message);
+          const feedback = action.message.feedback;
+          const nextFeedback = feedback?.activityId === void 0 ? state.attemptFeedback : { ...state.attemptFeedback, [feedback.activityId]: feedback };
+          return {
+            ...state,
+            messages,
+            attemptFeedback: nextFeedback,
+            ...state.session === void 0 ? {} : { session: { ...state.session, messages: appendMessage(state.session.messages, action.message) } }
+          };
+        }
+        case "attempt/result":
+          return {
+            ...state,
+            attemptFeedback: {
+              ...state.attemptFeedback,
+              ...action.feedback.activityId === void 0 ? {} : { [action.feedback.activityId]: action.feedback }
+            }
           };
         case "chat/stream-event":
           return applyChatStreamEvent(state, action.event);
@@ -17582,8 +17619,8 @@ window.__ModuleLoader__.load({
     function mountQuiz(container, payload, options = {}) {
       const document2 = resolveDocument(options);
       const disposers = [];
-      const selected = new Set(options.selectedOptionIds ?? []);
-      let revealed = options.answerRevealed === true;
+      const selected = new Set(options.result?.selectedOptionIds ?? options.selectedOptionIds ?? []);
+      let revealed = options.answerRevealed === true || options.result !== void 0;
       let hintShown = options.hintRevealed === true;
       const wrapper = createElement(document2, "div", { className: "teaching-quiz" });
       const question = createElement(document2, "div", {
@@ -17746,10 +17783,22 @@ window.__ModuleLoader__.load({
       wrapper.appendChild(hintBox);
       wrapper.appendChild(feedback);
       wrapper.appendChild(explanation);
-      if (hintShown) showHint();
-      if (revealed) {
-        revealed = false;
-        doReveal();
+      if (options.result !== void 0) {
+        const result = options.result;
+        feedback.textContent = result.passed === true ? "\u2705 \u5DF2\u63D0\u4EA4\uFF1A\u56DE\u7B54\u6B63\u786E" : result.passed === false ? "\u274C \u5DF2\u63D0\u4EA4\uFF1A\u56DE\u7B54\u4E0D\u6B63\u786E" : "\u5DF2\u63D0\u4EA4\uFF0C\u53CD\u9988\u89C1\u5BF9\u8BDD\u3002";
+        const explanationText = payload.explanation ?? result.explanation;
+        if (explanationText !== void 0) {
+          appendMarkdownBlocks(explanation, document2, parseMarkdown(explanationText), options);
+        }
+        submitButton.disabled = true;
+        if (hintButton !== void 0) hintButton.style.display = "none";
+        if (revealButton !== void 0) revealButton.style.display = "none";
+      } else {
+        if (hintShown) showHint();
+        if (revealed) {
+          revealed = false;
+          doReveal();
+        }
       }
       container.appendChild(wrapper);
       return {
@@ -18670,6 +18719,7 @@ window.__ModuleLoader__.load({
         case "quiz": {
           const handle = mountQuiz(content, payload, {
             document: document2,
+            ...options.attempt !== void 0 ? { result: options.attempt } : {},
             ...callbacks.onQuizSubmit !== void 0 ? { onSubmit: callbacks.onQuizSubmit } : {},
             ...callbacks.onHelpExposure !== void 0 ? { onHelpExposed: (help) => callbacks.onHelpExposure?.(help) } : {}
           });
@@ -19088,16 +19138,28 @@ window.__ModuleLoader__.load({
       const { graphical, other } = splitGraphicalActivities(linked);
       const visualFences = message.role === "teacher" && graphical.length === 0 ? extractChatVisualFences(message.text) : [];
       const hasGraphical = graphical.length > 0;
+      const isFeedback = message.kind === "teacher-feedback" && message.feedback !== void 0;
       return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
         "article",
         {
-          className: `ai-msg ${roleClass}`,
+          className: `ai-msg ${roleClass}${isFeedback ? " ai-msg-feedback" : ""}`,
           "data-role": message.role,
           "data-message-id": message.id,
           "data-graphical": hasGraphical,
           children: [
             message.role === "teacher" && message.kind !== "teacher-explanation" && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-muted", style: { marginBottom: 2 }, children: TEACHER_KIND_LABELS[message.kind] ?? "" }),
             message.markdown === true ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(RenderedMarkdown, { source: message.text }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { style: { whiteSpace: "pre-wrap" }, children: message.text }),
+            isFeedback && (message.teaching?.nextActions ?? []).length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-feedback-actions", children: (message.teaching?.nextActions ?? []).map((action) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-small-button",
+                disabled: props.busy,
+                onClick: () => props.onTeachingAction?.(action.id),
+                children: action.label
+              },
+              action.id
+            )) }),
             hasGraphical && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "ai-inline-activities", children: graphical.map((activity) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
               InlineActivity,
               {
@@ -19201,8 +19263,10 @@ window.__ModuleLoader__.load({
         {
           message,
           activities: props.activities,
+          busy: props.busy,
           ...props.activityStates !== void 0 ? { activityStates: props.activityStates } : {},
           ...props.onActivityStateChange !== void 0 ? { onActivityStateChange: props.onActivityStateChange } : {},
+          ...props.onTeachingAction !== void 0 ? { onTeachingAction: props.onTeachingAction } : {},
           onActivityClick: props.onActivityClick,
           onFullscreen: (activity) => setFullscreenActivity(activity),
           onEvidenceClick: props.onEvidenceClick
@@ -20792,6 +20856,7 @@ window.__ModuleLoader__.load({
           verification: activity.verification
         }, {
           ...stateRef.current !== void 0 ? { state: stateRef.current } : {},
+          ...props.attempt !== void 0 ? { attempt: props.attempt } : {},
           callbacks: {
             onStateChange: (patch) => callbacksRef.current.onStateChange(activity, patch),
             onRunCode: (request) => callbacksRef.current.onRunCode(activity, request),
@@ -20806,7 +20871,7 @@ window.__ModuleLoader__.load({
           mounted.dispose();
           element.textContent = "";
         };
-      }, [activity.id, activity.revision]);
+      }, [activity.id, activity.revision, props.attempt]);
       return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { ref: host });
     }
     function ActivityHistoryRow(props) {
@@ -20863,6 +20928,7 @@ window.__ModuleLoader__.load({
             {
               activity: current,
               ...props.activityStates[current.id] !== void 0 ? { state: props.activityStates[current.id] } : {},
+              ...props.attemptFeedback?.[current.id] !== void 0 ? { attempt: props.attemptFeedback[current.id] } : {},
               callbacks: props.callbacks
             },
             `${current.id}:${current.revision}`
@@ -21178,6 +21244,7 @@ window.__ModuleLoader__.load({
             ActivityTab,
             {
               activities: props.activities,
+              ...props.attemptFeedback !== void 0 ? { attemptFeedback: props.attemptFeedback } : {},
               ...props.currentActivityId !== void 0 ? { currentActivityId: props.currentActivityId } : {},
               activityStates: props.activityStates,
               latestRuns: props.latestRuns,
@@ -21889,6 +21956,15 @@ window.__ModuleLoader__.load({
       const quickAction = (0, import_react12.useCallback)((action) => {
         void sendMessage(QUICK_ACTION_PROMPTS[action]);
       }, [sendMessage]);
+      const onTeachingAction = (0, import_react12.useCallback)((actionId) => {
+        if (actionId === "explain-attempt") {
+          void sendMessage("\u8BF7\u7ED3\u5408\u6211\u521A\u624D\u8FD9\u9053\u9898\u7684\u4F5C\u7B54\u53CD\u9988\uFF0C\u8BB2\u8BB2\u6211\u4E3A\u4EC0\u4E48\u4F1A\u9009\u9519\uFF08\u6216\u6B63\u786E\uFF09\uFF0C\u4EE5\u53CA\u4E0B\u6B21\u9047\u5230\u540C\u7C7B\u9898\u5E94\u8BE5\u600E\u6837\u601D\u8003\u3002");
+          return;
+        }
+        if (actionId === "practice-variant") {
+          void sendMessage("\u8BF7\u518D\u7ED9\u6211\u4E00\u9053\u7C7B\u4F3C\u7684\u53D8\u5F0F\u9898\uFF0C\u96BE\u5EA6\u4E0E\u521A\u624D\u90A3\u9053\u76F8\u5F53\u3002");
+        }
+      }, [sendMessage]);
       const persistActivityState = (0, import_react12.useCallback)((activity, patch) => {
         const previous = stateRef.current.activityStates[activity.id];
         const next = {
@@ -22080,8 +22156,22 @@ window.__ModuleLoader__.load({
           });
           if (!mounted.current) return;
           dispatch({ type: "learning/updated", mastery: outcome.mastery, review: outcome.review });
-          const note = outcome.independenceNote !== void 0 ? `\u5DF2\u8BB0\u5F55\u5C1D\u8BD5\uFF08${outcome.attempt.independence}\uFF09\uFF1A${outcome.independenceNote}` : `\u5DF2\u8BB0\u5F55\u5C1D\u8BD5\uFF08${outcome.attempt.independence}\uFF09${outcome.validation.passed === void 0 ? "" : outcome.validation.passed ? "\uFF0C\u5BA2\u89C2\u68C0\u67E5\u901A\u8FC7" : "\uFF0C\u5BA2\u89C2\u68C0\u67E5\u672A\u901A\u8FC7"}\u3002`;
-          notify({ kind: "info", message: note });
+          if (outcome.feedback !== void 0) {
+            dispatch({ type: "attempt/result", feedback: outcome.feedback });
+          }
+          if (outcome.feedbackMessage !== void 0) {
+            dispatch({ type: "message/appended", message: outcome.feedbackMessage });
+          }
+          const passed = outcome.feedback?.passed ?? outcome.validation.passed;
+          if (outcome.feedback !== void 0) {
+            notify({
+              kind: passed === true ? "info" : "warning",
+              message: passed === true ? "\u4F5C\u7B54\u5DF2\u8BB0\u5F55\uFF0C\u53CD\u9988\u5DF2\u5199\u5165\u5BF9\u8BDD\u3002" : passed === false ? "\u4F5C\u7B54\u5DF2\u8BB0\u5F55\uFF0C\u53CD\u9988\u5DF2\u5199\u5165\u5BF9\u8BDD\uFF1B\u53EF\u70B9\u201C\u8BA9 AI \u8BB2\u8BB2\u9519\u56E0\u201D\u3002" : "\u4F5C\u7B54\u5DF2\u8BB0\u5F55\uFF0C\u53CD\u9988\u5DF2\u5199\u5165\u5BF9\u8BDD\u3002"
+            });
+          } else {
+            const note = outcome.independenceNote !== void 0 ? `\u5DF2\u8BB0\u5F55\u5C1D\u8BD5\uFF08${outcome.attempt.independence}\uFF09\uFF1A${outcome.independenceNote}` : `\u5DF2\u8BB0\u5F55\u5C1D\u8BD5\uFF08${outcome.attempt.independence}\uFF09${outcome.validation.passed === void 0 ? "" : outcome.validation.passed ? "\uFF0C\u5BA2\u89C2\u68C0\u67E5\u901A\u8FC7" : "\uFF0C\u5BA2\u89C2\u68C0\u67E5\u672A\u901A\u8FC7"}\u3002`;
+            notify({ kind: "info", message: note });
+          }
         } catch (error) {
           notify({ kind: "error", message: `\u63D0\u4EA4\u56DE\u7B54\u5931\u8D25\uFF1A${describeError(error)}` });
         } finally {
@@ -22619,6 +22709,7 @@ window.__ModuleLoader__.load({
                     activityStates: state.activityStates,
                     onActivityStateChange: persistActivityState,
                     onActivityClick: onChatActivityClick,
+                    onTeachingAction,
                     onEvidenceClick,
                     onRetry: retryLast,
                     onDismissError: () => dispatch({ type: "error/clear" })
@@ -22631,6 +22722,7 @@ window.__ModuleLoader__.load({
                     ...state.selectedActivityId !== void 0 ? { currentActivityId: state.selectedActivityId } : {},
                     ...state.selectedSourceDocumentId !== void 0 ? { selectedDocumentId: state.selectedSourceDocumentId } : {},
                     activityStates: state.activityStates,
+                    attemptFeedback: state.attemptFeedback,
                     latestRuns: state.latestRuns,
                     selectedTab: state.selectedTab,
                     ...detail !== void 0 ? { courseDetail: detail } : {},

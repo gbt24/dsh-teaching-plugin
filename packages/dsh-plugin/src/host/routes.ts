@@ -20,7 +20,7 @@ import type {
 import {
   CourseRepository, LearningRepository, ProfileRepository, SessionRepository,
   activityFile, activityStateFile, activityId as newActivityId, apiPath, conceptId as newConceptId,
-  courseId as newCourseId,
+  courseId as newCourseId, messageId as newMessageId,
   courseRevisionId as newCourseRevisionId, nowIso, runFile,
 } from '@deepseek-teaching/core'
 import type { LocalState } from '@deepseek-teaching/core'
@@ -34,6 +34,7 @@ import type { TaskManager } from './tasks.ts'
 import type { WebBridge } from './web.ts'
 import type { SettingsStore } from './settings.ts'
 import { generateVisual } from './visual-service.ts'
+import { composeAttemptFeedback } from './attempt-feedback.ts'
 import {
   buildSummaryInput, estimateCompactedTokens, estimateMessageTokens, estimateTokens,
   resolveCompactionPolicy, selectCompactionRange, SUMMARY_MAX_TOKENS, TEACHING_COMPACTION_INSTRUCTION,
@@ -1743,6 +1744,15 @@ ${buildSummaryInput(selection.compacted)}
     }
     const validation = activity === undefined ? undefined : await validateAttempt(services, activity, input)
     const conceptIds = activity?.conceptIds ?? (session.position.conceptId === undefined ? [] : [session.position.conceptId])
+    // Snapshot mastery levels before the attempt so feedback can show the delta.
+    const learningRecordBefore = await services.learning.get(session.courseId)
+    const previousLevels = new Map(
+      (learningRecordBefore?.mastery ?? []).map(record => [record.conceptId as string, record.level]),
+    )
+    const revisionForFeedback = await services.courses.getRevision(session.courseId, session.courseRevisionId)
+    const conceptTitles = new Map(
+      (revisionForFeedback?.concepts ?? []).map(concept => [concept.id as string, concept.title]),
+    )
     const learning = services.createLearningFor(activity)
     const outcome = await learning.submitAttempt({
       sessionId: session.id,
@@ -1761,6 +1771,47 @@ ${buildSummaryInput(selection.compacted)}
       ...(input.runId === undefined ? {} : { runId: input.runId as never }),
     })
     if (!outcome.ok) return failure(outcome.error)
+    if (activity !== undefined) {
+      const composed = composeAttemptFeedback({
+        activity,
+        attempt: outcome.value.attempt,
+        outcome: outcome.value,
+        previousLevels: previousLevels as ReadonlyMap<string, import('@deepseek-teaching/core').MasteryLevel>,
+        conceptTitles,
+      })
+      const feedbackMessage: ChatMessage = {
+        id: newMessageId(),
+        sessionId: session.id,
+        role: 'teacher',
+        kind: 'teacher-feedback',
+        text: composed.markdown,
+        markdown: true,
+        createdAt: nowIso(),
+        activityIds: [activity.id],
+        teaching: {
+          intent: 'feedback',
+          stage: session.position.stage,
+          conceptIds,
+          nextActions: composed.nextActions,
+          uncertainty: outcome.value.independenceNote === undefined ? [] : [outcome.value.independenceNote],
+        },
+        feedback: composed.feedback,
+      }
+      await services.sessions.appendMessage(feedbackMessage)
+      const latest = await services.sessions.get(session.id)
+      if (latest !== undefined) {
+        await services.sessions.save({
+          ...latest,
+          messageIds: [...latest.messageIds, feedbackMessage.id],
+          updatedAt: nowIso(),
+        })
+      }
+      return envelope({
+        ...outcome.value,
+        feedback: composed.feedback,
+        feedbackMessage,
+      })
+    }
     return envelope(outcome.value)
   })
 

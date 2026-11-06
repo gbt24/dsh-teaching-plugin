@@ -49,6 +49,8 @@ export interface ChatPanelProps {
   readonly onStop: () => void
   readonly onQuickAction: (action: QuickAction) => void
   readonly onActivityClick: (activityId: string) => void
+  /** Feedback-card action buttons ("explain", "practice variant"). */
+  readonly onTeachingAction?: (actionId: string) => void
   /** Persisted activity state (graph params etc.) for inline graphical activities. */
   readonly activityStates?: Readonly<Record<string, ActivityState>>
   readonly onActivityStateChange?: (activity: LessonActivity, patch: MountedActivityState) => void
@@ -123,8 +125,10 @@ function formatPage(locator: { readonly page?: number; readonly slide?: number; 
 function MessageBubble(props: {
   readonly message: ChatMessage
   readonly activities: readonly LessonActivity[]
+  readonly busy: boolean
   readonly activityStates?: Readonly<Record<string, ActivityState>>
   readonly onActivityStateChange?: (activity: LessonActivity, patch: MountedActivityState) => void
+  readonly onTeachingAction?: (actionId: string) => void
   readonly onActivityClick: (activityId: string) => void
   readonly onFullscreen: (activity: LessonActivity) => void
   readonly onEvidenceClick: (reference: EvidenceReference) => void
@@ -138,9 +142,10 @@ function MessageBubble(props: {
     ? extractChatVisualFences(message.text)
     : []
   const hasGraphical = graphical.length > 0
+  const isFeedback = message.kind === 'teacher-feedback' && message.feedback !== undefined
   return (
     <article
-      className={`ai-msg ${roleClass}`}
+      className={`ai-msg ${roleClass}${isFeedback ? ' ai-msg-feedback' : ''}`}
       data-role={message.role}
       data-message-id={message.id as string}
       data-graphical={hasGraphical}
@@ -151,6 +156,21 @@ function MessageBubble(props: {
       {message.markdown === true
         ? <RenderedMarkdown source={message.text} />
         : <div style={{ whiteSpace: 'pre-wrap' }}>{message.text}</div>}
+      {isFeedback && (message.teaching?.nextActions ?? []).length > 0 && (
+        <div className="ai-feedback-actions">
+          {(message.teaching?.nextActions ?? []).map(action => (
+            <button
+              key={action.id}
+              type="button"
+              className="ai-small-button"
+              disabled={props.busy}
+              onClick={() => props.onTeachingAction?.(action.id)}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
       {hasGraphical && (
         <div className="ai-inline-activities">
           {graphical.map(activity => (
@@ -277,8 +297,10 @@ export function ChatPanel(props: ChatPanelProps): React.ReactElement {
       key={message.id}
       message={message}
       activities={props.activities}
+      busy={props.busy}
       {...(props.activityStates !== undefined ? { activityStates: props.activityStates } : {})}
       {...(props.onActivityStateChange !== undefined ? { onActivityStateChange: props.onActivityStateChange } : {})}
+      {...(props.onTeachingAction !== undefined ? { onTeachingAction: props.onTeachingAction } : {})}
       onActivityClick={props.onActivityClick}
       onFullscreen={activity => setFullscreenActivity(activity)}
       onEvidenceClick={props.onEvidenceClick}

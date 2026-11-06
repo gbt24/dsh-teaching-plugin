@@ -6,7 +6,7 @@
  * the shared renderer.
  */
 export type {
-  ActivityState, CodeRunPayload, CourseDetail, EnvironmentDirectory, EvidenceReference,
+  ActivityState, AttemptFeedback, CodeRunPayload, CourseDetail, EnvironmentDirectory, EvidenceReference,
   ExperimentRun, LessonActivity, SessionView, SourceAnchor, SourceView,
 } from '@deepseek-teaching/core/contracts'
 export type {

@@ -4,6 +4,7 @@
  * is reported through `onHelpExposed` so the attempt records that help was used.
  */
 import type { QuizPayload } from '../contracts/activity.ts'
+import type { AttemptFeedback } from '../contracts/learning.ts'
 import { createElement, on, resolveDocument } from './dom.ts'
 import type { RenderEnvironment } from './dom.ts'
 import { appendMarkdownBlocks, parseMarkdown } from './markdown.ts'
@@ -16,6 +17,8 @@ export interface QuizMountOptions extends RenderEnvironment {
   readonly answerRevealed?: boolean
   /** True when the hint was already revealed. */
   readonly hintRevealed?: boolean
+  /** Persisted attempt result; renders the graded state without re-submitting. */
+  readonly result?: AttemptFeedback
   /** Student submitted a selection. */
   readonly onSubmit?: (selectedOptionIds: readonly string[]) => void | Promise<void>
   /** Hint or full answer was exposed; used for help-exposure accounting. */
@@ -37,8 +40,8 @@ export interface QuizHandle {
 export function mountQuiz(container: HTMLElement, payload: QuizPayload, options: QuizMountOptions = {}): QuizHandle {
   const document = resolveDocument(options)
   const disposers: (() => void)[] = []
-  const selected = new Set<string>(options.selectedOptionIds ?? [])
-  let revealed = options.answerRevealed === true
+  const selected = new Set<string>(options.result?.selectedOptionIds ?? options.selectedOptionIds ?? [])
+  let revealed = options.answerRevealed === true || options.result !== undefined
   let hintShown = options.hintRevealed === true
 
   const wrapper = createElement(document, 'div', { className: 'teaching-quiz' })
@@ -201,10 +204,24 @@ export function mountQuiz(container: HTMLElement, payload: QuizPayload, options:
   wrapper.appendChild(hintBox)
   wrapper.appendChild(feedback)
   wrapper.appendChild(explanation)
-  if (hintShown) showHint()
-  if (revealed) {
-    revealed = false
-    doReveal()
+  if (options.result !== undefined) {
+    const result = options.result
+    feedback.textContent = result.passed === true
+      ? '✅ 已提交：回答正确'
+      : result.passed === false ? '❌ 已提交：回答不正确' : '已提交，反馈见对话。'
+    const explanationText = payload.explanation ?? result.explanation
+    if (explanationText !== undefined) {
+      appendMarkdownBlocks(explanation, document, parseMarkdown(explanationText), options)
+    }
+    submitButton.disabled = true
+    if (hintButton !== undefined) hintButton.style.display = 'none'
+    if (revealButton !== undefined) revealButton.style.display = 'none'
+  } else {
+    if (hintShown) showHint()
+    if (revealed) {
+      revealed = false
+      doReveal()
+    }
   }
 
   container.appendChild(wrapper)

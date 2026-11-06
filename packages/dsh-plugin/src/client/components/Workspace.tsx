@@ -449,6 +449,16 @@ export function TeachingWorkspace(props: {
     void sendMessage(QUICK_ACTION_PROMPTS[action])
   }, [sendMessage])
 
+  const onTeachingAction = useCallback((actionId: string): void => {
+    if (actionId === 'explain-attempt') {
+      void sendMessage('请结合我刚才这道题的作答反馈，讲讲我为什么会选错（或正确），以及下次遇到同类题应该怎样思考。')
+      return
+    }
+    if (actionId === 'practice-variant') {
+      void sendMessage('请再给我一道类似的变式题，难度与刚才那道相当。')
+    }
+  }, [sendMessage])
+
   // ---- activity state / attempts --------------------------------------
 
   const persistActivityState = useCallback((activity: LessonActivity, patch: MountedActivityState): void => {
@@ -676,10 +686,26 @@ export function TeachingWorkspace(props: {
       })
       if (!mounted.current) return
       dispatch({ type: 'learning/updated', mastery: outcome.mastery, review: outcome.review })
-      const note = outcome.independenceNote !== undefined
-        ? `已记录尝试（${outcome.attempt.independence}）：${outcome.independenceNote}`
-        : `已记录尝试（${outcome.attempt.independence}）${outcome.validation.passed === undefined ? '' : outcome.validation.passed ? '，客观检查通过' : '，客观检查未通过'}。`
-      notify({ kind: 'info', message: note })
+      if (outcome.feedback !== undefined) {
+        dispatch({ type: 'attempt/result', feedback: outcome.feedback })
+      }
+      if (outcome.feedbackMessage !== undefined) {
+        dispatch({ type: 'message/appended', message: outcome.feedbackMessage })
+      }
+      const passed = outcome.feedback?.passed ?? outcome.validation.passed
+      if (outcome.feedback !== undefined) {
+        notify({
+          kind: passed === true ? 'info' : 'warning',
+          message: passed === true
+            ? '作答已记录，反馈已写入对话。'
+            : passed === false ? '作答已记录，反馈已写入对话；可点“让 AI 讲讲错因”。' : '作答已记录，反馈已写入对话。',
+        })
+      } else {
+        const note = outcome.independenceNote !== undefined
+          ? `已记录尝试（${outcome.attempt.independence}）：${outcome.independenceNote}`
+          : `已记录尝试（${outcome.attempt.independence}）${outcome.validation.passed === undefined ? '' : outcome.validation.passed ? '，客观检查通过' : '，客观检查未通过'}。`
+        notify({ kind: 'info', message: note })
+      }
     } catch (error) {
       notify({ kind: 'error', message: `提交回答失败：${describeError(error)}` })
     } finally {
@@ -1278,6 +1304,7 @@ export function TeachingWorkspace(props: {
               activityStates={state.activityStates}
               onActivityStateChange={persistActivityState}
               onActivityClick={onChatActivityClick}
+              onTeachingAction={onTeachingAction}
               onEvidenceClick={onEvidenceClick}
               onRetry={retryLast}
               onDismissError={() => dispatch({ type: 'error/clear' })}
@@ -1287,6 +1314,7 @@ export function TeachingWorkspace(props: {
               {...(state.selectedActivityId !== undefined ? { currentActivityId: state.selectedActivityId } : {})}
               {...(state.selectedSourceDocumentId !== undefined ? { selectedDocumentId: state.selectedSourceDocumentId } : {})}
               activityStates={state.activityStates}
+              attemptFeedback={state.attemptFeedback}
               latestRuns={state.latestRuns}
               selectedTab={state.selectedTab}
               {...(detail !== undefined ? { courseDetail: detail } : {})}
