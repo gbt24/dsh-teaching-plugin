@@ -75,11 +75,19 @@ export const TEACHING_CSS = `
 .ai-badge[data-level="mastered"] { color: var(--dsw-alias-state-success-primary, #15803d); border-color: var(--dsw-alias-state-success-primary, #16a34a); opacity: 1; }
 .ai-badge[data-level="checked"] { color: var(--dsw-alias-link, #0369a1); border-color: var(--dsw-alias-link, #0284c7); opacity: 1; }
 .ai-badge[data-level="practiced"] { color: var(--dsw-alias-state-warn-primary, #b45309); border-color: var(--dsw-alias-state-warn-primary, #d97706); opacity: 1; }
-.ai-session-row { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left;
-  border: none; background: transparent; color: inherit; cursor: pointer; font-size: 12px;
-  padding: 4px 6px; border-radius: 6px; }
+.ai-session-row { display: flex; align-items: center; gap: 4px; width: 100%;
+  padding: 1px 2px 1px 0; border-radius: 6px; }
 .ai-session-row:hover { background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08)); }
 .ai-session-row[data-active="true"] { background: var(--dsw-alias-bg-layer-1, rgba(59,130,246,0.12)); }
+.ai-session-main { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;
+  border: none; background: transparent; color: inherit; cursor: pointer; font-size: 12px;
+  padding: 4px 6px; text-align: left; font-family: inherit; }
+.ai-session-delete { flex: 0 0 auto; border: none; background: transparent; color: inherit;
+  opacity: 0; cursor: pointer; font-size: 10px; padding: 2px 5px; border-radius: 5px; }
+.ai-session-row:hover .ai-session-delete,
+.ai-session-delete:focus-visible { opacity: 0.7; }
+.ai-session-delete:hover { opacity: 1; color: var(--dsw-alias-state-error-primary, #b91c1c);
+  background: rgba(185,28,28,0.08); }
 .ai-session-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ai-review-item { font-size: 12px; padding: 6px 8px; border-radius: 8px;
   border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); margin-bottom: 6px; }

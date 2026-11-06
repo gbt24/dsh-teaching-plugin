@@ -27,6 +27,8 @@ export interface SidebarProps {
   readonly onSelectCourse: (courseId: string) => void
   readonly onSelectSession: (sessionId: string) => void
   readonly onNewSession: () => void
+  /** Request deletion of one learning session (workspace shows confirmation). */
+  readonly onDeleteSession?: (session: SessionSummary) => void
   readonly onConceptClick: (concept: Concept) => void
   readonly onReviewConcept: (item: ReviewItem) => void
   readonly onOpenSource: (documentId: string) => void
@@ -273,17 +275,33 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
         <h3 className="ai-sidebar-heading">学习会话</h3>
         {props.sessions.length === 0 && <div className="ai-muted">新建会话开始学习</div>}
         {props.sessions.slice(0, 8).map(summary => (
-          <button
+          <div
             key={summary.id}
-            type="button"
             className="ai-session-row"
             data-active={summary.id === props.session?.session.id}
-            onClick={() => props.onSelectSession(summary.id)}
-            aria-label={`打开会话 ${summary.title}`}
           >
-            <span className="ai-session-title">{summary.title}</span>
-            <span className="ai-badge">{STAGE_LABELS[summary.stage]}</span>
-          </button>
+            <button
+              type="button"
+              className="ai-session-main"
+              onClick={() => props.onSelectSession(summary.id)}
+              aria-label={`打开会话 ${summary.title}`}
+            >
+              <span className="ai-session-title">{summary.title}</span>
+              <span className="ai-badge">{STAGE_LABELS[summary.stage]}</span>
+            </button>
+            {props.onDeleteSession !== undefined && (
+              <button
+                type="button"
+                className="ai-session-delete"
+                aria-label={`删除会话 ${summary.title}`}
+                title="删除这个学习会话"
+                disabled={props.busy}
+                onClick={() => props.onDeleteSession?.(summary)}
+              >
+                删除
+              </button>
+            )}
+          </div>
         ))}
         <button type="button" className="ai-link-button" onClick={props.onNewSession} disabled={props.busy}>
           + 新建学习会话

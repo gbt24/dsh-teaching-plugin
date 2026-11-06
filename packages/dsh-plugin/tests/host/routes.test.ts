@@ -747,6 +747,38 @@ describe('teaching host routes', () => {
     assert.equal(view.session.position.activityId, undefined)
   })
 
+  it('deletes a learning session together with its activities and messages', async () => {
+    const harness = await createHarness([{ kind: 'text', text: DRAFT_REPLY }])
+    const { courseId } = await preparedCourse(harness)
+    const created = unwrap<{ session: { id: string } }>((
+      await harness.call('sessions.create', { body: { courseId } })
+    ).json)
+    const sessionId = created.session.id
+    const activity = quizActivity(sessionId, courseId)
+    await harness.services.sessions.saveActivity(activity as never)
+    await harness.services.sessions.appendMessage({
+      id: 'msg-delete-test',
+      sessionId: sessionId as never,
+      role: 'teacher',
+      kind: 'teacher-explanation',
+      text: '将被删除',
+      createdAt: new Date().toISOString(),
+    } as never)
+    const deleted = unwrap<{ sessionId: string; deletedActivities: number }>((
+      await harness.call('sessions.delete', { body: { sessionId } })
+    ).json)
+    assert.equal(deleted.sessionId, sessionId)
+    assert.equal(deleted.deletedActivities, 1)
+    assert.equal(await harness.services.sessions.get(sessionId), undefined)
+    assert.equal(await harness.services.sessions.getActivity(activity.id), undefined)
+    const list = unwrap<{ sessions: unknown[] }>((
+      await harness.call('sessions.list', { method: 'GET', query: { courseId } })
+    ).json)
+    assert.equal(list.sessions.length, 0)
+    const missing = await harness.call('sessions.get', { method: 'GET', query: { sessionId } })
+    assert.equal((missing.json as { ok: boolean }).ok, false)
+  })
+
   it('lists models, applies a plugin model override and resets to the host default', async () => {
     const harness = await createHarness([])
     const initial = unwrap<{

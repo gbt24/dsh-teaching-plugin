@@ -222,6 +222,7 @@ export interface ApiRequests {
     }
   }
   'sessions.get': { readonly method: 'GET'; readonly query: { readonly sessionId: SessionId }; readonly body?: never }
+  'sessions.delete': { readonly method: 'POST'; readonly body: { readonly sessionId: SessionId } }
   'sessions.position': {
     readonly method: 'POST'
     readonly body: { readonly sessionId: SessionId; readonly stage?: string; readonly conceptId?: ConceptId; readonly activityId?: ActivityId | null; readonly note?: string }
@@ -400,6 +401,7 @@ export interface ApiResponses {
   'sessions.list': { readonly sessions: readonly SessionSummary[] }
   'sessions.create': { readonly session: TeachingSession }
   'sessions.get': SessionView
+  'sessions.delete': { readonly sessionId: SessionId; readonly deletedActivities: number }
   'sessions.position': { readonly session: TeachingSession }
   'chat.send': never
   'chat.cancel': { readonly cancelled: boolean }

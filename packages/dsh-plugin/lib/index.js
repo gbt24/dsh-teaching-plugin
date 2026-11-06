@@ -63880,6 +63880,29 @@ ${buildSummaryInput(selection.compacted)}
     };
     return envelope(view);
   });
+  route("sessions.delete", async ({ body }) => {
+    const input = body;
+    if (typeof input?.sessionId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 sessionId");
+    const session = await services.sessions.get(input.sessionId);
+    if (session === void 0) throw notFoundError("\u5B66\u4E60\u4F1A\u8BDD");
+    const activities = await services.sessions.listActivities(session.id);
+    const removedActivityIds = /* @__PURE__ */ new Set();
+    for (const activity of activities) {
+      removedActivityIds.add(activity.id);
+      await services.state.remove(activityFile(services.state.dataDir, activity.id));
+      await services.state.remove(activityStateFile(services.state.dataDir, activity.id));
+    }
+    for (const name2 of await services.state.list("runs")) {
+      if (!name2.endsWith(".json")) continue;
+      const run = await services.state.readJson(`runs/${name2}`);
+      if (run === void 0) continue;
+      if (run.sessionId === session.id || run.activityId !== void 0 && removedActivityIds.has(run.activityId)) {
+        await services.state.remove(`runs/${name2}`);
+      }
+    }
+    await services.sessions.delete(session.id);
+    return envelope({ sessionId: session.id, deletedActivities: activities.length });
+  });
   route("sessions.position", async ({ body }) => {
     const input = body;
     if (typeof input?.sessionId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 sessionId");

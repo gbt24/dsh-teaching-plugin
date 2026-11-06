@@ -116,11 +116,19 @@ window.__ModuleLoader__.load({
     .ai-badge[data-level="mastered"] { color: var(--dsw-alias-state-success-primary, #15803d); border-color: var(--dsw-alias-state-success-primary, #16a34a); opacity: 1; }
     .ai-badge[data-level="checked"] { color: var(--dsw-alias-link, #0369a1); border-color: var(--dsw-alias-link, #0284c7); opacity: 1; }
     .ai-badge[data-level="practiced"] { color: var(--dsw-alias-state-warn-primary, #b45309); border-color: var(--dsw-alias-state-warn-primary, #d97706); opacity: 1; }
-    .ai-session-row { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left;
-      border: none; background: transparent; color: inherit; cursor: pointer; font-size: 12px;
-      padding: 4px 6px; border-radius: 6px; }
+    .ai-session-row { display: flex; align-items: center; gap: 4px; width: 100%;
+      padding: 1px 2px 1px 0; border-radius: 6px; }
     .ai-session-row:hover { background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08)); }
     .ai-session-row[data-active="true"] { background: var(--dsw-alias-bg-layer-1, rgba(59,130,246,0.12)); }
+    .ai-session-main { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;
+      border: none; background: transparent; color: inherit; cursor: pointer; font-size: 12px;
+      padding: 4px 6px; text-align: left; font-family: inherit; }
+    .ai-session-delete { flex: 0 0 auto; border: none; background: transparent; color: inherit;
+      opacity: 0; cursor: pointer; font-size: 10px; padding: 2px 5px; border-radius: 5px; }
+    .ai-session-row:hover .ai-session-delete,
+    .ai-session-delete:focus-visible { opacity: 0.7; }
+    .ai-session-delete:hover { opacity: 1; color: var(--dsw-alias-state-error-primary, #b91c1c);
+      background: rgba(185,28,28,0.08); }
     .ai-session-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ai-review-item { font-size: 12px; padding: 6px 8px; border-radius: 8px;
       border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); margin-bottom: 6px; }
@@ -20666,16 +20674,36 @@ window.__ModuleLoader__.load({
           /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h3", { className: "ai-sidebar-heading", children: "\u5B66\u4E60\u4F1A\u8BDD" }),
           props.sessions.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "ai-muted", children: "\u65B0\u5EFA\u4F1A\u8BDD\u5F00\u59CB\u5B66\u4E60" }),
           props.sessions.slice(0, 8).map((summary) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
-            "button",
+            "div",
             {
-              type: "button",
               className: "ai-session-row",
               "data-active": summary.id === props.session?.session.id,
-              onClick: () => props.onSelectSession(summary.id),
-              "aria-label": `\u6253\u5F00\u4F1A\u8BDD ${summary.title}`,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-session-title", children: summary.title }),
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", children: STAGE_LABELS[summary.stage] })
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "ai-session-main",
+                    onClick: () => props.onSelectSession(summary.id),
+                    "aria-label": `\u6253\u5F00\u4F1A\u8BDD ${summary.title}`,
+                    children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-session-title", children: summary.title }),
+                      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: "ai-badge", children: STAGE_LABELS[summary.stage] })
+                    ]
+                  }
+                ),
+                props.onDeleteSession !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "ai-session-delete",
+                    "aria-label": `\u5220\u9664\u4F1A\u8BDD ${summary.title}`,
+                    title: "\u5220\u9664\u8FD9\u4E2A\u5B66\u4E60\u4F1A\u8BDD",
+                    disabled: props.busy,
+                    onClick: () => props.onDeleteSession?.(summary),
+                    children: "\u5220\u9664"
+                  }
+                )
               ]
             },
             summary.id
@@ -21675,6 +21703,8 @@ window.__ModuleLoader__.load({
       const [deleteTarget, setDeleteTarget] = (0, import_react12.useState)(void 0);
       const [activityDeleteTarget, setActivityDeleteTarget] = (0, import_react12.useState)(void 0);
       const [deleteActivityBusy, setDeleteActivityBusy] = (0, import_react12.useState)(false);
+      const [sessionDeleteTarget, setSessionDeleteTarget] = (0, import_react12.useState)(void 0);
+      const [deleteSessionBusy, setDeleteSessionBusy] = (0, import_react12.useState)(false);
       const [goalsEditor, setGoalsEditor] = (0, import_react12.useState)(void 0);
       const [savingGoals, setSavingGoals] = (0, import_react12.useState)(false);
       const [deleteSources, setDeleteSources] = (0, import_react12.useState)(false);
@@ -21779,6 +21809,9 @@ window.__ModuleLoader__.load({
           notify({ kind: "error", message: `\u52A0\u8F7D\u8BFE\u7A0B\u5931\u8D25\uFF1A${describeError(error)}`, ...error instanceof Error ? {} : {} });
         }
       }, [notify]);
+      const requestDeleteSession = (0, import_react12.useCallback)((session) => {
+        setSessionDeleteTarget(session);
+      }, []);
       const confirmDeleteCourse = (0, import_react12.useCallback)(async () => {
         if (deleteTarget === void 0) return;
         setDeleting(true);
@@ -21841,6 +21874,32 @@ window.__ModuleLoader__.load({
           notify({ kind: "error", message: `\u521B\u5EFA\u5B66\u4E60\u4F1A\u8BDD\u5931\u8D25\uFF1A${describeError(error)}` });
         }
       }, [notify]);
+      const confirmDeleteSession = (0, import_react12.useCallback)(async () => {
+        const target = sessionDeleteTarget;
+        if (target === void 0) return;
+        setDeleteSessionBusy(true);
+        try {
+          const result = await apiPost("sessions.delete", { sessionId: target.id });
+          const { sessions } = await apiGet("sessions.list", { courseId: target.courseId });
+          if (!mounted.current) return;
+          const wasCurrent = stateRef.current.session?.session.id === target.id;
+          dispatch({ type: "sessions/loaded", sessions });
+          if (wasCurrent) {
+            dispatch({ type: "session/cleared" });
+            const next = sessions[0];
+            if (next !== void 0) await selectSession(next.id);
+          }
+          setSessionDeleteTarget(void 0);
+          notify({
+            kind: "info",
+            message: `\u5DF2\u5220\u9664\u4F1A\u8BDD\u300C${target.title}\u300D${result.deletedActivities > 0 ? `\u53CA\u5176\u4E2D ${result.deletedActivities} \u4E2A\u6D3B\u52A8` : ""}\u3002\u8BFE\u7A0B\u7ED3\u6784\u3001\u539F\u59CB\u8D44\u6599\u548C\u5B66\u4E60\u7EDF\u8BA1\uFF08\u5C1D\u8BD5/\u638C\u63E1/\u590D\u4E60\uFF09\u4FDD\u7559\u3002`
+          });
+        } catch (error) {
+          notify({ kind: "error", message: `\u5220\u9664\u4F1A\u8BDD\u5931\u8D25\uFF1A${describeError(error)}` });
+        } finally {
+          if (mounted.current) setDeleteSessionBusy(false);
+        }
+      }, [sessionDeleteTarget, selectSession, notify]);
       const loadTasks = (0, import_react12.useCallback)(async () => {
         try {
           const { tasks } = await apiGet("tasks.list");
@@ -22670,6 +22729,7 @@ window.__ModuleLoader__.load({
                   onSelectSession: (sessionId) => {
                     void selectSession(sessionId);
                   },
+                  onDeleteSession: requestDeleteSession,
                   onNewSession: () => {
                     const courseId = detail?.course.id;
                     if (courseId === void 0) {
@@ -22862,6 +22922,41 @@ window.__ModuleLoader__.load({
                   void confirmDeleteActivity();
                 },
                 children: deleteActivityBusy ? "\u5220\u9664\u4E2D\u2026" : "\u786E\u8BA4\u5220\u9664"
+              }
+            )
+          ] })
+        ] }) }),
+        sessionDeleteTarget !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "ai-modal-overlay", role: "dialog", "aria-modal": "true", "aria-label": "\u5220\u9664\u5B66\u4E60\u4F1A\u8BDD\u786E\u8BA4", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "ai-modal", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("h3", { children: [
+            "\u5220\u9664\u5B66\u4E60\u4F1A\u8BDD\u300C",
+            sessionDeleteTarget.title,
+            "\u300D\uFF1F"
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { className: "ai-muted", style: { margin: "0 0 10px" }, children: [
+            "\u5C06\u5220\u9664\u8FD9\u4E2A\u4F1A\u8BDD\u7684\u5168\u90E8\u6D88\u606F\u3001\u6D3B\u52A8\u3001\u7F16\u8F91\u72B6\u6001\u4E0E\u8FD0\u884C\u8BB0\u5F55\u3002",
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("strong", { children: "\u8BFE\u7A0B\u7ED3\u6784\u3001\u539F\u59CB\u8D44\u6599\u4E0E\u5B66\u4E60\u7EDF\u8BA1\uFF08\u5C1D\u8BD5/\u638C\u63E1/\u590D\u4E60\uFF09\u4FDD\u7559\u3002" })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "ai-modal-actions", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-small-button",
+                disabled: deleteSessionBusy,
+                onClick: () => setSessionDeleteTarget(void 0),
+                children: "\u53D6\u6D88"
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-danger-button",
+                disabled: deleteSessionBusy,
+                onClick: () => {
+                  void confirmDeleteSession();
+                },
+                children: deleteSessionBusy ? "\u5220\u9664\u4E2D\u2026" : "\u786E\u8BA4\u5220\u9664"
               }
             )
           ] })

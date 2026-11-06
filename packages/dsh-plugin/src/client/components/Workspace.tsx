@@ -100,6 +100,9 @@ export function TeachingWorkspace(props: {
   /** Pending activity deletion awaiting the shared confirm modal. */
   const [activityDeleteTarget, setActivityDeleteTarget] = useState<LessonActivity | undefined>(undefined)
   const [deleteActivityBusy, setDeleteActivityBusy] = useState(false)
+  /** Pending learning-session deletion awaiting the shared confirm modal. */
+  const [sessionDeleteTarget, setSessionDeleteTarget] = useState<SessionSummary | undefined>(undefined)
+  const [deleteSessionBusy, setDeleteSessionBusy] = useState(false)
   const [goalsEditor, setGoalsEditor] = useState<{ readonly courseId: string; readonly goals: string; readonly background: string } | undefined>(undefined)
   const [savingGoals, setSavingGoals] = useState(false)
   const [deleteSources, setDeleteSources] = useState(false)
@@ -239,6 +242,11 @@ export function TeachingWorkspace(props: {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notify])
+  const requestDeleteSession = useCallback((session: SessionSummary): void => {
+    setSessionDeleteTarget(session)
+  }, [])
+
+
   /** Delete one course after explicit confirmation (student data control). */
   const confirmDeleteCourse = useCallback(async (): Promise<void> => {
     if (deleteTarget === undefined) return
@@ -314,6 +322,34 @@ export function TeachingWorkspace(props: {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notify])
+
+  const confirmDeleteSession = useCallback(async (): Promise<void> => {
+    const target = sessionDeleteTarget
+    if (target === undefined) return
+    setDeleteSessionBusy(true)
+    try {
+      const result = await apiPost('sessions.delete', { sessionId: target.id as never })
+      const { sessions } = await apiGet('sessions.list', { courseId: target.courseId as never })
+      if (!mounted.current) return
+      const wasCurrent = stateRef.current.session?.session.id === target.id
+      dispatch({ type: 'sessions/loaded', sessions })
+      if (wasCurrent) {
+        dispatch({ type: 'session/cleared' })
+        const next = sessions[0]
+        if (next !== undefined) await selectSession(next.id)
+      }
+      setSessionDeleteTarget(undefined)
+      notify({
+        kind: 'info',
+        message: `已删除会话「${target.title}」${result.deletedActivities > 0 ? `及其中 ${result.deletedActivities} 个活动` : ''}。课程结构、原始资料和学习统计（尝试/掌握/复习）保留。`,
+      })
+    } catch (error) {
+      notify({ kind: 'error', message: `删除会话失败：${describeError(error)}` })
+    } finally {
+      if (mounted.current) setDeleteSessionBusy(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionDeleteTarget, selectSession, notify])
 
   // ---- tasks -----------------------------------------------------------
 
@@ -1272,6 +1308,7 @@ export function TeachingWorkspace(props: {
             }}
             onEditGoals={openGoalsEditor}
             onSelectSession={sessionId => { void selectSession(sessionId) }}
+            onDeleteSession={requestDeleteSession}
             onNewSession={() => {
               const courseId = detail?.course.id
               if (courseId === undefined) {
@@ -1461,6 +1498,35 @@ export function TeachingWorkspace(props: {
                 onClick={() => { void confirmDeleteActivity() }}
               >
                 {deleteActivityBusy ? '删除中…' : '确认删除'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {sessionDeleteTarget !== undefined && (
+        <div className="ai-modal-overlay" role="dialog" aria-modal="true" aria-label="删除学习会话确认">
+          <div className="ai-modal">
+            <h3>删除学习会话「{sessionDeleteTarget.title}」？</h3>
+            <p className="ai-muted" style={{ margin: '0 0 10px' }}>
+              将删除这个会话的全部消息、活动、编辑状态与运行记录。
+              <strong>课程结构、原始资料与学习统计（尝试/掌握/复习）保留。</strong>
+            </p>
+            <div className="ai-modal-actions">
+              <button
+                type="button"
+                className="ai-small-button"
+                disabled={deleteSessionBusy}
+                onClick={() => setSessionDeleteTarget(undefined)}
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                className="ai-danger-button"
+                disabled={deleteSessionBusy}
+                onClick={() => { void confirmDeleteSession() }}
+              >
+                {deleteSessionBusy ? '删除中…' : '确认删除'}
               </button>
             </div>
           </div>
