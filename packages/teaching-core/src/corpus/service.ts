@@ -34,6 +34,7 @@ import { buildSearchIndex, SearchIndexCache, searchCorpus } from './search.ts'
 import { CorpusStore } from './store.ts'
 import { proposeCourseRevision, buildDraftCoverage, type DraftCoverageData } from './draft.ts'
 import { prepareKbContext, type KbDetection } from './structure.ts'
+import { parseWebPage, webSyntheticPath, type WebImportRequest } from './web.ts'
 import {
   buildEffects, describeDiff, diffUnits, resolveReferences,
 } from './change-utils.ts'
@@ -56,6 +57,13 @@ export interface CorpusServiceApi extends CorpusService {
     readonly courseId: CourseId
     readonly documentIds?: readonly SourceId[]
   }): Promise<Result<KbDetection>>
+  /**
+   * 导入 Host 已抓取好的网页内容（不联网、不执行脚本）。
+   * - 相同 URL + 相同内容哈希 → 返回既有文档/修订（幂等，不新增修订）；
+   * - 相同 URL + 内容变化 → 生成新修订并更新 web.fetchedAt/contentHash；
+   * - 不同 URL 但正文哈希相同 → 视为重复资料，返回既有文档。
+   */
+  importWebPage(request: WebImportRequest): Promise<Result<{ document: SourceDocument; revision: SourceRevision }>>
 }
 
 /** 解析所需参数。 */
@@ -328,15 +336,24 @@ export class CorpusServiceImpl implements CorpusServiceApi {
     readonly assets: ReadonlyMap<string, { readonly bytes: Uint8Array; readonly ext: string }>
     readonly revisionId: SourceRevisionId
     readonly courseId?: CourseId
+    /** 资料来源（网页导入时 'web'；缺省沿用既有记录）。 */
+    readonly origin?: SourceDocument['origin']
+    /** 网页来源元信息（url/fetchedAt/contentHash 等）。 */
+    readonly web?: SourceDocument['web']
   }): Promise<SourceDocument> {
     const documentId = (input.existing?.id ?? newSourceId()) as SourceId
     const status = statusForIssues(input.parsed.issues)
+    // 外部解析结果（saveRevision/网页导入）可能带临时 revisionId：统一改写为本修订 id，
+    // 保证 unit.revisionId 与 meta.id 一致（锚点/回解依赖）。
+    const units = input.parsed.units.map(unit => unit.revisionId === input.revisionId
+      ? unit
+      : { ...unit, revisionId: input.revisionId })
     const meta = buildRevisionMeta({
       revisionId: input.revisionId,
       documentId,
       fingerprint: input.fingerprint,
       extractor: input.parsed.extractor,
-      units: input.parsed.units,
+      units,
       issues: input.parsed.issues,
       status,
       ...(input.parsed.extent !== undefined ? { extent: input.parsed.extent } : {}),
@@ -345,16 +362,20 @@ export class CorpusServiceImpl implements CorpusServiceApi {
       documentId,
       revisionId: input.revisionId,
       meta,
-      payload: { units: input.parsed.units, issues: input.parsed.issues },
+      payload: { units, issues: input.parsed.issues },
       assets: input.assets,
     })
     const base = input.existing
     const detail = input.parsed.detail ?? base?.detail
     const courseIds: CourseId[] = [...(base?.courseIds ?? [])]
     if (input.courseId !== undefined && !courseIds.includes(input.courseId)) courseIds.push(input.courseId)
+    const origin = input.origin ?? base?.origin
+    const web = input.web ?? base?.web
     const document: SourceDocument = {
       id: documentId,
       originalPath: input.absolutePath,
+      ...(origin !== undefined ? { origin } : {}),
+      ...(web !== undefined ? { web } : {}),
       title: input.title ?? base?.title ?? basename(input.absolutePath),
       format: input.format,
       ...(detail !== undefined ? { detail } : {}),
@@ -368,7 +389,7 @@ export class CorpusServiceImpl implements CorpusServiceApi {
       revisions: [...(base?.revisions ?? []), revisionEntry(meta)],
     }
     const saved = await this.store.saveDocument(document)
-    await this.indexRevision(saved, input.revisionId, input.parsed.units)
+    await this.indexRevision(saved, input.revisionId, units)
     return saved
   }
 
@@ -400,6 +421,8 @@ export class CorpusServiceImpl implements CorpusServiceApi {
     return await this.guard('读取资料失败', async () => {
       const document = await this.store.readDocument(documentId)
       if (document === undefined) return err('not-found', '资料不存在或已被删除')
+      // 网页来源没有本地文件：不能按本地路径缺失处理
+      if (document.origin === 'web') return ok(withoutMissing(document))
       const info = await statFile(document.originalPath)
       return ok(info === undefined ? { ...withoutMissing(document), missing: true } : withoutMissing(document))
     })
@@ -534,6 +557,20 @@ export class CorpusServiceImpl implements CorpusServiceApi {
       ? await this.store.readRevisionMeta(document.id, document.currentRevisionId)
       : undefined
     const previousFingerprint = previousMeta?.fingerprint ?? ''
+    if (document.origin === 'web') {
+      // 网页来源没有本地文件可对比：变化检测由重新抓取（importWebPage 内容哈希）完成
+      return ok({
+        documentId: document.id,
+        previousFingerprint,
+        currentFingerprint: previousFingerprint,
+        changed: false,
+        effects: buildEffects({
+          references: { affectedConceptIds: [], affectedActivityIds: [] },
+          summary: '网页来源不通过本地文件检测；重新抓取网页（sources.importWeb）即可按内容哈希更新',
+          needsConfirmation: false,
+        }),
+      })
+    }
     const info = await statFile(document.originalPath)
     if (info === undefined) {
       const updated = await this.store.saveDocument({ ...withoutMissing(document), missing: true })
@@ -604,6 +641,9 @@ export class CorpusServiceImpl implements CorpusServiceApi {
   private async refreshInner(documentId: SourceId, signal?: AbortSignal): Promise<Result<SourceChange>> {
     const document = await this.store.readDocument(documentId)
     if (document === undefined) return err('not-found', '资料不存在或已被删除')
+    if (document.origin === 'web') {
+      return err('invalid-input', '网页来源无法通过本地文件刷新，请重新抓取网页（sources.importWeb）')
+    }
     if (isSignalAborted(signal)) return err('cancelled', '更新资料已取消')
     const detected = await this.detectFor(document)
     if (!detected.ok) return detected
@@ -770,10 +810,82 @@ export class CorpusServiceImpl implements CorpusServiceApi {
         parsed,
         assets: new Map(),
         revisionId,
+        ...(document.origin !== undefined ? { origin: document.origin } : {}),
+        ...(document.web !== undefined ? { web: document.web } : {}),
       })
       const revision = await this.store.readRevision(saved.id, revisionId)
       if (revision === undefined) return err('storage', '资料修订写入后无法读回')
       return ok({ document: saved, revision })
+    })
+  }
+
+  /** 导入 Host 已抓取的网页内容（详情/幂等/去重规则见接口注释）。 */
+  async importWebPage(request: WebImportRequest): Promise<Result<{ document: SourceDocument; revision: SourceRevision }>> {
+    return await this.guard('导入网页资料失败', async () => {
+      const url = typeof request.url === 'string' ? request.url.trim() : ''
+      if (!/^https?:\/\//iu.test(url)) {
+        return err('invalid-input', '网页导入只支持 http(s) URL', { cause: 'invalid-url' })
+      }
+      const parsed = await parseWebPage(request, this.limits)
+      if (!parsed.ok) return parsed
+      const content = parsed.value
+      const syntheticPath = webSyntheticPath(url)
+      let existing = await this.store.findDocumentByPath(syntheticPath)
+      if (existing === undefined) {
+        // 内容哈希去重：同一正文的其它 URL 视为同一资料，不重复入库
+        const documents = await this.store.listDocuments()
+        existing = documents.find(document => document.origin === 'web'
+          && document.web?.contentHash === content.contentHash)
+      }
+      const web: NonNullable<SourceDocument['web']> = {
+        url,
+        ...(content.finalUrl !== url ? { finalUrl: content.finalUrl } : {}),
+        title: content.title,
+        fetchedAt: request.fetchedAt,
+        ...(request.provider !== undefined ? { provider: request.provider } : {}),
+        contentHash: content.contentHash,
+      }
+      if (existing !== undefined && existing.currentRevisionId !== undefined) {
+        const currentMeta = await this.store.readRevisionMeta(existing.id, existing.currentRevisionId)
+        if (currentMeta !== undefined && currentMeta.fingerprint === content.contentHash) {
+          // 幂等：内容未变，只补挂课程/更新抓取时间等元信息
+          const attached = await this.attachCourseIfNeeded(existing, request.courseId)
+          const shouldUpdateWeb = attached.web?.fetchedAt !== web.fetchedAt
+            || attached.web?.url !== web.url
+            || attached.web?.contentHash !== web.contentHash
+          const document = shouldUpdateWeb
+            ? await this.store.saveDocument({ ...attached, web })
+            : attached
+          const revision = await this.store.readRevision(document.id, existing.currentRevisionId)
+          if (revision !== undefined) return ok({ document, revision })
+        }
+      }
+      const revisionId = newSourceRevisionId()
+      const fetchedMs = Date.parse(request.fetchedAt)
+      const document = await this.persistParsedRevision({
+        existing,
+        absolutePath: syntheticPath,
+        format: content.format,
+        title: content.title,
+        fingerprint: content.contentHash,
+        stat: { mtimeMs: Number.isFinite(fetchedMs) ? fetchedMs : 0, sizeBytes: content.textBytes },
+        parsed: {
+          format: content.format,
+          ...(content.detail !== undefined ? { detail: content.detail } : {}),
+          extractor: { name: 'teaching-corpus/web', version: '1.0.0' },
+          units: content.units,
+          issues: content.issues,
+          ...(content.extent !== undefined ? { extent: content.extent } : {}),
+        },
+        assets: new Map(),
+        revisionId,
+        ...(request.courseId !== undefined ? { courseId: request.courseId } : {}),
+        origin: 'web',
+        web,
+      })
+      const revision = await this.store.readRevision(document.id, revisionId)
+      if (revision === undefined) return err('storage', '网页资料修订写入后无法读回')
+      return ok({ document, revision })
     })
   }
 

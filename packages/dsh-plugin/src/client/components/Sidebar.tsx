@@ -5,7 +5,8 @@
  */
 import React, { useEffect, useState } from 'react'
 import type {
-  Concept, CourseDetail, CourseSummary, MasteryRecord, ReviewItem, SessionSummary, SessionView,
+  Concept, CourseDetail, CourseDraftView, CourseSummary, MasteryRecord, ReviewItem, SessionSummary,
+  SessionView,
 } from '@deepseek-teaching/core/contracts'
 import type { CourseProgress } from '../state.ts'
 import {
@@ -14,6 +15,7 @@ import {
 import {
   chapterCoverage, defaultOpenChapterId, groupConceptsByChapters,
 } from '../draft-edits.ts'
+import { MaterialsPanel } from './MaterialsPanel.tsx'
 
 export interface SidebarProps {
   readonly courses: readonly CourseSummary[]
@@ -38,6 +40,13 @@ export interface SidebarProps {
   readonly onDeleteCourse: (courseId: string, title: string) => void
   /** Open the learning-goals editor for the active course. */
   readonly onEditGoals?: () => void
+  /** Local material import through the workspace (keeps its notify/task UI). */
+  readonly onImportLocalPaths?: (courseId: string, paths: readonly string[]) => Promise<{ readonly ok: boolean; readonly error?: string }>
+  readonly onPickDirectory?: () => Promise<string | null>
+  /** Refresh the course/source list after adding materials. */
+  readonly onMaterialsChanged?: () => void | Promise<void>
+  /** Refreshed draft after incremental integration; open the draft review. */
+  readonly onDraftReady?: (draft: CourseDraftView) => void
 }
 
 /** Ordered concepts of the active (or draft) course revision. */
@@ -336,20 +345,16 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
 
       {detail !== undefined && (
         <div className="ai-sidebar-section">
-          <h3 className="ai-sidebar-heading">资料</h3>
-          {detail.sources.length === 0 && <div className="ai-muted">尚未导入资料</div>}
-          {detail.sources.slice(0, 6).map(source => (
-            <button
-              key={source.id}
-              type="button"
-              className="ai-link-button"
-              style={{ display: 'block' }}
-              onClick={() => props.onOpenSource(source.id)}
-              title={source.originalPath}
-            >
-              {source.missing === true ? '⚠ ' : ''}{truncate(source.title, 22)}
-            </button>
-          ))}
+          <MaterialsPanel
+            courseId={detail.course.id as string}
+            sources={detail.sources}
+            busy={props.busy}
+            onOpenSource={documentId => props.onOpenSource(documentId)}
+            {...(props.onImportLocalPaths !== undefined ? { onImportLocalPaths: props.onImportLocalPaths } : {})}
+            {...(props.onPickDirectory !== undefined ? { onPickDirectory: props.onPickDirectory } : {})}
+            {...(props.onMaterialsChanged !== undefined ? { onMaterialsChanged: props.onMaterialsChanged } : {})}
+            {...(props.onDraftReady !== undefined ? { onDraftReady: props.onDraftReady } : {})}
+          />
         </div>
       )}
     </nav>

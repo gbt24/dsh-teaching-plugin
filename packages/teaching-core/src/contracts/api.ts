@@ -25,6 +25,7 @@ import type { TaskHandle, TaskSnapshot } from './task.ts'
 import type { EnvironmentDirectory, EnvironmentRecord, ExperimentRun, RunRequest } from './experiment.ts'
 import type { BackupManifest, ExportedSession, RestoreReport } from './portability.ts'
 import type { ContextUsageView, ModelCatalogView, ModelInfoView, ModelSelectionView } from './model.ts'
+import type { CoursePlan, PlanAnswer, PlanBrief } from './planning.ts'
 import type { ActivityId, ConceptId, CourseId, SessionId } from './ids.ts'
 
 /** Model identity and capability facts the client may render. */
@@ -157,6 +158,35 @@ export interface ApiRequests {
     readonly body: { readonly courseId?: CourseId; readonly paths: readonly string[] }
   }
   'sources.refresh': { readonly method: 'POST'; readonly body: { readonly documentId: string } }
+  'sources.importWeb': {
+    readonly method: 'POST'
+    readonly body: {
+      readonly courseId: CourseId
+      readonly urls: readonly string[]
+      /** Optional search-derived titles/snippets keyed by URL. */
+      readonly metadata?: Readonly<Record<string, { readonly title?: string; readonly snippet?: string }>>
+    }
+  }
+  'sources.integrate': { readonly method: 'POST'; readonly body: { readonly courseId: CourseId } }
+  'planning.start': {
+    readonly method: 'POST'
+    readonly body: { readonly topic?: string; readonly language?: 'zh' | 'en' | 'bilingual' }
+  }
+  'planning.answer': {
+    readonly method: 'POST'
+    readonly body: { readonly planId: string; readonly answers: readonly PlanAnswer[] }
+  }
+  'planning.brief': {
+    readonly method: 'POST'
+    readonly body: { readonly planId: string; readonly brief?: PlanBrief }
+  }
+  'planning.search': { readonly method: 'POST'; readonly body: { readonly planId: string } }
+  'planning.fetch': {
+    readonly method: 'POST'
+    readonly body: { readonly planId: string; readonly candidateIds?: readonly string[] }
+  }
+  'planning.createCourse': { readonly method: 'POST'; readonly body: { readonly planId: string } }
+  'planning.cancel': { readonly method: 'POST'; readonly body: { readonly planId: string } }
   'sources.get': {
     readonly method: 'GET'
     readonly query: { readonly documentId: string; readonly offset?: number; readonly limit?: number }
@@ -320,6 +350,7 @@ export interface ApiRequests {
     }
   }
   'context.reset': { readonly method: 'POST'; readonly body: { readonly sessionId: SessionId } }
+  'planning.get': { readonly method: 'GET'; readonly query: { readonly planId: string }; readonly body?: never }
   'profile.get': { readonly method: 'GET'; readonly query?: Record<string, never>; readonly body?: never }
   'profile.set': { readonly method: 'POST'; readonly body: { readonly patch: Partial<StudentProfile> } }
   'environments.list': { readonly method: 'GET'; readonly query?: Record<string, never>; readonly body?: never }
@@ -394,6 +425,16 @@ export interface ApiResponses {
   'sources.import': { readonly task: TaskHandle }
   'sources.refresh': { readonly task: TaskHandle }
   'sources.get': SourceView
+  'sources.importWeb': { readonly task: TaskHandle }
+  'sources.integrate': { readonly task: TaskHandle }
+  'planning.start': { readonly plan: CoursePlan }
+  'planning.get': { readonly plan: CoursePlan }
+  'planning.answer': { readonly plan: CoursePlan; readonly ready: boolean }
+  'planning.brief': { readonly plan: CoursePlan }
+  'planning.search': { readonly task: TaskHandle }
+  'planning.fetch': { readonly task: TaskHandle }
+  'planning.createCourse': { readonly task: TaskHandle }
+  'planning.cancel': { readonly plan: CoursePlan }
   'courseDraft.generate': { readonly task: TaskHandle }
   'courseDraft.get': { readonly draft?: CourseDraftView }
   'courseDraft.confirm': { readonly course: Course; readonly revision: CourseRevision }

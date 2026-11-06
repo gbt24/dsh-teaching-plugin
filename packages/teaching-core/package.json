@@ -13,6 +13,7 @@
     "./experiments": "./src/experiments/index.ts",
     "./environments": "./src/environments/index.ts",
     "./portability": "./src/portability/index.ts",
-    "./render": "./src/render/index.ts"
+    "./render": "./src/render/index.ts",
+    "./planning": "./src/planning/index.ts"
   }
 }

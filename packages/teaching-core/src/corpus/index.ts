@@ -30,6 +30,17 @@ export type { ReferenceResolution, UnitDiff } from './change-utils.ts'
 export { CorpusCancelledError, CorpusFailure, CorpusParseError } from './errors.ts'
 export type { ParseAsset } from './budget.ts'
 
+/* 网页资料导入（Host 抓取后交给 corpus 抽取/持久化） */
+export type { WebImportRequest, WebParsedContent } from './web.ts'
+export {
+  domainOf, extractHtmlTitle, parseWebPage, stripNonContentHtml, webSyntheticPath,
+  WEB_MAX_UNITS, WEB_TEXT_CAP,
+} from './web.ts'
+
+/* 增量整合：新草案与已确认结构的 id/锚点/章节对齐（纯函数） */
+export type { ReconcileResult, ReconcileStats } from './reconcile.ts'
+export { normalizeConceptTitle, reconcileDraftWithActive } from './reconcile.ts'
+
 /* 课程结构 v2：知识库结构识别/角色判定/确定性构建（模式 A） */
 export type {
   KbBuiltChapter, KbBuiltConcept, KbContext, KbDetection, KbDetectionFacts, KbDetectionSignal,

@@ -19,6 +19,7 @@ import {
   moveConcept, orderedConceptIds, previewStructure, totalConceptCount,
   type AddedConceptDraft, type DraftConfirmEdits, type DraftEditState,
 } from '../draft-edits.ts'
+import { integrationSummaryText } from '../source-helpers.ts'
 
 export interface DraftReviewProps {
   readonly draft: CourseDraftView
@@ -449,6 +450,21 @@ export function DraftReview(props: DraftReviewProps): React.ReactElement {
   return (
     <div className="ai-draft-review">
       <h3 style={{ margin: '0 0 6px', fontSize: 14 }}>课程结构草案（v{revision.version}）{editing ? ' · 编辑中' : ''}</h3>
+      {draft.integration !== undefined && (
+        <div className="ai-banner ai-integration-banner" data-kind="info" role="status" style={{ margin: '6px 0', borderRadius: 8 }}>
+          <div>
+            <div>{integrationSummaryText(draft.integration)}</div>
+            {draft.integration.warnings.length > 0 && (
+              <ul className="ai-warning-list">
+                {draft.integration.warnings.map(warning => <li key={warning}>{warning}</li>)}
+              </ul>
+            )}
+            <div className="ai-muted" style={{ marginTop: 2 }}>
+              这是新资料整合后的增量结构；旧概念被保留，确认前可继续编辑。
+            </div>
+          </div>
+        </div>
+      )}
       {(origin !== undefined || structureNotes.length > 0) && (
         <div className="ai-draft-origin">
           {origin !== undefined && (

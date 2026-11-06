@@ -121,6 +121,17 @@ export interface SourceRevision extends SourceRevisionMeta {
 /** Stable identity of one imported student file. */
 export interface SourceDocument {
   readonly id: SourceId
+  /** Where the content came from; absent in old records means local. */
+  readonly origin?: 'local' | 'web'
+  /** Web provenance when `origin === 'web'`. */
+  readonly web?: {
+    readonly url: string
+    readonly finalUrl?: string
+    readonly title: string
+    readonly fetchedAt: string
+    readonly provider?: string
+    readonly contentHash?: string
+  }
   /** Original absolute path at import time; re-checked on refresh. */
   readonly originalPath: string
   readonly title: string

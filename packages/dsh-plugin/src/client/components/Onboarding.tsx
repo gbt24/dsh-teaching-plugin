@@ -14,6 +14,7 @@ import type { AppError, BootstrapInfo, CourseDraftView, TaskSnapshot } from '@de
 import { formatPercent } from '../helpers.ts'
 import { Banner, Spinner, TaskProgressBar } from './Banner.tsx'
 import { DraftReview } from './DraftReview.tsx'
+import { PlanningWizard } from './PlanningWizard.tsx'
 import type { DraftConfirmEdits } from '../draft-edits.ts'
 
 /** Result of one wizard action; `error` is shown verbatim with a retry path. */
@@ -49,6 +50,8 @@ export interface OnboardingProps {
   readonly onCancel?: () => void
   /** Open the Harness directory chooser and append the chosen folder path. */
   readonly onPickDirectory?: () => Promise<string | null>
+  /** A guided AI plan created a course; open it in the workspace. */
+  readonly onGuidedCourseCreated?: (courseId: string) => Promise<void> | void
 }
 
 type Step = 'course' | 'import' | 'draft'
@@ -66,6 +69,7 @@ export function Onboarding(props: OnboardingProps): React.ReactElement {
   const [description, setDescription] = useState('')
   const [goals, setGoals] = useState('')
   const [language, setLanguage] = useState<'zh' | 'en' | 'bilingual'>('zh')
+  const [mode, setMode] = useState<'choose' | 'local' | 'planning'>('choose')
   const [pathsText, setPathsText] = useState('')
   const [localError, setLocalError] = useState<string | undefined>(undefined)
   const [courseId, setCourseId] = useState<string | undefined>(props.courseId)
@@ -163,6 +167,63 @@ export function Onboarding(props: OnboardingProps): React.ReactElement {
     const result = await props.onStartAdhoc(courseId)
     setActionBusy(undefined)
     if (!result.ok) setDraftError(result.error ?? '随问随学会话创建失败')
+  }
+
+  if (mode === 'planning') {
+    return (
+      <div className="ai-onboarding">
+        <PlanningWizard
+          defaultLanguage={language}
+          onCourseCreated={async (courseId) => {
+            await props.onGuidedCourseCreated?.(courseId)
+          }}
+          onCancel={() => setMode('choose')}
+        />
+      </div>
+    )
+  }
+
+  if (mode === 'choose') {
+    return (
+      <div className="ai-onboarding">
+        <div className="ai-onboarding-heading">
+          <h2 style={{ margin: 0 }}>{props.canCancel === true ? '添加新课程' : '开始你的学习'}</h2>
+          {props.canCancel === true && props.onCancel !== undefined && (
+            <button type="button" className="ai-small-button" onClick={() => props.onCancel?.()} aria-label="返回工作区">
+              返回工作区
+            </button>
+          )}
+        </div>
+        <p>资料只保存在本机。教学以你的课程资料为依据；模型补充、外部网页与实验输出会分别标注来源。</p>
+        <div className="ai-onboarding-card">
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>怎么开始？</h3>
+          <div className="ai-row" style={{ alignItems: 'stretch', gap: 12, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="ai-primary-button"
+              style={{ flex: '1 1 260px', padding: '12px 14px', textAlign: 'left' }}
+              onClick={() => setMode('planning')}
+            >
+              AI 帮我规划并联网找资料
+              <span className="ai-muted" style={{ display: 'block', fontWeight: 400 }}>
+                先分轮访谈你的目标与基础，再搜索、审核资料并生成课程结构。
+              </span>
+            </button>
+            <button
+              type="button"
+              className="ai-small-button"
+              style={{ flex: '1 1 220px', padding: '12px 14px', textAlign: 'left' }}
+              onClick={() => setMode('local')}
+            >
+              导入本地资料建课
+              <span className="ai-muted" style={{ display: 'block', fontWeight: 400 }}>
+                适合你已有教材、讲义或笔记。
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

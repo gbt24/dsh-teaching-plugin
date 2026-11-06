@@ -28,12 +28,23 @@ interface HarnessWebService {
   }>
 }
 
+/** One fetched external resource. */
+export interface WebFetchOutcome {
+  readonly url: string
+  readonly statusCode: number
+  readonly kind: 'html' | 'text'
+  readonly content: string
+  readonly truncated: boolean
+}
+
 /** Bridge over the optional web service. */
 export interface WebBridge {
   /** Whether a web capability is mounted at all (provider usability is checked at call time). */
   available(): boolean
   /** One bounded search; returns a clear capability error instead of inventing results. */
   search(query: string, options?: { readonly maxResults?: number; readonly signal?: AbortSignal }): Promise<Result<WebSearchHit[]>>
+  /** Fetch one URL through the Harness web provider; no network provider is invented. */
+  fetch(url: string, options?: { readonly signal?: AbortSignal }): Promise<Result<WebFetchOutcome>>
 }
 
 /** Build the bridge from a Cordis-like context. */
@@ -70,6 +81,48 @@ export function createWebBridge(ctx: { get(name: string): unknown }): WebBridge 
           return fail('capability-missing', '联网能力不可用：没有可用的搜索提供方')
         }
         return fail('network', '联网查询失败，本地资料内容不受影响', { message: message.slice(0, 300) })
+      }
+    },
+    async fetch(url, options) {
+      const service = ctx.get('web') as
+        | { fetch?: (request: { url: string }, signal?: AbortSignal) => Promise<{
+            url: string
+            statusCode: number
+            body: { kind: 'html' | 'text'; content: string }
+            truncated: boolean
+          }> }
+        | undefined
+      if (service === undefined || service.fetch === undefined) {
+        return fail('capability-missing', '当前 Harness 配置没有启用网页抓取能力，无法读取外部资料')
+      }
+      const trimmed = url.trim()
+      if (trimmed === '') return fail('invalid-input', '网页 URL 为空')
+      if (!/^https?:\/\//iu.test(trimmed)) return fail('invalid-input', '只支持 http(s) 网页 URL')
+      try {
+        const result = await service.fetch({ url: trimmed }, options?.signal)
+        if (result.statusCode < 200 || result.statusCode >= 300) {
+          return fail('network', `网页返回 HTTP ${result.statusCode}，未导入`)
+        }
+        return {
+          ok: true,
+          value: {
+            url: result.url,
+            statusCode: result.statusCode,
+            kind: result.body.kind,
+            content: result.body.content.slice(0, 200_000),
+            truncated: result.truncated || result.body.content.length > 200_000,
+          },
+        }
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : String(cause)
+        const code = typeof cause === 'object' && cause !== null && typeof (cause as { code?: unknown }).code === 'string'
+          ? String((cause as { code: string }).code)
+          : ''
+        if (/cancel|abort/i.test(message) || /CANCEL|ABORT/i.test(code)) return fail('cancelled', '网页抓取已取消')
+        if (/unavailable|no provider|not configured/i.test(message) || /UNAVAILABLE|MISSING/i.test(code)) {
+          return fail('capability-missing', '网页抓取能力不可用：没有可用的抓取提供方')
+        }
+        return fail('network', '网页抓取失败，已有资料不受影响', { message: message.slice(0, 300) })
       }
     },
   }

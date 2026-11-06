@@ -1837,14 +1837,14 @@ var require_orderedJs2Xml = __commonJS({
       }
       return false;
     }
-    function replaceEntitiesValue(textValue, options) {
-      if (textValue && textValue.length > 0 && options.processEntities) {
+    function replaceEntitiesValue(textValue2, options) {
+      if (textValue2 && textValue2.length > 0 && options.processEntities) {
         for (let i = 0; i < options.entities.length; i++) {
           const entity = options.entities[i];
-          textValue = textValue.replace(entity.regex, entity.val);
+          textValue2 = textValue2.replace(entity.regex, entity.val);
         }
       }
-      return textValue;
+      return textValue2;
     }
     module.exports = toXml;
   }
@@ -1982,9 +1982,9 @@ var require_json2xml = __commonJS({
               }
             } else {
               if (this.options.oneListGroup) {
-                let textValue = this.options.tagValueProcessor(key, item);
-                textValue = this.replaceEntitiesValue(textValue);
-                listTagVal += textValue;
+                let textValue2 = this.options.tagValueProcessor(key, item);
+                textValue2 = this.replaceEntitiesValue(textValue2);
+                listTagVal += textValue2;
               } else {
                 listTagVal += this.buildTextValNode(item, key, "", level);
               }
@@ -2067,23 +2067,23 @@ var require_json2xml = __commonJS({
       } else if (key[0] === "?") {
         return this.indentate(level) + "<" + key + attrStr + "?" + this.tagEndChar;
       } else {
-        let textValue = this.options.tagValueProcessor(key, val);
-        textValue = this.replaceEntitiesValue(textValue);
-        if (textValue === "") {
+        let textValue2 = this.options.tagValueProcessor(key, val);
+        textValue2 = this.replaceEntitiesValue(textValue2);
+        if (textValue2 === "") {
           return this.indentate(level) + "<" + key + attrStr + this.closeTag(key) + this.tagEndChar;
         } else {
-          return this.indentate(level) + "<" + key + attrStr + ">" + textValue + "</" + key + this.tagEndChar;
+          return this.indentate(level) + "<" + key + attrStr + ">" + textValue2 + "</" + key + this.tagEndChar;
         }
       }
     };
-    Builder.prototype.replaceEntitiesValue = function(textValue) {
-      if (textValue && textValue.length > 0 && this.options.processEntities) {
+    Builder.prototype.replaceEntitiesValue = function(textValue2) {
+      if (textValue2 && textValue2.length > 0 && this.options.processEntities) {
         for (let i = 0; i < this.options.entities.length; i++) {
           const entity = this.options.entities[i];
-          textValue = textValue.replace(entity.regex, entity.val);
+          textValue2 = textValue2.replace(entity.regex, entity.val);
         }
       }
-      return textValue;
+      return textValue2;
     };
     function indentate(level) {
       return this.options.indentBy.repeat(level);
@@ -3000,6 +3000,9 @@ async function hashFile(path2) {
     stream.on("end", () => resolve6());
   });
   return `${FINGERPRINT_PREFIX}${hash.digest("hex")}`;
+}
+function fingerprintOfBytes(bytes) {
+  return `${FINGERPRINT_PREFIX}${createHash("sha256").update(bytes).digest("hex")}`;
 }
 
 // packages/teaching-core/src/corpus/limits.ts
@@ -7272,138 +7275,7 @@ function toResultError(cause, message) {
   return err("failed", message, { details: { message: cause instanceof Error ? cause.message : String(cause) } });
 }
 
-// packages/teaching-core/src/corpus/change-utils.ts
-function normalizeText(text2) {
-  return text2.replace(/\s+/g, " ").trim();
-}
-function locatorKey(unit) {
-  const locator = unit.locator;
-  const ordered = {};
-  for (const key of Object.keys(locator).sort()) {
-    const value = locator[key];
-    if (value !== void 0) ordered[key] = value;
-  }
-  return `${unit.kind}|${JSON.stringify(ordered)}`;
-}
-function diffUnits(oldUnits, newUnits) {
-  const oldByKey = /* @__PURE__ */ new Map();
-  for (const unit of oldUnits) {
-    if (!oldByKey.has(locatorKey(unit))) oldByKey.set(locatorKey(unit), unit);
-  }
-  const newByKey = /* @__PURE__ */ new Map();
-  for (const unit of newUnits) {
-    if (!newByKey.has(locatorKey(unit))) newByKey.set(locatorKey(unit), unit);
-  }
-  const removedUnitIds = [];
-  const modifiedUnitIds = [];
-  let structureChanged = false;
-  for (const [key, oldUnit] of oldByKey) {
-    const newUnit = newByKey.get(key);
-    if (newUnit === void 0) {
-      removedUnitIds.push(oldUnit.id);
-      if (oldUnit.kind === "heading") structureChanged = true;
-      continue;
-    }
-    if (normalizeText(oldUnit.text) !== normalizeText(newUnit.text)) {
-      modifiedUnitIds.push(oldUnit.id);
-      if (oldUnit.kind === "heading" || newUnit.kind === "heading") structureChanged = true;
-    }
-  }
-  let added = 0;
-  for (const key of newByKey.keys()) {
-    if (!oldByKey.has(key)) {
-      added += 1;
-      if (newByKey.get(key)?.kind === "heading") structureChanged = true;
-    }
-  }
-  const affectedUnitIds = [...removedUnitIds, ...modifiedUnitIds];
-  const totalOldUnits = oldUnits.length;
-  return {
-    added,
-    removedUnitIds,
-    modifiedUnitIds,
-    affectedUnitIds,
-    totalOldUnits,
-    changedRatio: totalOldUnits === 0 ? added > 0 ? 1 : 0 : affectedUnitIds.length / totalOldUnits,
-    structureChanged
-  };
-}
-async function callHook(value) {
-  return await Promise.resolve(value);
-}
-async function defaultConceptReferences(courses, documentId, unitIds) {
-  const unitSet = unitIds !== void 0 ? new Set(unitIds) : void 0;
-  const conceptIds = /* @__PURE__ */ new Set();
-  let coursesList;
-  try {
-    coursesList = await courses.list();
-  } catch {
-    return [];
-  }
-  for (const course of coursesList) {
-    let revisions;
-    try {
-      revisions = await courses.listRevisions(course.id);
-    } catch {
-      continue;
-    }
-    for (const revision of revisions) {
-      for (const concept of revision.concepts) {
-        const matched = concept.sourceAnchors.some((anchor) => {
-          if (anchor.documentId !== documentId) return false;
-          if (unitSet === void 0) return true;
-          return unitSet.has(anchor.unitId);
-        });
-        if (matched) conceptIds.add(concept.id);
-      }
-    }
-  }
-  return [...conceptIds];
-}
-async function resolveReferences(deps, documentId, unitIds) {
-  const hooks = deps.references;
-  let affectedConceptIds = [];
-  if (hooks?.conceptsForUnits !== void 0 && unitIds !== void 0) {
-    affectedConceptIds = await callHook(hooks.conceptsForUnits(documentId, unitIds));
-  } else if (hooks?.conceptsForDocument !== void 0) {
-    affectedConceptIds = await callHook(hooks.conceptsForDocument(documentId));
-  } else {
-    affectedConceptIds = await defaultConceptReferences(deps.courses, documentId, unitIds);
-  }
-  let affectedActivityIds = [];
-  if (hooks?.activitiesForUnits !== void 0 && unitIds !== void 0) {
-    affectedActivityIds = await callHook(hooks.activitiesForUnits(documentId, unitIds));
-  } else if (hooks?.activitiesForDocument !== void 0) {
-    affectedActivityIds = await callHook(hooks.activitiesForDocument(documentId));
-  }
-  return {
-    affectedConceptIds: [...new Set(affectedConceptIds.map(String))].sort(),
-    affectedActivityIds: [...new Set(affectedActivityIds.map(String))].sort()
-  };
-}
-function buildEffects(input) {
-  return {
-    affectedConceptIds: input.references.affectedConceptIds,
-    affectedActivityIds: input.references.affectedActivityIds,
-    needsConfirmation: input.needsConfirmation,
-    summary: input.summary
-  };
-}
-function describeDiff(diff, conceptCount, activityCount) {
-  const parts = [
-    `\u65B0\u589E ${diff.added} \u4E2A\u5355\u5143`,
-    `\u5220\u9664/\u66FF\u6362 ${diff.removedUnitIds.length} \u4E2A`,
-    `\u4FEE\u6539 ${diff.modifiedUnitIds.length} \u4E2A`,
-    `\u6D89\u53CA ${conceptCount} \u4E2A\u6982\u5FF5\u3001${activityCount} \u4E2A\u6D3B\u52A8`
-  ];
-  if (diff.structureChanged) parts.push("\u5305\u542B\u6807\u9898/\u7ED3\u6784\u53D8\u5316\uFF0C\u5EFA\u8BAE\u786E\u8BA4\u8BFE\u7A0B\u7ED3\u6784");
-  return `\u8D44\u6599\u5185\u5BB9\u66F4\u65B0\uFF1A${parts.join("\uFF0C")}`;
-}
-
-// packages/teaching-core/src/corpus/parsers/index.ts
-import { extname as extname4 } from "node:path";
-
-// packages/teaching-core/src/corpus/parsers/plain.ts
+// packages/teaching-core/src/corpus/parsers/html.ts
 import { dirname as dirname4 } from "node:path";
 
 // packages/teaching-core/src/corpus/parsers/context.ts
@@ -7473,8 +7345,368 @@ function assetNamePrefix(documentPath) {
   return name2 === "" ? "asset" : name2;
 }
 
-// packages/teaching-core/src/corpus/parsers/plain.ts
+// packages/teaching-core/src/corpus/parsers/html.ts
 var EXTRACTOR_VERSION = "1.0.0";
+var TOKEN_REGEX = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<![^>]*>|<\/?([a-zA-Z][\w:-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)\/?>/g;
+var ATTR_REGEX = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
+var HEADING_TAGS = /* @__PURE__ */ new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
+var BLOCK_TAGS = /* @__PURE__ */ new Set([
+  "p",
+  "div",
+  "section",
+  "article",
+  "header",
+  "footer",
+  "main",
+  "aside",
+  "li",
+  "ul",
+  "ol",
+  "blockquote",
+  "dt",
+  "dd",
+  "dl",
+  "figure",
+  "figcaption",
+  "form",
+  "fieldset",
+  "nav"
+]);
+function decodeHtmlEntities(text2) {
+  return text2.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (full) => {
+    const body = full.slice(1, -1);
+    if (body.startsWith("#x") || body.startsWith("#X")) {
+      const code = Number.parseInt(body.slice(2), 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : full;
+    }
+    if (body.startsWith("#")) {
+      const code = Number.parseInt(body.slice(1), 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : full;
+    }
+    switch (body) {
+      case "amp":
+        return "&";
+      case "lt":
+        return "<";
+      case "gt":
+        return ">";
+      case "quot":
+        return '"';
+      case "apos":
+        return "'";
+      case "nbsp":
+        return " ";
+      case "mdash":
+        return "\u2014";
+      case "ndash":
+        return "\u2013";
+      case "hellip":
+        return "\u2026";
+      default:
+        return full;
+    }
+  });
+}
+function parseAttrs(raw) {
+  const attrs = {};
+  ATTR_REGEX.lastIndex = 0;
+  for (const match of raw.matchAll(ATTR_REGEX)) {
+    const key = (match[1] ?? "").toLowerCase();
+    const value = match[2] ?? match[3] ?? match[4] ?? "";
+    if (key !== "") attrs[key] = decodeHtmlEntities(value);
+  }
+  return attrs;
+}
+function stripTags(html) {
+  return decodeHtmlEntities(html.replace(/<[^>]*>/g, " "));
+}
+async function parseHtml(context) {
+  const raw = assertTextual(context.bytes, "HTML \u6587\u4EF6");
+  const budget = new ExtractionBudget(context.revisionId, context.limits, context.signal);
+  const fileDir = dirname4(context.path);
+  const assetPrefix = assetNamePrefix(context.path);
+  const lineStarts2 = computeLineStarts(raw);
+  const totalLines = lineStarts2.length;
+  const sectionPath = [];
+  let block;
+  let headingLevel = 0;
+  let inHead = false;
+  let tableDepth = 0;
+  let tableRows = [];
+  let tableRow = [];
+  let tableCell;
+  let tableStart = 0;
+  let tableEnd = 0;
+  const lineOf = (offset) => {
+    let low = 0;
+    let high = lineStarts2.length - 1;
+    while (low < high) {
+      const mid = Math.ceil((low + high) / 2);
+      if (lineStarts2[mid] <= offset) low = mid;
+      else high = mid - 1;
+    }
+    return low;
+  };
+  const locatorRange = (startOffset, endOffset) => ({
+    lines: [lineOf(startOffset) + 1, lineOf(Math.max(startOffset, endOffset)) + 1],
+    chars: [startOffset, Math.max(startOffset, endOffset)],
+    ...sectionPath.length > 0 ? { sectionPath: [...sectionPath] } : {}
+  });
+  const addIssue = (code, severity, message, locator, reviewRequired = false) => {
+    budget.addIssue({
+      code,
+      severity,
+      message,
+      reviewRequired,
+      ...locator !== void 0 ? { locator } : {}
+    });
+  };
+  const flushBlock = (tagOverride) => {
+    if (block === void 0) return;
+    const tag = tagOverride ?? block.tag;
+    const text2 = block.text.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+    const locator = locatorRange(block.startOffset, block.endOffset);
+    const current = block;
+    block = void 0;
+    if (text2 === "") return;
+    if (headingLevel > 0) {
+      sectionPath.length = Math.min(sectionPath.length, headingLevel - 1);
+      sectionPath.push(text2.slice(0, 120));
+      budget.addUnit({ kind: "heading", locator: { ...locator, sectionPath: [...sectionPath] }, text: text2, confidence: "high" });
+      headingLevel = 0;
+      return;
+    }
+    if (tag === "li") {
+      budget.addUnit({ kind: "list", locator, text: text2, confidence: "high" });
+      return;
+    }
+    if (tag === "blockquote") {
+      budget.addUnit({ kind: "note", locator, text: text2, confidence: "high" });
+      return;
+    }
+    if (tag === "pre" || tag === "code") {
+      budget.addUnit({ kind: "code", locator, text: current.text.trimEnd(), confidence: "high" });
+      return;
+    }
+    if (looksLikeFormula(text2) && text2.length <= 400) {
+      budget.addUnit({ kind: "formula", locator, text: text2, confidence: "medium" });
+      addIssue("formula-uncertain", "info", "\u8BE5\u6BB5\u88AB\u8BC6\u522B\u4E3A\u516C\u5F0F\uFF08\u542F\u53D1\u5F0F\u5224\u65AD\uFF09\uFF0C\u8BF7\u6838\u5BF9\u539F\u6587", locator);
+      return;
+    }
+    budget.addUnit({ kind: "paragraph", locator, text: text2, confidence: "high" });
+  };
+  const appendText = (text2) => {
+    if (text2 === "") return;
+    if (block === void 0) {
+      if (text2.trim() === "") return;
+      block = { tag: "p", startOffset: lastOffset, endOffset: lastOffset, text: "" };
+    }
+    const normalized = text2.replace(/\r/g, "");
+    block.text += normalized;
+    block.endOffset = lastOffset + normalized.length;
+  };
+  let lastOffset = 0;
+  let match;
+  TOKEN_REGEX.lastIndex = 0;
+  while ((match = TOKEN_REGEX.exec(raw)) !== null) {
+    budget.checkAbort();
+    if (budget.full || budget.overTextLimit) break;
+    const tokenStart = match.index;
+    const between = raw.slice(lastOffset, tokenStart);
+    if (between !== "") {
+      if (!inHead && tableDepth === 0) appendText(decodeHtmlEntities(between));
+      else if (tableDepth > 0 && tableCell !== void 0) tableCell += decodeHtmlEntities(between);
+    }
+    lastOffset = tokenStart + match[0].length;
+    const tagName = (match[1] ?? "").toLowerCase();
+    const attrsRaw = match[2] ?? "";
+    const isClosing = match[0].startsWith("</");
+    if (tagName === "") continue;
+    if (!isClosing && (tagName === "script" || tagName === "style" || tagName === "pre" || tagName === "math" || tagName === "title" || tagName === "svg")) {
+      const closeTag = new RegExp(`</${tagName}\\s*>`, "i");
+      const rest = raw.slice(lastOffset);
+      const closeMatch = closeTag.exec(rest);
+      const innerEnd = closeMatch !== null ? lastOffset + closeMatch.index : raw.length;
+      const inner2 = raw.slice(lastOffset, innerEnd);
+      lastOffset = closeMatch !== null ? innerEnd + closeMatch[0].length : raw.length;
+      TOKEN_REGEX.lastIndex = lastOffset;
+      const attrs = parseAttrs(attrsRaw);
+      if (tagName === "script") {
+        const type = (attrs["type"] ?? "").toLowerCase();
+        if (type.includes("math/tex")) {
+          const tex = stripTags(inner2).trim();
+          if (tex !== "") {
+            budget.addUnit({
+              kind: "formula",
+              locator: locatorRange(tokenStart, lastOffset),
+              text: tex,
+              confidence: "high"
+            });
+          }
+        }
+      } else if (tagName === "math") {
+        const tex = stripTags(inner2).replace(/\s+/g, " ").trim();
+        if (tex !== "") {
+          budget.addUnit({
+            kind: "formula",
+            locator: locatorRange(tokenStart, lastOffset),
+            text: tex,
+            confidence: "medium",
+            notes: ["MathML \u516C\u5F0F\u6309\u7EAF\u6587\u672C\u4FDD\u7559\uFF0C\u672A\u8F6C\u6362\u4E3A TeX"]
+          });
+          addIssue("formula-uncertain", "info", "MathML \u516C\u5F0F\u4EC5\u4FDD\u7559\u7EAF\u6587\u672C\uFF0C\u590D\u6742\u7ED3\u6784\u53EF\u80FD\u4E22\u5931", locatorRange(tokenStart, lastOffset));
+        }
+      } else if (tagName === "pre") {
+        const language = /(?:^|\s)language-([\w+#.-]+)/.exec(attrs["class"] ?? "")?.[1];
+        const code = stripTags(inner2).replace(/^\n/, "").trimEnd();
+        if (code.trim() !== "") {
+          budget.addUnit({
+            kind: "code",
+            locator: locatorRange(tokenStart, lastOffset),
+            text: code,
+            confidence: "high",
+            ...language !== void 0 ? { notes: [`\u8BED\u8A00\uFF1A${language}`] } : {}
+          });
+        }
+      }
+      continue;
+    }
+    if (tagName === "head") {
+      inHead = !isClosing;
+      continue;
+    }
+    if (tagName === "img") {
+      const attrs = parseAttrs(attrsRaw);
+      const ref = attrs["src"] ?? "";
+      const alt = attrs["alt"] ?? attrs["title"] ?? "";
+      const locator = locatorRange(tokenStart, lastOffset);
+      if (isRemoteRef(ref)) {
+        budget.addUnit({
+          kind: "figure",
+          locator,
+          text: alt.trim() === "" ? "\u5916\u94FE\u56FE\u7247" : alt.trim(),
+          confidence: "unknown",
+          notes: [`\u5916\u94FE\u56FE\u7247\u672A\u4E0B\u8F7D\uFF1A${ref}`]
+        });
+        addIssue("unsupported-content", "info", "HTML \u5F15\u7528\u4E86\u5916\u90E8\u56FE\u7247\uFF0C\u672C\u7248\u672C\u4E0D\u8054\u7F51\u4E0B\u8F7D", locator);
+      } else {
+        const asset = await addLocalImageAsset(budget, fileDir, ref, assetPrefix);
+        if (asset !== void 0 && asset.assetPath !== void 0) {
+          budget.addUnit({
+            kind: "figure",
+            locator,
+            text: alt.trim() === "" ? "\u56FE\u7247" : alt.trim(),
+            assetPath: asset.assetPath,
+            confidence: "high"
+          });
+        } else {
+          budget.addUnit({
+            kind: "figure",
+            locator,
+            text: alt.trim() === "" ? `\u56FE\u7247\uFF08\u7F3A\u5931\uFF1A${ref}\uFF09` : alt.trim(),
+            confidence: "unknown",
+            notes: [`\u56FE\u7247\u6587\u4EF6\u7F3A\u5931\u6216\u65E0\u6CD5\u8BFB\u53D6\uFF1A${ref}`]
+          });
+          addIssue("figure-unreadable", "warning", "HTML \u5F15\u7528\u7684\u56FE\u7247\u7F3A\u5931\u6216\u65E0\u6CD5\u8BFB\u53D6\uFF0C\u53EF\u56DE\u770B\u539F\u6587\u4EF6\u6838\u5BF9", locator, true);
+        }
+      }
+      continue;
+    }
+    if (tagName === "br") {
+      if (block !== void 0) block.text += "\n";
+      continue;
+    }
+    if (tagName === "table") {
+      if (isClosing) {
+        tableDepth = 0;
+        const rows = tableRows.filter((row) => row.some((cell) => cell.trim() !== ""));
+        if (rows.length > 0) {
+          const text2 = rows.map((row) => row.map((cell) => cell.trim()).join(" | ")).join("\n");
+          budget.addUnit({ kind: "table", locator: locatorRange(tableStart, tableEnd), text: text2, confidence: "high" });
+        }
+        tableRows = [];
+        tableRow = [];
+        tableCell = void 0;
+      } else {
+        tableDepth += 1;
+        tableStart = tokenStart;
+        tableEnd = lastOffset;
+        tableRows = [];
+        tableRow = [];
+        tableCell = void 0;
+      }
+      continue;
+    }
+    if (tagName === "tr") {
+      if (isClosing) {
+        if (tableRow.length > 0 || tableCell !== void 0) {
+          tableRows.push([...tableRow, tableCell ?? ""]);
+          tableRow = [];
+          tableCell = void 0;
+        }
+      } else {
+        tableRow = [];
+        tableCell = void 0;
+      }
+      continue;
+    }
+    if (tagName === "td" || tagName === "th") {
+      if (isClosing) {
+        if (tableCell !== void 0) tableRow.push(tableCell);
+        tableCell = void 0;
+      } else {
+        tableCell = "";
+      }
+      continue;
+    }
+    if (tableDepth > 0) {
+      tableEnd = lastOffset;
+      continue;
+    }
+    if (HEADING_TAGS.has(tagName)) {
+      if (!isClosing) {
+        flushBlock();
+        headingLevel = Number(tagName.slice(1));
+        block = { tag: "p", startOffset: tokenStart, endOffset: lastOffset, text: "" };
+      } else {
+        flushBlock();
+      }
+      continue;
+    }
+    if (BLOCK_TAGS.has(tagName)) {
+      if (!isClosing) {
+        flushBlock();
+        const kindTag = tagName === "li" ? "li" : tagName === "blockquote" ? "blockquote" : tagName === "figcaption" ? "p" : "p";
+        block = { tag: kindTag, startOffset: tokenStart, endOffset: lastOffset, text: "" };
+      } else {
+        flushBlock(tagName === "li" ? "li" : tagName === "blockquote" ? "blockquote" : "p");
+      }
+      continue;
+    }
+  }
+  if (lastOffset < raw.length && !inHead) {
+    appendText(decodeHtmlEntities(raw.slice(lastOffset)));
+  }
+  flushBlock();
+  if (budget.units.length === 0) {
+    addIssue("unsupported-content", "warning", "HTML \u4E2D\u6CA1\u6709\u62BD\u53D6\u5230\u53EF\u8BFB\u6B63\u6587", void 0, true);
+  }
+  return budget.finalize("html", void 0, {
+    name: "teaching-corpus/html",
+    version: EXTRACTOR_VERSION
+  }, { kind: "lines", count: totalLines });
+}
+function computeLineStarts(text2) {
+  const starts = [0];
+  for (let i = 0; i < text2.length; i += 1) {
+    if (text2.charCodeAt(i) === 10) starts.push(i + 1);
+  }
+  return starts;
+}
+
+// packages/teaching-core/src/corpus/parsers/plain.ts
+import { dirname as dirname5 } from "node:path";
+var EXTRACTOR_VERSION2 = "1.0.0";
 var LIST_LINE = /^\s*(?:[-*+]|\d{1,3}[.)])\s+/;
 var IMAGE_INLINE = /!\[([^\]]*)\]\(\s*([^)\s]+)(?:\s+"([^"]*)")?\s*\)/g;
 function lineStarts(text2) {
@@ -7540,13 +7772,38 @@ async function parsePlainText(context) {
       baseLocator: void 0
     });
   }
-  return budget.finalize("text", void 0, { name: "teaching-corpus/text", version: EXTRACTOR_VERSION }, {
+  return budget.finalize("text", void 0, { name: "teaching-corpus/text", version: EXTRACTOR_VERSION2 }, {
     kind: "lines",
     count: lines.length
   });
 }
 async function addTextBlock(budget, options) {
   const { lines, starts } = options;
+  if (options.startIndex === options.endIndex) {
+    const onlyLine = lines[options.startIndex] ?? "";
+    if (onlyLine.length > budget.limits.maxUnitChars) {
+      const lineStart = starts[options.startIndex] ?? 0;
+      let offset = 0;
+      while (offset < onlyLine.length) {
+        budget.checkAbort();
+        const chunk2 = onlyLine.slice(offset, offset + budget.limits.maxUnitChars);
+        const chars = [lineStart + offset, lineStart + offset + Math.max(0, chunk2.length - 1)];
+        budget.addUnit({
+          kind: "paragraph",
+          locator: {
+            ...options.baseLocator ?? {},
+            ...options.sectionPath.length > 0 ? { sectionPath: [...options.sectionPath] } : {},
+            lines: linesRange(options.startIndex, options.endIndex),
+            chars
+          },
+          text: chunk2,
+          confidence: "high"
+        });
+        offset += chunk2.length;
+      }
+      return;
+    }
+  }
   let cursor = options.startIndex;
   while (cursor <= options.endIndex) {
     budget.checkAbort();
@@ -7681,7 +7938,7 @@ async function parseCode(context) {
   }
   return budget.finalize("code", language, {
     name: "teaching-corpus/code",
-    version: EXTRACTOR_VERSION
+    version: EXTRACTOR_VERSION2
   }, {
     kind: "lines",
     count: lines.length
@@ -7692,12 +7949,12 @@ async function parseMarkdown(context) {
   const budget = new ExtractionBudget(context.revisionId, context.limits, context.signal);
   await extractMarkdown(text2, {
     budget,
-    fileDir: dirname4(context.path),
+    fileDir: dirname5(context.path),
     assetPrefix: assetNamePrefix(context.path)
   });
   return budget.finalize("markdown", void 0, {
     name: "teaching-corpus/markdown",
-    version: EXTRACTOR_VERSION
+    version: EXTRACTOR_VERSION2
   }, {
     kind: "lines",
     count: splitLines(text2).length
@@ -7978,9 +8235,327 @@ async function addFigureUnit(budget, options, input) {
   ));
 }
 
+// packages/teaching-core/src/corpus/web.ts
+var WEB_TEXT_CAP = 2e5;
+var WEB_MAX_UNITS = 2e4;
+function webSyntheticPath(url) {
+  return `web://${url.trim()}`;
+}
+function domainOf(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.replace(/^www\./i, "");
+  } catch {
+    return "";
+  }
+}
+function stripNonContentHtml(html) {
+  let output = html;
+  const paired = /<(script|style|nav|footer|aside|noscript|iframe|svg|form|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi;
+  for (let pass = 0; pass < 3; pass += 1) {
+    const next = output.replace(paired, " ");
+    if (next === output) break;
+    output = next;
+  }
+  return output.replace(/<!--[\s\S]*?-->/g, " ").replace(/<(script|style|nav|footer|aside|noscript|iframe|svg|form|template)\b[^>]*\/?>/gi, " ").replace(/<br\s*\/?>/gi, "\n").replace(/<\/(?:p|div|section|article|li|ul|ol|h[1-6]|tr|table|thead|tbody|pre|blockquote|figure|figcaption|main|header)\s*>/gi, "\n");
+}
+function extractHtmlTitle(html) {
+  const match = /<title\b[^>]*>([\s\S]*?)<\/title\s*>/i.exec(html);
+  if (match === null) return void 0;
+  const title = decodeHtmlEntities((match[1] ?? "").replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
+  return title === "" ? void 0 : title;
+}
+function extractFirstHeading(html) {
+  const match = /<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/i.exec(html);
+  if (match === null) return void 0;
+  const text2 = decodeHtmlEntities((match[1] ?? "").replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
+  return text2 === "" ? void 0 : text2;
+}
+function looksLikeMarkdown(text2) {
+  return /^#{1,6}\s+\S/m.test(text2) || /^```/m.test(text2);
+}
+function disabledOcrRuntime() {
+  return {
+    available: false,
+    reason: "\u7F51\u9875\u5BFC\u5165\u4E0D\u6267\u884C OCR",
+    languages: [],
+    minConfidence: 70,
+    timeoutMs: 0,
+    renderDpi: 72
+  };
+}
+function webIssue(code, severity, message, options = {}) {
+  return {
+    code,
+    severity,
+    message,
+    reviewRequired: options.reviewRequired ?? false,
+    ...options.excerpt !== void 0 ? { excerpt: options.excerpt.slice(0, 240) } : {}
+  };
+}
+function webLimits(limits) {
+  return {
+    ...limits,
+    maxTextChars: Math.min(limits.maxTextChars, WEB_TEXT_CAP),
+    maxUnits: Math.min(limits.maxUnits, WEB_MAX_UNITS)
+  };
+}
+async function runParserForWeb(input) {
+  const revisionId = sourceRevisionId();
+  const context = {
+    path: webSyntheticPath("web-import"),
+    bytes: new TextEncoder().encode(input.content),
+    format: input.format,
+    extension: input.extension,
+    limits: webLimits(input.limits),
+    revisionId,
+    ocr: disabledOcrRuntime()
+  };
+  if (input.format === "html") return await parseHtml(context);
+  if (input.format === "markdown") return await parseMarkdown(context);
+  return await parsePlainText(context);
+}
+function withMarkdownHeadings(units) {
+  return units.map((unit) => {
+    if (unit.kind !== "heading") return unit;
+    const level = Math.min(6, Math.max(1, unit.locator.sectionPath?.length ?? 1));
+    return { ...unit, markdown: `${"#".repeat(level)} ${unit.text}` };
+  });
+}
+function contentHashOf(units) {
+  const normalized = units.map((unit) => `${unit.kind}\0${unit.text.replace(/\s+/g, " ").trim()}`).join("\n");
+  return fingerprintOfBytes(new TextEncoder().encode(normalized));
+}
+async function parseWebPage(request, limits) {
+  const url = typeof request.url === "string" ? request.url.trim() : "";
+  if (!/^https?:\/\//iu.test(url)) {
+    return err("invalid-input", "\u7F51\u9875\u5BFC\u5165\u53EA\u652F\u6301 http(s) URL", { cause: "invalid-url" });
+  }
+  const html = typeof request.html === "string" && request.html.trim() !== "" ? request.html : void 0;
+  const text2 = typeof request.text === "string" && request.text.trim() !== "" ? request.text : void 0;
+  if (html === void 0 && text2 === void 0) {
+    return err("invalid-input", "\u7F51\u9875\u6CA1\u6709\u8FD4\u56DE\u5185\u5BB9\uFF08html \u4E0E text \u5747\u4E3A\u7A7A\uFF09", { cause: "empty-page" });
+  }
+  const finalUrl = (request.finalUrl ?? request.url).trim();
+  let output;
+  let attempted = "";
+  try {
+    if (html !== void 0) {
+      const sanitized = stripNonContentHtml(html);
+      attempted = `html(${html.length} chars, \u53BB\u58F3\u540E ${sanitized.length})`;
+      output = await runParserForWeb({ format: "html", extension: ".html", content: sanitized, limits });
+      if (output.parsed.units.length === 0 && text2 !== void 0) {
+        attempted += " \u2192 text \u56DE\u9000";
+        const format = looksLikeMarkdown(text2) ? "markdown" : "text";
+        output = await runParserForWeb({
+          format,
+          extension: format === "markdown" ? ".md" : ".txt",
+          content: text2,
+          limits
+        });
+      }
+    } else if (text2 !== void 0) {
+      const format = looksLikeMarkdown(text2) ? "markdown" : "text";
+      attempted = `${format}(${text2.length} chars)`;
+      output = await runParserForWeb({
+        format,
+        extension: format === "markdown" ? ".md" : ".txt",
+        content: text2,
+        limits
+      });
+    }
+  } catch (cause) {
+    return err("failed", `\u7F51\u9875\u5185\u5BB9\u89E3\u6790\u5931\u8D25\uFF1A${cause instanceof Error ? cause.message : String(cause)}`, {
+      cause: "web-parse-failed",
+      details: { url, attempted },
+      retryable: false
+    });
+  }
+  if (output === void 0) {
+    return err("invalid-input", "\u7F51\u9875\u6CA1\u6709\u8FD4\u56DE\u53EF\u89E3\u6790\u7684\u5185\u5BB9", { cause: "empty-page" });
+  }
+  const units = withMarkdownHeadings(output.parsed.units);
+  if (units.length === 0) {
+    return err(
+      "invalid-input",
+      "\u7F51\u9875\u6CA1\u6709\u53EF\u63D0\u53D6\u7684\u6B63\u6587\uFF08\u53EF\u80FD\u4F9D\u8D56\u811A\u672C\u6E32\u67D3\u3001\u53EA\u542B\u5BFC\u822A/\u9875\u811A\uFF0C\u6216\u8FD4\u56DE\u7684\u662F\u9A8C\u8BC1/\u767B\u5F55\u9875\uFF09",
+      { cause: "empty-content", details: { url, attempted } }
+    );
+  }
+  const firstHeading = units.find((unit) => unit.kind === "heading");
+  const title = (request.title ?? "").trim() || extractHtmlTitle(html ?? "") || extractFirstHeading(html ?? "") || domainOf(finalUrl) || firstHeading?.text || url;
+  const contentHash = contentHashOf(units);
+  let textChars = 0;
+  for (const unit of units) textChars += unit.text.length;
+  const issues = [...output.parsed.issues];
+  const truncated = issues.some((issue2) => issue2.code === "truncated") || textChars >= WEB_TEXT_CAP;
+  if (truncated && !issues.some((issue2) => issue2.code === "truncated")) {
+    issues.push(webIssue(
+      "truncated",
+      "warning",
+      `\u7F51\u9875\u6B63\u6587\u8D85\u8FC7\u4E0A\u9650\uFF08${WEB_TEXT_CAP} \u5B57\u7B26\uFF09\uFF0C\u5DF2\u622A\u65AD\uFF1B\u8BF7\u56DE\u770B\u539F\u59CB\u7F51\u9875\u6838\u5BF9\u5B8C\u6574\u5185\u5BB9`,
+      { reviewRequired: true }
+    ));
+  }
+  const rawLength = (html ?? text2 ?? "").length;
+  if (textChars < 200 && rawLength > 2e3) {
+    issues.push(webIssue(
+      "unsupported-content",
+      "warning",
+      "\u7F51\u9875\u6B63\u6587\u62BD\u53D6\u8FC7\u5C11\uFF08\u53EF\u80FD\u4F9D\u8D56\u811A\u672C\u6E32\u67D3\u6216\u9700\u8981\u767B\u5F55\uFF09\uFF0C\u5EFA\u8BAE\u7528\u539F\u59CB\u9875\u9762\u6838\u5BF9\u6216\u6539\u7528\u53EF\u8BFB\u7684\u955C\u50CF/PDF \u7248\u672C",
+      { reviewRequired: true, excerpt: units[0]?.text ?? "" }
+    ));
+  }
+  const textBytes = new TextEncoder().encode(units.map((unit) => unit.text).join("\n")).byteLength;
+  return ok({
+    title: title.slice(0, 200),
+    format: output.parsed.format,
+    ...output.parsed.detail !== void 0 ? { detail: output.parsed.detail } : {},
+    contentHash,
+    units,
+    issues,
+    ...output.parsed.extent !== void 0 ? { extent: output.parsed.extent } : {},
+    textChars,
+    textBytes,
+    truncated,
+    finalUrl
+  });
+}
+
+// packages/teaching-core/src/corpus/change-utils.ts
+function normalizeText(text2) {
+  return text2.replace(/\s+/g, " ").trim();
+}
+function locatorKey(unit) {
+  const locator = unit.locator;
+  const ordered = {};
+  for (const key of Object.keys(locator).sort()) {
+    const value = locator[key];
+    if (value !== void 0) ordered[key] = value;
+  }
+  return `${unit.kind}|${JSON.stringify(ordered)}`;
+}
+function diffUnits(oldUnits, newUnits) {
+  const oldByKey = /* @__PURE__ */ new Map();
+  for (const unit of oldUnits) {
+    if (!oldByKey.has(locatorKey(unit))) oldByKey.set(locatorKey(unit), unit);
+  }
+  const newByKey = /* @__PURE__ */ new Map();
+  for (const unit of newUnits) {
+    if (!newByKey.has(locatorKey(unit))) newByKey.set(locatorKey(unit), unit);
+  }
+  const removedUnitIds = [];
+  const modifiedUnitIds = [];
+  let structureChanged = false;
+  for (const [key, oldUnit] of oldByKey) {
+    const newUnit = newByKey.get(key);
+    if (newUnit === void 0) {
+      removedUnitIds.push(oldUnit.id);
+      if (oldUnit.kind === "heading") structureChanged = true;
+      continue;
+    }
+    if (normalizeText(oldUnit.text) !== normalizeText(newUnit.text)) {
+      modifiedUnitIds.push(oldUnit.id);
+      if (oldUnit.kind === "heading" || newUnit.kind === "heading") structureChanged = true;
+    }
+  }
+  let added = 0;
+  for (const key of newByKey.keys()) {
+    if (!oldByKey.has(key)) {
+      added += 1;
+      if (newByKey.get(key)?.kind === "heading") structureChanged = true;
+    }
+  }
+  const affectedUnitIds = [...removedUnitIds, ...modifiedUnitIds];
+  const totalOldUnits = oldUnits.length;
+  return {
+    added,
+    removedUnitIds,
+    modifiedUnitIds,
+    affectedUnitIds,
+    totalOldUnits,
+    changedRatio: totalOldUnits === 0 ? added > 0 ? 1 : 0 : affectedUnitIds.length / totalOldUnits,
+    structureChanged
+  };
+}
+async function callHook(value) {
+  return await Promise.resolve(value);
+}
+async function defaultConceptReferences(courses, documentId, unitIds) {
+  const unitSet = unitIds !== void 0 ? new Set(unitIds) : void 0;
+  const conceptIds = /* @__PURE__ */ new Set();
+  let coursesList;
+  try {
+    coursesList = await courses.list();
+  } catch {
+    return [];
+  }
+  for (const course of coursesList) {
+    let revisions;
+    try {
+      revisions = await courses.listRevisions(course.id);
+    } catch {
+      continue;
+    }
+    for (const revision of revisions) {
+      for (const concept of revision.concepts) {
+        const matched = concept.sourceAnchors.some((anchor) => {
+          if (anchor.documentId !== documentId) return false;
+          if (unitSet === void 0) return true;
+          return unitSet.has(anchor.unitId);
+        });
+        if (matched) conceptIds.add(concept.id);
+      }
+    }
+  }
+  return [...conceptIds];
+}
+async function resolveReferences(deps, documentId, unitIds) {
+  const hooks = deps.references;
+  let affectedConceptIds = [];
+  if (hooks?.conceptsForUnits !== void 0 && unitIds !== void 0) {
+    affectedConceptIds = await callHook(hooks.conceptsForUnits(documentId, unitIds));
+  } else if (hooks?.conceptsForDocument !== void 0) {
+    affectedConceptIds = await callHook(hooks.conceptsForDocument(documentId));
+  } else {
+    affectedConceptIds = await defaultConceptReferences(deps.courses, documentId, unitIds);
+  }
+  let affectedActivityIds = [];
+  if (hooks?.activitiesForUnits !== void 0 && unitIds !== void 0) {
+    affectedActivityIds = await callHook(hooks.activitiesForUnits(documentId, unitIds));
+  } else if (hooks?.activitiesForDocument !== void 0) {
+    affectedActivityIds = await callHook(hooks.activitiesForDocument(documentId));
+  }
+  return {
+    affectedConceptIds: [...new Set(affectedConceptIds.map(String))].sort(),
+    affectedActivityIds: [...new Set(affectedActivityIds.map(String))].sort()
+  };
+}
+function buildEffects(input) {
+  return {
+    affectedConceptIds: input.references.affectedConceptIds,
+    affectedActivityIds: input.references.affectedActivityIds,
+    needsConfirmation: input.needsConfirmation,
+    summary: input.summary
+  };
+}
+function describeDiff(diff, conceptCount, activityCount) {
+  const parts = [
+    `\u65B0\u589E ${diff.added} \u4E2A\u5355\u5143`,
+    `\u5220\u9664/\u66FF\u6362 ${diff.removedUnitIds.length} \u4E2A`,
+    `\u4FEE\u6539 ${diff.modifiedUnitIds.length} \u4E2A`,
+    `\u6D89\u53CA ${conceptCount} \u4E2A\u6982\u5FF5\u3001${activityCount} \u4E2A\u6D3B\u52A8`
+  ];
+  if (diff.structureChanged) parts.push("\u5305\u542B\u6807\u9898/\u7ED3\u6784\u53D8\u5316\uFF0C\u5EFA\u8BAE\u786E\u8BA4\u8BFE\u7A0B\u7ED3\u6784");
+  return `\u8D44\u6599\u5185\u5BB9\u66F4\u65B0\uFF1A${parts.join("\uFF0C")}`;
+}
+
+// packages/teaching-core/src/corpus/parsers/index.ts
+import { extname as extname4 } from "node:path";
+
 // packages/teaching-core/src/corpus/parsers/notebook.ts
-import { dirname as dirname5 } from "node:path";
-var EXTRACTOR_VERSION2 = "1.0.0";
+import { dirname as dirname6 } from "node:path";
+var EXTRACTOR_VERSION3 = "1.0.0";
 function joinSource(value) {
   if (value === void 0) return "";
   return typeof value === "string" ? value : value.join("");
@@ -8023,7 +8598,7 @@ async function parseNotebook(context) {
     if (cellType === "markdown") {
       await extractMarkdown(source, {
         budget,
-        fileDir: dirname5(context.path),
+        fileDir: dirname6(context.path),
         baseLocator: { cell: index },
         assetPrefix
       });
@@ -8052,7 +8627,7 @@ async function parseNotebook(context) {
   }
   return budget.finalize("notebook", language, {
     name: "teaching-corpus/notebook",
-    version: EXTRACTOR_VERSION2
+    version: EXTRACTOR_VERSION3
   }, { kind: "cells", count: cells.length });
 }
 async function addOutputs(budget, outputs, cellIndex, assetPrefix) {
@@ -8133,366 +8708,6 @@ function decodeBase64(value) {
   } catch {
     return void 0;
   }
-}
-
-// packages/teaching-core/src/corpus/parsers/html.ts
-import { dirname as dirname6 } from "node:path";
-var EXTRACTOR_VERSION3 = "1.0.0";
-var TOKEN_REGEX = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<![^>]*>|<\/?([a-zA-Z][\w:-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)\/?>/g;
-var ATTR_REGEX = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
-var HEADING_TAGS = /* @__PURE__ */ new Set(["h1", "h2", "h3", "h4", "h5", "h6"]);
-var BLOCK_TAGS = /* @__PURE__ */ new Set([
-  "p",
-  "div",
-  "section",
-  "article",
-  "header",
-  "footer",
-  "main",
-  "aside",
-  "li",
-  "ul",
-  "ol",
-  "blockquote",
-  "dt",
-  "dd",
-  "dl",
-  "figure",
-  "figcaption",
-  "form",
-  "fieldset",
-  "nav"
-]);
-function decodeHtmlEntities(text2) {
-  return text2.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (full) => {
-    const body = full.slice(1, -1);
-    if (body.startsWith("#x") || body.startsWith("#X")) {
-      const code = Number.parseInt(body.slice(2), 16);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : full;
-    }
-    if (body.startsWith("#")) {
-      const code = Number.parseInt(body.slice(1), 10);
-      return Number.isFinite(code) ? String.fromCodePoint(code) : full;
-    }
-    switch (body) {
-      case "amp":
-        return "&";
-      case "lt":
-        return "<";
-      case "gt":
-        return ">";
-      case "quot":
-        return '"';
-      case "apos":
-        return "'";
-      case "nbsp":
-        return " ";
-      case "mdash":
-        return "\u2014";
-      case "ndash":
-        return "\u2013";
-      case "hellip":
-        return "\u2026";
-      default:
-        return full;
-    }
-  });
-}
-function parseAttrs(raw) {
-  const attrs = {};
-  ATTR_REGEX.lastIndex = 0;
-  for (const match of raw.matchAll(ATTR_REGEX)) {
-    const key = (match[1] ?? "").toLowerCase();
-    const value = match[2] ?? match[3] ?? match[4] ?? "";
-    if (key !== "") attrs[key] = decodeHtmlEntities(value);
-  }
-  return attrs;
-}
-function stripTags(html) {
-  return decodeHtmlEntities(html.replace(/<[^>]*>/g, " "));
-}
-async function parseHtml(context) {
-  const raw = assertTextual(context.bytes, "HTML \u6587\u4EF6");
-  const budget = new ExtractionBudget(context.revisionId, context.limits, context.signal);
-  const fileDir = dirname6(context.path);
-  const assetPrefix = assetNamePrefix(context.path);
-  const lineStarts2 = computeLineStarts(raw);
-  const totalLines = lineStarts2.length;
-  const sectionPath = [];
-  let block;
-  let headingLevel = 0;
-  let inHead = false;
-  let tableDepth = 0;
-  let tableRows = [];
-  let tableRow = [];
-  let tableCell;
-  let tableStart = 0;
-  let tableEnd = 0;
-  const lineOf = (offset) => {
-    let low = 0;
-    let high = lineStarts2.length - 1;
-    while (low < high) {
-      const mid = Math.ceil((low + high) / 2);
-      if (lineStarts2[mid] <= offset) low = mid;
-      else high = mid - 1;
-    }
-    return low;
-  };
-  const locatorRange = (startOffset, endOffset) => ({
-    lines: [lineOf(startOffset) + 1, lineOf(Math.max(startOffset, endOffset)) + 1],
-    chars: [startOffset, Math.max(startOffset, endOffset)],
-    ...sectionPath.length > 0 ? { sectionPath: [...sectionPath] } : {}
-  });
-  const addIssue = (code, severity, message, locator, reviewRequired = false) => {
-    budget.addIssue({
-      code,
-      severity,
-      message,
-      reviewRequired,
-      ...locator !== void 0 ? { locator } : {}
-    });
-  };
-  const flushBlock = (tagOverride) => {
-    if (block === void 0) return;
-    const tag = tagOverride ?? block.tag;
-    const text2 = block.text.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
-    const locator = locatorRange(block.startOffset, block.endOffset);
-    const current = block;
-    block = void 0;
-    if (text2 === "") return;
-    if (headingLevel > 0) {
-      sectionPath.length = Math.min(sectionPath.length, headingLevel - 1);
-      sectionPath.push(text2.slice(0, 120));
-      budget.addUnit({ kind: "heading", locator: { ...locator, sectionPath: [...sectionPath] }, text: text2, confidence: "high" });
-      headingLevel = 0;
-      return;
-    }
-    if (tag === "li") {
-      budget.addUnit({ kind: "list", locator, text: text2, confidence: "high" });
-      return;
-    }
-    if (tag === "blockquote") {
-      budget.addUnit({ kind: "note", locator, text: text2, confidence: "high" });
-      return;
-    }
-    if (tag === "pre" || tag === "code") {
-      budget.addUnit({ kind: "code", locator, text: current.text.trimEnd(), confidence: "high" });
-      return;
-    }
-    if (looksLikeFormula(text2) && text2.length <= 400) {
-      budget.addUnit({ kind: "formula", locator, text: text2, confidence: "medium" });
-      addIssue("formula-uncertain", "info", "\u8BE5\u6BB5\u88AB\u8BC6\u522B\u4E3A\u516C\u5F0F\uFF08\u542F\u53D1\u5F0F\u5224\u65AD\uFF09\uFF0C\u8BF7\u6838\u5BF9\u539F\u6587", locator);
-      return;
-    }
-    budget.addUnit({ kind: "paragraph", locator, text: text2, confidence: "high" });
-  };
-  const appendText = (text2) => {
-    if (text2 === "") return;
-    if (block === void 0) {
-      if (text2.trim() === "") return;
-      block = { tag: "p", startOffset: lastOffset, endOffset: lastOffset, text: "" };
-    }
-    const normalized = text2.replace(/\r/g, "");
-    block.text += normalized;
-    block.endOffset = lastOffset + normalized.length;
-  };
-  let lastOffset = 0;
-  let match;
-  TOKEN_REGEX.lastIndex = 0;
-  while ((match = TOKEN_REGEX.exec(raw)) !== null) {
-    budget.checkAbort();
-    if (budget.full || budget.overTextLimit) break;
-    const tokenStart = match.index;
-    const between = raw.slice(lastOffset, tokenStart);
-    if (between !== "") {
-      if (!inHead && tableDepth === 0) appendText(decodeHtmlEntities(between));
-      else if (tableDepth > 0 && tableCell !== void 0) tableCell += decodeHtmlEntities(between);
-    }
-    lastOffset = tokenStart + match[0].length;
-    const tagName = (match[1] ?? "").toLowerCase();
-    const attrsRaw = match[2] ?? "";
-    const isClosing = match[0].startsWith("</");
-    if (tagName === "") continue;
-    if (!isClosing && (tagName === "script" || tagName === "style" || tagName === "pre" || tagName === "math" || tagName === "title" || tagName === "svg")) {
-      const closeTag = new RegExp(`</${tagName}\\s*>`, "i");
-      const rest = raw.slice(lastOffset);
-      const closeMatch = closeTag.exec(rest);
-      const innerEnd = closeMatch !== null ? lastOffset + closeMatch.index : raw.length;
-      const inner2 = raw.slice(lastOffset, innerEnd);
-      lastOffset = closeMatch !== null ? innerEnd + closeMatch[0].length : raw.length;
-      TOKEN_REGEX.lastIndex = lastOffset;
-      const attrs = parseAttrs(attrsRaw);
-      if (tagName === "script") {
-        const type = (attrs["type"] ?? "").toLowerCase();
-        if (type.includes("math/tex")) {
-          const tex = stripTags(inner2).trim();
-          if (tex !== "") {
-            budget.addUnit({
-              kind: "formula",
-              locator: locatorRange(tokenStart, lastOffset),
-              text: tex,
-              confidence: "high"
-            });
-          }
-        }
-      } else if (tagName === "math") {
-        const tex = stripTags(inner2).replace(/\s+/g, " ").trim();
-        if (tex !== "") {
-          budget.addUnit({
-            kind: "formula",
-            locator: locatorRange(tokenStart, lastOffset),
-            text: tex,
-            confidence: "medium",
-            notes: ["MathML \u516C\u5F0F\u6309\u7EAF\u6587\u672C\u4FDD\u7559\uFF0C\u672A\u8F6C\u6362\u4E3A TeX"]
-          });
-          addIssue("formula-uncertain", "info", "MathML \u516C\u5F0F\u4EC5\u4FDD\u7559\u7EAF\u6587\u672C\uFF0C\u590D\u6742\u7ED3\u6784\u53EF\u80FD\u4E22\u5931", locatorRange(tokenStart, lastOffset));
-        }
-      } else if (tagName === "pre") {
-        const language = /(?:^|\s)language-([\w+#.-]+)/.exec(attrs["class"] ?? "")?.[1];
-        const code = stripTags(inner2).replace(/^\n/, "").trimEnd();
-        if (code.trim() !== "") {
-          budget.addUnit({
-            kind: "code",
-            locator: locatorRange(tokenStart, lastOffset),
-            text: code,
-            confidence: "high",
-            ...language !== void 0 ? { notes: [`\u8BED\u8A00\uFF1A${language}`] } : {}
-          });
-        }
-      }
-      continue;
-    }
-    if (tagName === "head") {
-      inHead = !isClosing;
-      continue;
-    }
-    if (tagName === "img") {
-      const attrs = parseAttrs(attrsRaw);
-      const ref = attrs["src"] ?? "";
-      const alt = attrs["alt"] ?? attrs["title"] ?? "";
-      const locator = locatorRange(tokenStart, lastOffset);
-      if (isRemoteRef(ref)) {
-        budget.addUnit({
-          kind: "figure",
-          locator,
-          text: alt.trim() === "" ? "\u5916\u94FE\u56FE\u7247" : alt.trim(),
-          confidence: "unknown",
-          notes: [`\u5916\u94FE\u56FE\u7247\u672A\u4E0B\u8F7D\uFF1A${ref}`]
-        });
-        addIssue("unsupported-content", "info", "HTML \u5F15\u7528\u4E86\u5916\u90E8\u56FE\u7247\uFF0C\u672C\u7248\u672C\u4E0D\u8054\u7F51\u4E0B\u8F7D", locator);
-      } else {
-        const asset = await addLocalImageAsset(budget, fileDir, ref, assetPrefix);
-        if (asset !== void 0 && asset.assetPath !== void 0) {
-          budget.addUnit({
-            kind: "figure",
-            locator,
-            text: alt.trim() === "" ? "\u56FE\u7247" : alt.trim(),
-            assetPath: asset.assetPath,
-            confidence: "high"
-          });
-        } else {
-          budget.addUnit({
-            kind: "figure",
-            locator,
-            text: alt.trim() === "" ? `\u56FE\u7247\uFF08\u7F3A\u5931\uFF1A${ref}\uFF09` : alt.trim(),
-            confidence: "unknown",
-            notes: [`\u56FE\u7247\u6587\u4EF6\u7F3A\u5931\u6216\u65E0\u6CD5\u8BFB\u53D6\uFF1A${ref}`]
-          });
-          addIssue("figure-unreadable", "warning", "HTML \u5F15\u7528\u7684\u56FE\u7247\u7F3A\u5931\u6216\u65E0\u6CD5\u8BFB\u53D6\uFF0C\u53EF\u56DE\u770B\u539F\u6587\u4EF6\u6838\u5BF9", locator, true);
-        }
-      }
-      continue;
-    }
-    if (tagName === "br") {
-      if (block !== void 0) block.text += "\n";
-      continue;
-    }
-    if (tagName === "table") {
-      if (isClosing) {
-        tableDepth = 0;
-        const rows = tableRows.filter((row) => row.some((cell) => cell.trim() !== ""));
-        if (rows.length > 0) {
-          const text2 = rows.map((row) => row.map((cell) => cell.trim()).join(" | ")).join("\n");
-          budget.addUnit({ kind: "table", locator: locatorRange(tableStart, tableEnd), text: text2, confidence: "high" });
-        }
-        tableRows = [];
-        tableRow = [];
-        tableCell = void 0;
-      } else {
-        tableDepth += 1;
-        tableStart = tokenStart;
-        tableEnd = lastOffset;
-        tableRows = [];
-        tableRow = [];
-        tableCell = void 0;
-      }
-      continue;
-    }
-    if (tagName === "tr") {
-      if (isClosing) {
-        if (tableRow.length > 0 || tableCell !== void 0) {
-          tableRows.push([...tableRow, tableCell ?? ""]);
-          tableRow = [];
-          tableCell = void 0;
-        }
-      } else {
-        tableRow = [];
-        tableCell = void 0;
-      }
-      continue;
-    }
-    if (tagName === "td" || tagName === "th") {
-      if (isClosing) {
-        if (tableCell !== void 0) tableRow.push(tableCell);
-        tableCell = void 0;
-      } else {
-        tableCell = "";
-      }
-      continue;
-    }
-    if (tableDepth > 0) {
-      tableEnd = lastOffset;
-      continue;
-    }
-    if (HEADING_TAGS.has(tagName)) {
-      if (!isClosing) {
-        flushBlock();
-        headingLevel = Number(tagName.slice(1));
-        block = { tag: "p", startOffset: tokenStart, endOffset: lastOffset, text: "" };
-      } else {
-        flushBlock();
-      }
-      continue;
-    }
-    if (BLOCK_TAGS.has(tagName)) {
-      if (!isClosing) {
-        flushBlock();
-        const kindTag = tagName === "li" ? "li" : tagName === "blockquote" ? "blockquote" : tagName === "figcaption" ? "p" : "p";
-        block = { tag: kindTag, startOffset: tokenStart, endOffset: lastOffset, text: "" };
-      } else {
-        flushBlock(tagName === "li" ? "li" : tagName === "blockquote" ? "blockquote" : "p");
-      }
-      continue;
-    }
-  }
-  if (lastOffset < raw.length && !inHead) {
-    appendText(decodeHtmlEntities(raw.slice(lastOffset)));
-  }
-  flushBlock();
-  if (budget.units.length === 0) {
-    addIssue("unsupported-content", "warning", "HTML \u4E2D\u6CA1\u6709\u62BD\u53D6\u5230\u53EF\u8BFB\u6B63\u6587", void 0, true);
-  }
-  return budget.finalize("html", void 0, {
-    name: "teaching-corpus/html",
-    version: EXTRACTOR_VERSION3
-  }, { kind: "lines", count: totalLines });
-}
-function computeLineStarts(text2) {
-  const starts = [0];
-  for (let i = 0; i < text2.length; i += 1) {
-    if (text2.charCodeAt(i) === 10) starts.push(i + 1);
-  }
-  return starts;
 }
 
 // packages/teaching-core/src/corpus/parsers/office.ts
@@ -35070,12 +35285,13 @@ var CorpusServiceImpl = class {
   async persistParsedRevision(input) {
     const documentId = input.existing?.id ?? sourceId();
     const status = statusForIssues(input.parsed.issues);
+    const units = input.parsed.units.map((unit) => unit.revisionId === input.revisionId ? unit : { ...unit, revisionId: input.revisionId });
     const meta = buildRevisionMeta({
       revisionId: input.revisionId,
       documentId,
       fingerprint: input.fingerprint,
       extractor: input.parsed.extractor,
-      units: input.parsed.units,
+      units,
       issues: input.parsed.issues,
       status,
       ...input.parsed.extent !== void 0 ? { extent: input.parsed.extent } : {}
@@ -35084,16 +35300,20 @@ var CorpusServiceImpl = class {
       documentId,
       revisionId: input.revisionId,
       meta,
-      payload: { units: input.parsed.units, issues: input.parsed.issues },
+      payload: { units, issues: input.parsed.issues },
       assets: input.assets
     });
     const base = input.existing;
     const detail = input.parsed.detail ?? base?.detail;
     const courseIds = [...base?.courseIds ?? []];
     if (input.courseId !== void 0 && !courseIds.includes(input.courseId)) courseIds.push(input.courseId);
+    const origin = input.origin ?? base?.origin;
+    const web = input.web ?? base?.web;
     const document2 = {
       id: documentId,
       originalPath: input.absolutePath,
+      ...origin !== void 0 ? { origin } : {},
+      ...web !== void 0 ? { web } : {},
       title: input.title ?? base?.title ?? basename4(input.absolutePath),
       format: input.format,
       ...detail !== void 0 ? { detail } : {},
@@ -35107,7 +35327,7 @@ var CorpusServiceImpl = class {
       revisions: [...base?.revisions ?? [], revisionEntry(meta)]
     };
     const saved = await this.store.saveDocument(document2);
-    await this.indexRevision(saved, input.revisionId, input.parsed.units);
+    await this.indexRevision(saved, input.revisionId, units);
     return saved;
   }
   /** 构建立即可用的检索索引（缓存失败不影响导入正确性）。 */
@@ -35131,6 +35351,7 @@ var CorpusServiceImpl = class {
     return await this.guard("\u8BFB\u53D6\u8D44\u6599\u5931\u8D25", async () => {
       const document2 = await this.store.readDocument(documentId);
       if (document2 === void 0) return err("not-found", "\u8D44\u6599\u4E0D\u5B58\u5728\u6216\u5DF2\u88AB\u5220\u9664");
+      if (document2.origin === "web") return ok(withoutMissing(document2));
       const info2 = await statFile(document2.originalPath);
       return ok(info2 === void 0 ? { ...withoutMissing(document2), missing: true } : withoutMissing(document2));
     });
@@ -35241,6 +35462,19 @@ var CorpusServiceImpl = class {
   async detectFor(document2) {
     const previousMeta = document2.currentRevisionId !== void 0 ? await this.store.readRevisionMeta(document2.id, document2.currentRevisionId) : void 0;
     const previousFingerprint = previousMeta?.fingerprint ?? "";
+    if (document2.origin === "web") {
+      return ok({
+        documentId: document2.id,
+        previousFingerprint,
+        currentFingerprint: previousFingerprint,
+        changed: false,
+        effects: buildEffects({
+          references: { affectedConceptIds: [], affectedActivityIds: [] },
+          summary: "\u7F51\u9875\u6765\u6E90\u4E0D\u901A\u8FC7\u672C\u5730\u6587\u4EF6\u68C0\u6D4B\uFF1B\u91CD\u65B0\u6293\u53D6\u7F51\u9875\uFF08sources.importWeb\uFF09\u5373\u53EF\u6309\u5185\u5BB9\u54C8\u5E0C\u66F4\u65B0",
+          needsConfirmation: false
+        })
+      });
+    }
     const info2 = await statFile(document2.originalPath);
     if (info2 === void 0) {
       const updated = await this.store.saveDocument({ ...withoutMissing(document2), missing: true });
@@ -35307,6 +35541,9 @@ var CorpusServiceImpl = class {
   async refreshInner(documentId, signal) {
     const document2 = await this.store.readDocument(documentId);
     if (document2 === void 0) return err("not-found", "\u8D44\u6599\u4E0D\u5B58\u5728\u6216\u5DF2\u88AB\u5220\u9664");
+    if (document2.origin === "web") {
+      return err("invalid-input", "\u7F51\u9875\u6765\u6E90\u65E0\u6CD5\u901A\u8FC7\u672C\u5730\u6587\u4EF6\u5237\u65B0\uFF0C\u8BF7\u91CD\u65B0\u6293\u53D6\u7F51\u9875\uFF08sources.importWeb\uFF09");
+    }
     if (isSignalAborted(signal)) return err("cancelled", "\u66F4\u65B0\u8D44\u6599\u5DF2\u53D6\u6D88");
     const detected = await this.detectFor(document2);
     if (!detected.ok) return detected;
@@ -35456,11 +35693,75 @@ var CorpusServiceImpl = class {
         stat: stat7,
         parsed,
         assets: /* @__PURE__ */ new Map(),
-        revisionId
+        revisionId,
+        ...document2.origin !== void 0 ? { origin: document2.origin } : {},
+        ...document2.web !== void 0 ? { web: document2.web } : {}
       });
       const revision = await this.store.readRevision(saved.id, revisionId);
       if (revision === void 0) return err("storage", "\u8D44\u6599\u4FEE\u8BA2\u5199\u5165\u540E\u65E0\u6CD5\u8BFB\u56DE");
       return ok({ document: saved, revision });
+    });
+  }
+  /** 导入 Host 已抓取的网页内容（详情/幂等/去重规则见接口注释）。 */
+  async importWebPage(request) {
+    return await this.guard("\u5BFC\u5165\u7F51\u9875\u8D44\u6599\u5931\u8D25", async () => {
+      const url = typeof request.url === "string" ? request.url.trim() : "";
+      if (!/^https?:\/\//iu.test(url)) {
+        return err("invalid-input", "\u7F51\u9875\u5BFC\u5165\u53EA\u652F\u6301 http(s) URL", { cause: "invalid-url" });
+      }
+      const parsed = await parseWebPage(request, this.limits);
+      if (!parsed.ok) return parsed;
+      const content = parsed.value;
+      const syntheticPath = webSyntheticPath(url);
+      let existing = await this.store.findDocumentByPath(syntheticPath);
+      if (existing === void 0) {
+        const documents = await this.store.listDocuments();
+        existing = documents.find((document3) => document3.origin === "web" && document3.web?.contentHash === content.contentHash);
+      }
+      const web = {
+        url,
+        ...content.finalUrl !== url ? { finalUrl: content.finalUrl } : {},
+        title: content.title,
+        fetchedAt: request.fetchedAt,
+        ...request.provider !== void 0 ? { provider: request.provider } : {},
+        contentHash: content.contentHash
+      };
+      if (existing !== void 0 && existing.currentRevisionId !== void 0) {
+        const currentMeta = await this.store.readRevisionMeta(existing.id, existing.currentRevisionId);
+        if (currentMeta !== void 0 && currentMeta.fingerprint === content.contentHash) {
+          const attached = await this.attachCourseIfNeeded(existing, request.courseId);
+          const shouldUpdateWeb = attached.web?.fetchedAt !== web.fetchedAt || attached.web?.url !== web.url || attached.web?.contentHash !== web.contentHash;
+          const document3 = shouldUpdateWeb ? await this.store.saveDocument({ ...attached, web }) : attached;
+          const revision2 = await this.store.readRevision(document3.id, existing.currentRevisionId);
+          if (revision2 !== void 0) return ok({ document: document3, revision: revision2 });
+        }
+      }
+      const revisionId = sourceRevisionId();
+      const fetchedMs = Date.parse(request.fetchedAt);
+      const document2 = await this.persistParsedRevision({
+        existing,
+        absolutePath: syntheticPath,
+        format: content.format,
+        title: content.title,
+        fingerprint: content.contentHash,
+        stat: { mtimeMs: Number.isFinite(fetchedMs) ? fetchedMs : 0, sizeBytes: content.textBytes },
+        parsed: {
+          format: content.format,
+          ...content.detail !== void 0 ? { detail: content.detail } : {},
+          extractor: { name: "teaching-corpus/web", version: "1.0.0" },
+          units: content.units,
+          issues: content.issues,
+          ...content.extent !== void 0 ? { extent: content.extent } : {}
+        },
+        assets: /* @__PURE__ */ new Map(),
+        revisionId,
+        ...request.courseId !== void 0 ? { courseId: request.courseId } : {},
+        origin: "web",
+        web
+      });
+      const revision = await this.store.readRevision(document2.id, revisionId);
+      if (revision === void 0) return err("storage", "\u7F51\u9875\u8D44\u6599\u4FEE\u8BA2\u5199\u5165\u540E\u65E0\u6CD5\u8BFB\u56DE");
+      return ok({ document: document2, revision });
     });
   }
   async guard(fallback, operation) {
@@ -35484,6 +35785,357 @@ function hashUnits(units) {
 }
 function createCorpusService(options) {
   return new CorpusServiceImpl(options);
+}
+
+// packages/teaching-core/src/corpus/reconcile.ts
+function normalizeConceptTitle(title) {
+  return title.normalize("NFKC").trim().toLowerCase().replace(/[\s\u3000]+/g, "").replace(/[（）()【】[\]「」『』《》〈〉〔〕、，,。.；;：:！!？?·•—–\-_/\\|"'“”‘’`~^*+=<>]/g, "");
+}
+function anchorKey(anchor) {
+  return `${anchor.documentId}|${anchor.revisionId}|${anchor.unitId}`;
+}
+function mergeAnchors(oldAnchors, newAnchors) {
+  const seen = new Set(oldAnchors.map(anchorKey));
+  const anchors = [...oldAnchors];
+  let added = 0;
+  for (const anchor of newAnchors) {
+    const key = anchorKey(anchor);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    anchors.push(anchor);
+    added += 1;
+  }
+  return { anchors, added };
+}
+function uniqueIds(ids) {
+  return [...new Set(ids)];
+}
+function reconcileDraftWithActive(active, draft) {
+  const warnings = [];
+  if (active.courseId !== draft.courseId) {
+    warnings.push(`\u6574\u5408\u7684\u4E24\u4E2A\u4FEE\u8BA2\u5C5E\u4E8E\u4E0D\u540C\u8BFE\u7A0B\uFF08${active.courseId} \u2192 ${draft.courseId}\uFF09\uFF0C\u7ED3\u679C\u4EC5\u6309\u5185\u5BB9\u5BF9\u9F50`);
+  }
+  const activeByTitle = /* @__PURE__ */ new Map();
+  for (const concept of active.concepts) {
+    const key = normalizeConceptTitle(concept.title);
+    if (key === "") continue;
+    const list = activeByTitle.get(key);
+    if (list === void 0) activeByTitle.set(key, [concept]);
+    else list.push(concept);
+  }
+  for (const [key, list] of activeByTitle) {
+    if (list.length > 1) {
+      warnings.push(`\u65E7\u7ED3\u6784\u4E2D\u6709 ${list.length} \u4E2A\u6982\u5FF5\u6807\u9898\u5F52\u4E00\u5316\u540E\u76F8\u540C\uFF08${key}\uFF09\uFF0C\u5339\u914D\u65F6\u4F7F\u7528\u7B2C\u4E00\u4E2A\uFF0C\u5176\u4F59\u4F5C\u4E3A\u65E7\u6982\u5FF5\u4FDD\u7559`);
+    }
+  }
+  const draftTitleCounts = /* @__PURE__ */ new Map();
+  for (const concept of draft.concepts) {
+    const key = normalizeConceptTitle(concept.title);
+    if (key === "") continue;
+    draftTitleCounts.set(key, (draftTitleCounts.get(key) ?? 0) + 1);
+  }
+  const usedActiveIds = /* @__PURE__ */ new Set();
+  const usedFinalIds = /* @__PURE__ */ new Set();
+  const draftIdToFinal = /* @__PURE__ */ new Map();
+  const finalConcepts = [];
+  const oldOnlyConcepts = [];
+  let reusedConcepts = 0;
+  let addedConcepts = 0;
+  let addedAnchors = 0;
+  const freshId = () => {
+    let candidate = conceptId();
+    while (usedFinalIds.has(candidate)) candidate = conceptId();
+    return candidate;
+  };
+  const reusedActive = /* @__PURE__ */ new Map();
+  const finalConceptById = /* @__PURE__ */ new Map();
+  const investigationPrerequisites = [];
+  for (const draftConcept of draft.concepts) {
+    const key = normalizeConceptTitle(draftConcept.title);
+    const candidates = key === "" ? void 0 : activeByTitle.get(key);
+    const candidate = candidates?.find((item) => !usedActiveIds.has(item.id));
+    if (candidates !== void 0 && candidates.length > 1 && candidate !== void 0) {
+      warnings.push(`\u6807\u9898\u300A${draftConcept.title}\u300B\u5728\u65E7\u7ED3\u6784\u4E2D\u5B58\u5728\u591A\u4E2A\u5019\u9009\uFF0C\u6309\u7B2C\u4E00\u4E2A\u5339\u914D\uFF08${candidate.id}\uFF09`);
+    }
+    if (candidate !== void 0 && key !== "") {
+      usedActiveIds.add(candidate.id);
+      const merged = mergeAnchors(candidate.sourceAnchors, draftConcept.sourceAnchors);
+      addedAnchors += merged.added;
+      const concept2 = {
+        id: candidate.id,
+        title: draftConcept.title,
+        summary: draftConcept.summary.trim() !== "" ? draftConcept.summary : candidate.summary,
+        prerequisites: [],
+        sourceAnchors: [...merged.anchors],
+        ...draftConcept.difficulty !== void 0 ? { difficulty: draftConcept.difficulty } : candidate.difficulty !== void 0 ? { difficulty: candidate.difficulty } : {},
+        ...draftConcept.misconceptions !== void 0 && draftConcept.misconceptions.length > 0 ? { misconceptions: draftConcept.misconceptions } : candidate.misconceptions !== void 0 && candidate.misconceptions.length > 0 ? { misconceptions: candidate.misconceptions } : {},
+        ...draftConcept.checkIdeas !== void 0 && draftConcept.checkIdeas.length > 0 ? { checkIdeas: draftConcept.checkIdeas } : candidate.checkIdeas !== void 0 && candidate.checkIdeas.length > 0 ? { checkIdeas: candidate.checkIdeas } : {}
+      };
+      reusedActive.set(candidate.id, candidate);
+      draftIdToFinal.set(draftConcept.id, concept2.id);
+      usedFinalIds.add(concept2.id);
+      finalConcepts.push(concept2);
+      finalConceptById.set(concept2.id, concept2);
+      investigationPrerequisites.push({ concept: concept2, draftSource: true });
+      reusedConcepts += 1;
+      if ((draftTitleCounts.get(key) ?? 0) > 1) {
+        warnings.push(`\u65B0\u8349\u6848\u4E2D\u6807\u9898\u300A${draftConcept.title}\u300B\u91CD\u590D\u51FA\u73B0\uFF0C\u5DF2\u6309\u9996\u4E2A\u5339\u914D\u65E7\u6982\u5FF5\uFF0C\u5176\u4F59\u4FDD\u7559\u4E3A\u65B0\u6982\u5FF5`);
+      }
+      continue;
+    }
+    const hasTitleKey = key !== "";
+    const duplicateTitle = hasTitleKey && (draftTitleCounts.get(key) ?? 0) > 1;
+    if (duplicateTitle) {
+      warnings.push(`\u65B0\u8349\u6848\u4E2D\u6807\u9898\u300A${draftConcept.title}\u300B\u91CD\u590D\u51FA\u73B0\uFF0C\u5DF2\u4F5C\u4E3A\u72EC\u7ACB\u6982\u5FF5\u4FDD\u7559\uFF08\u8BF7\u540E\u7EED\u4EBA\u5DE5\u5408\u5E76\uFF09`);
+    }
+    const id = usedFinalIds.has(draftConcept.id) ? freshId() : draftConcept.id;
+    const concept = {
+      id,
+      title: draftConcept.title,
+      summary: draftConcept.summary,
+      prerequisites: [],
+      sourceAnchors: [...draftConcept.sourceAnchors],
+      ...draftConcept.difficulty !== void 0 ? { difficulty: draftConcept.difficulty } : {},
+      ...draftConcept.misconceptions !== void 0 ? { misconceptions: draftConcept.misconceptions } : {},
+      ...draftConcept.checkIdeas !== void 0 ? { checkIdeas: draftConcept.checkIdeas } : {}
+    };
+    draftIdToFinal.set(draftConcept.id, id);
+    usedFinalIds.add(id);
+    finalConcepts.push(concept);
+    finalConceptById.set(id, concept);
+    investigationPrerequisites.push({ concept, draftSource: true });
+    addedAnchors += draftConcept.sourceAnchors.length;
+    addedConcepts += 1;
+  }
+  for (const activeConcept of active.concepts) {
+    if (usedActiveIds.has(activeConcept.id)) continue;
+    const preserved = {
+      id: activeConcept.id,
+      title: activeConcept.title,
+      summary: activeConcept.summary,
+      prerequisites: [...activeConcept.prerequisites],
+      sourceAnchors: [...activeConcept.sourceAnchors],
+      ...activeConcept.difficulty !== void 0 ? { difficulty: activeConcept.difficulty } : {},
+      ...activeConcept.misconceptions !== void 0 ? { misconceptions: activeConcept.misconceptions } : {},
+      ...activeConcept.checkIdeas !== void 0 ? { checkIdeas: activeConcept.checkIdeas } : {}
+    };
+    oldOnlyConcepts.push(preserved);
+    usedFinalIds.add(preserved.id);
+    finalConcepts.push(preserved);
+    finalConceptById.set(preserved.id, preserved);
+    investigationPrerequisites.push({ concept: preserved, draftSource: false });
+  }
+  const preservedOldConcepts = oldOnlyConcepts.length;
+  if (preservedOldConcepts > 0) {
+    warnings.push(`${preservedOldConcepts} \u4E2A\u65E7\u6982\u5FF5\u672A\u51FA\u73B0\u5728\u65B0\u8349\u6848\u4E2D\uFF0C\u5DF2\u6309\u539F id \u4FDD\u7559\u5E76\u8FFD\u52A0\u5230\u5B66\u4E60\u987A\u5E8F/\u7AE0\u8282\uFF0C\u907F\u514D\u4E22\u5931\u638C\u63E1\u8BB0\u5F55`);
+  }
+  const activeIdToFinal = /* @__PURE__ */ new Map();
+  for (const concept of active.concepts) {
+    if (finalConceptById.has(concept.id)) activeIdToFinal.set(concept.id, concept.id);
+  }
+  const finalIdSet = new Set(finalConcepts.map((concept) => concept.id));
+  let droppedPrerequisites = 0;
+  for (const item of investigationPrerequisites) {
+    const concept = item.concept;
+    if (item.draftSource) {
+      const draftConcept = draft.concepts.find((source) => draftIdToFinal.get(source.id) === concept.id);
+      const oldConcept = reusedActive.get(concept.id);
+      const mapped = [];
+      if (oldConcept !== void 0) {
+        for (const prerequisite of oldConcept.prerequisites) {
+          const finalId = activeIdToFinal.get(prerequisite);
+          if (finalId !== void 0) mapped.push(finalId);
+          else droppedPrerequisites += 1;
+        }
+        for (const prerequisite of oldConcept.prerequisites) {
+          if (finalIdSet.has(prerequisite) && !mapped.includes(prerequisite)) mapped.push(prerequisite);
+        }
+      }
+      for (const prerequisite of draftConcept?.prerequisites ?? []) {
+        const finalId = draftIdToFinal.get(prerequisite);
+        if (finalId !== void 0) mapped.push(finalId);
+        else droppedPrerequisites += 1;
+      }
+      concept.prerequisites = uniqueIds(mapped).filter((id) => id !== concept.id);
+    } else {
+      const oldConcept = oldOnlyConcepts.find((item2) => item2.id === concept.id);
+      const mapped = [];
+      for (const prerequisite of oldConcept?.prerequisites ?? []) {
+        if (finalIdSet.has(prerequisite)) mapped.push(prerequisite);
+        else droppedPrerequisites += 1;
+      }
+      concept.prerequisites = uniqueIds(mapped).filter((id) => id !== concept.id);
+    }
+  }
+  if (droppedPrerequisites > 0) {
+    warnings.push(`${droppedPrerequisites} \u4E2A\u5148\u4FEE\u5F15\u7528\u6307\u5411\u5DF2\u4E0D\u5B58\u5728\u7684\u6982\u5FF5\uFF0C\u5DF2\u4ECE\u5148\u4FEE\u5173\u7CFB\u4E2D\u79FB\u9664\uFF08\u6982\u5FF5\u672C\u8EAB\u4FDD\u7559\uFF09`);
+  }
+  const sequence = [];
+  const sequenceSeen = /* @__PURE__ */ new Set();
+  const pushSequence = (id) => {
+    if (id === void 0 || sequenceSeen.has(id) || !finalIdSet.has(id)) return;
+    sequenceSeen.add(id);
+    sequence.push(id);
+  };
+  for (const id of draft.sequence) pushSequence(draftIdToFinal.get(id));
+  for (const id of active.sequence) {
+    const finalId = activeIdToFinal.get(id);
+    if (finalId !== void 0 && oldOnlyConcepts.some((concept) => concept.id === finalId)) pushSequence(finalId);
+  }
+  for (const concept of finalConcepts) pushSequence(concept.id);
+  const assigned = /* @__PURE__ */ new Set();
+  const finalChapters = [];
+  const chapterByTitle = /* @__PURE__ */ new Map();
+  const usedChapterIds = /* @__PURE__ */ new Set();
+  const uniqueChapterId = (preferred) => {
+    if (!usedChapterIds.has(preferred)) {
+      usedChapterIds.add(preferred);
+      return preferred;
+    }
+    let index = 2;
+    while (usedChapterIds.has(`${preferred}-${index}`)) index += 1;
+    const id = `${preferred}-${index}`;
+    usedChapterIds.add(id);
+    return id;
+  };
+  const appendChapterConcept = (chapter, id) => {
+    if (assigned.has(id) || !finalIdSet.has(id)) return;
+    assigned.add(id);
+    chapter.conceptIds.push(id);
+  };
+  if (draft.chapters !== void 0 && draft.chapters.length > 0) {
+    for (const draftChapter of draft.chapters) {
+      const key = normalizeConceptTitle(draftChapter.title);
+      const conceptIds = draftChapter.conceptIds.map((id) => draftIdToFinal.get(id)).filter((id) => id !== void 0);
+      const existing = key === "" ? void 0 : chapterByTitle.get(key);
+      if (existing !== void 0) {
+        for (const id of conceptIds) appendChapterConcept(existing, id);
+        warnings.push(`\u65B0\u8349\u6848\u4E2D\u7AE0\u8282\u300A${draftChapter.title}\u300B\u91CD\u590D\uFF0C\u5DF2\u5408\u5E76\u5230\u7B2C\u4E00\u4E2A\u540C\u540D\u7AE0\u8282`);
+        continue;
+      }
+      const chapter = {
+        id: uniqueChapterId(draftChapter.id),
+        title: draftChapter.title,
+        ...draftChapter.summary !== void 0 ? { summary: draftChapter.summary } : {},
+        ...draftChapter.role !== void 0 ? { role: draftChapter.role } : {},
+        ...draftChapter.sourceAnchors !== void 0 ? { sourceAnchors: draftChapter.sourceAnchors } : {},
+        conceptIds: []
+      };
+      for (const id of conceptIds) appendChapterConcept(chapter, id);
+      finalChapters.push(chapter);
+      if (key !== "") chapterByTitle.set(key, chapter);
+    }
+  }
+  if ((draft.chapters === void 0 || draft.chapters.length === 0) && active.chapters !== void 0 && active.chapters.length > 0) {
+    for (const activeChapter of active.chapters) {
+      const conceptIds = activeChapter.conceptIds.map((id) => activeIdToFinal.get(id)).filter((id) => id !== void 0);
+      if (conceptIds.length === 0) continue;
+      const chapter = {
+        id: uniqueChapterId(activeChapter.id),
+        title: activeChapter.title,
+        ...activeChapter.summary !== void 0 ? { summary: activeChapter.summary } : {},
+        ...activeChapter.role !== void 0 ? { role: activeChapter.role } : {},
+        ...activeChapter.sourceAnchors !== void 0 ? { sourceAnchors: activeChapter.sourceAnchors } : {},
+        conceptIds: []
+      };
+      for (const id of conceptIds) appendChapterConcept(chapter, id);
+      finalChapters.push(chapter);
+    }
+  }
+  for (const concept of oldOnlyConcepts) {
+    if (assigned.has(concept.id)) continue;
+    const activeChapter = active.chapters?.find((chapter2) => chapter2.conceptIds.includes(concept.id));
+    if (activeChapter === void 0) continue;
+    const key = normalizeConceptTitle(activeChapter.title);
+    const existing = key === "" ? void 0 : chapterByTitle.get(key);
+    if (existing !== void 0) {
+      appendChapterConcept(existing, concept.id);
+      continue;
+    }
+    const chapter = {
+      id: uniqueChapterId(activeChapter.id),
+      title: activeChapter.title,
+      ...activeChapter.summary !== void 0 ? { summary: activeChapter.summary } : {},
+      ...activeChapter.role !== void 0 ? { role: activeChapter.role } : {},
+      ...activeChapter.sourceAnchors !== void 0 ? { sourceAnchors: activeChapter.sourceAnchors } : {},
+      conceptIds: []
+    };
+    appendChapterConcept(chapter, concept.id);
+    finalChapters.push(chapter);
+    if (key !== "") chapterByTitle.set(key, chapter);
+  }
+  const unassigned = finalConcepts.filter((concept) => !assigned.has(concept.id)).map((concept) => concept.id);
+  if (unassigned.length > 0) {
+    const appendix = {
+      id: uniqueChapterId("chapter-preserved"),
+      title: "\u4FDD\u7559\u5185\u5BB9\uFF08\u672A\u5206\u7AE0\uFF09",
+      summary: "\u589E\u91CF\u6574\u5408\u65F6\u672A\u80FD\u5BF9\u5E94\u5230\u7AE0\u8282\u7684\u6982\u5FF5\uFF08\u542B\u65B0\u8349\u6848\u9057\u6F0F\u4E0E\u65E7\u6982\u5FF5\uFF09\uFF0C\u4FDD\u7559\u5B66\u4E60\u8BB0\u5F55\u7528",
+      role: "appendix",
+      conceptIds: []
+    };
+    for (const id of unassigned) appendChapterConcept(appendix, id);
+    finalChapters.push(appendix);
+    warnings.push(`${unassigned.length} \u4E2A\u6982\u5FF5\u672A\u5F52\u5C5E\u7AE0\u8282\uFF0C\u5DF2\u653E\u5165\u9644\u5F55\u300C\u4FDD\u7559\u5185\u5BB9\uFF08\u672A\u5206\u7AE0\uFF09\u300D`);
+  }
+  const visibleChapters = finalChapters.filter((chapter) => chapter.conceptIds.length > 0);
+  const sources = [];
+  const sourceSeen = /* @__PURE__ */ new Set();
+  for (const source of [...draft.sources, ...active.sources]) {
+    if (sourceSeen.has(source.sourceId)) continue;
+    sourceSeen.add(source.sourceId);
+    sources.push(source);
+  }
+  const basedOn = [];
+  const basedOnSeen = /* @__PURE__ */ new Set();
+  for (const item of [...draft.basedOn, ...active.basedOn]) {
+    const key = `${item.sourceId}|${item.revisionId}`;
+    if (basedOnSeen.has(key)) continue;
+    basedOnSeen.add(key);
+    basedOn.push({ sourceId: item.sourceId, revisionId: item.revisionId });
+  }
+  const changeSummary = [
+    draft.changeSummary ?? "",
+    `\u589E\u91CF\u6574\u5408\uFF1A\u590D\u7528 ${reusedConcepts} \u4E2A\u6982\u5FF5 id\u3001\u65B0\u589E ${addedConcepts} \u4E2A\u6982\u5FF5\u3001\u4FDD\u7559 ${preservedOldConcepts} \u4E2A\u65E7\u6982\u5FF5\u3001\u65B0\u589E ${addedAnchors} \u4E2A\u8D44\u6599\u951A\u70B9`,
+    warnings.length > 0 ? `\u6574\u5408\u8B66\u544A ${warnings.length} \u6761` : ""
+  ].filter((part) => part !== "").join("\uFF1B").slice(0, 800);
+  const outputConcepts = finalConcepts.map((concept) => ({
+    id: concept.id,
+    title: concept.title,
+    summary: concept.summary,
+    prerequisites: [...concept.prerequisites],
+    sourceAnchors: [...concept.sourceAnchors],
+    ...concept.difficulty !== void 0 ? { difficulty: concept.difficulty } : {},
+    ...concept.misconceptions !== void 0 && concept.misconceptions.length > 0 ? { misconceptions: concept.misconceptions } : {},
+    ...concept.checkIdeas !== void 0 && concept.checkIdeas.length > 0 ? { checkIdeas: concept.checkIdeas } : {}
+  }));
+  const revision = {
+    ...draft,
+    concepts: outputConcepts,
+    sequence,
+    sources,
+    ...basedOn.length > 0 ? { basedOn } : {},
+    ...visibleChapters.length > 0 ? {
+      chapters: visibleChapters.map((chapter) => ({
+        id: chapter.id,
+        title: chapter.title,
+        ...chapter.summary !== void 0 ? { summary: chapter.summary } : {},
+        conceptIds: [...chapter.conceptIds],
+        ...chapter.sourceAnchors !== void 0 ? { sourceAnchors: chapter.sourceAnchors } : {},
+        ...chapter.role !== void 0 ? { role: chapter.role } : {}
+      }))
+    } : {},
+    changeSummary
+  };
+  return {
+    revision,
+    stats: {
+      reusedConcepts,
+      addedConcepts,
+      preservedOldConcepts,
+      addedAnchors,
+      warnings
+    }
+  };
 }
 
 // packages/teaching-core/src/teaching/strategy.ts
@@ -62502,6 +63154,39 @@ function createWebBridge(ctx) {
         }
         return fail("network", "\u8054\u7F51\u67E5\u8BE2\u5931\u8D25\uFF0C\u672C\u5730\u8D44\u6599\u5185\u5BB9\u4E0D\u53D7\u5F71\u54CD", { message: message.slice(0, 300) });
       }
+    },
+    async fetch(url, options) {
+      const service = ctx.get("web");
+      if (service === void 0 || service.fetch === void 0) {
+        return fail("capability-missing", "\u5F53\u524D Harness \u914D\u7F6E\u6CA1\u6709\u542F\u7528\u7F51\u9875\u6293\u53D6\u80FD\u529B\uFF0C\u65E0\u6CD5\u8BFB\u53D6\u5916\u90E8\u8D44\u6599");
+      }
+      const trimmed = url.trim();
+      if (trimmed === "") return fail("invalid-input", "\u7F51\u9875 URL \u4E3A\u7A7A");
+      if (!/^https?:\/\//iu.test(trimmed)) return fail("invalid-input", "\u53EA\u652F\u6301 http(s) \u7F51\u9875 URL");
+      try {
+        const result = await service.fetch({ url: trimmed }, options?.signal);
+        if (result.statusCode < 200 || result.statusCode >= 300) {
+          return fail("network", `\u7F51\u9875\u8FD4\u56DE HTTP ${result.statusCode}\uFF0C\u672A\u5BFC\u5165`);
+        }
+        return {
+          ok: true,
+          value: {
+            url: result.url,
+            statusCode: result.statusCode,
+            kind: result.body.kind,
+            content: result.body.content.slice(0, 2e5),
+            truncated: result.truncated || result.body.content.length > 2e5
+          }
+        };
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : String(cause);
+        const code = typeof cause === "object" && cause !== null && typeof cause.code === "string" ? String(cause.code) : "";
+        if (/cancel|abort/i.test(message) || /CANCEL|ABORT/i.test(code)) return fail("cancelled", "\u7F51\u9875\u6293\u53D6\u5DF2\u53D6\u6D88");
+        if (/unavailable|no provider|not configured/i.test(message) || /UNAVAILABLE|MISSING/i.test(code)) {
+          return fail("capability-missing", "\u7F51\u9875\u6293\u53D6\u80FD\u529B\u4E0D\u53EF\u7528\uFF1A\u6CA1\u6709\u53EF\u7528\u7684\u6293\u53D6\u63D0\u4F9B\u65B9");
+        }
+        return fail("network", "\u7F51\u9875\u6293\u53D6\u5931\u8D25\uFF0C\u5DF2\u6709\u8D44\u6599\u4E0D\u53D7\u5F71\u54CD", { message: message.slice(0, 300) });
+      }
     }
   };
 }
@@ -62864,6 +63549,591 @@ ${text2.slice(text2.length - SUMMARY_INPUT_MAX_CHARS)}`;
 }
 function estimateCompactedTokens(summary, retained) {
   return estimateTokens(summary) + estimateMessageTokens(retained) + 16;
+}
+
+// packages/dsh-plugin/src/host/plans.ts
+var PlanRepository = class {
+  state;
+  constructor(state) {
+    this.state = state;
+  }
+  async get(planId) {
+    return this.state.readJson(`plans/${planId}.json`);
+  }
+  async save(plan) {
+    const next = { ...plan, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
+    await this.state.writeJson(`plans/${plan.id}.json`, next);
+    return next;
+  }
+  async list() {
+    const files = (await this.state.list("plans")).filter((name2) => name2.endsWith(".json"));
+    const plans = [];
+    for (const name2 of files) {
+      const plan = await this.state.readJson(`plans/${name2}`);
+      if (plan !== void 0) plans.push(plan);
+    }
+    return plans.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+};
+
+// packages/dsh-plugin/src/host/web-ingest.ts
+async function importWebPage(corpus, input) {
+  const result = await corpus.importWebPage(input);
+  if (!result.ok) return result;
+  return { ok: true, value: { document: result.value.document, duplicate: false } };
+}
+
+// packages/teaching-core/src/planning/types.ts
+var MAX_INTERVIEW_ROUNDS = 5;
+var MIN_QUESTIONS_PER_ROUND = 3;
+var MAX_QUESTIONS_PER_ROUND = 6;
+var MAX_OPTIONS_PER_QUESTION = 6;
+var MAX_FINAL_ROUND_QUESTIONS = 2;
+var MAX_PLAN_GOALS = 8;
+var MAX_PLAN_CHAPTERS = 12;
+var MAX_TOPICS_PER_CHAPTER = 15;
+var MAX_PREREQUISITES_PER_CHAPTER = 8;
+var MAX_EXCLUSIONS = 8;
+var MAX_SEARCH_TOPICS = 12;
+var MIN_SEARCH_QUERIES = 4;
+var MAX_SEARCH_QUERIES = 8;
+
+// packages/teaching-core/src/planning/prompts.ts
+var INTERVIEW_JSON = {
+  name: "guided_planning_interview_round",
+  description: "\u8BBE\u8BA1\u6811\u8BBF\u8C08\u7684\u4E00\u8F6E\uFF1A\u53EA\u95EE\u5F53\u524D frontier\uFF0C\u6BCF\u4E2A\u5B66\u751F\u95EE\u9898\u7ED9\u63A8\u8350\u7B54\u6848\uFF1B\u9700\u8981\u4E8B\u5B9E\u65F6\u7528 factQuery \u4EA4\u7ED9 Host",
+  fields: {
+    questions: `[{ id: \u77ED\u6A2A\u7EBF\u5C0F\u5199 id, title: \u95EE\u9898\u6807\u9898, body: \u95EE\u9898\u6B63\u6587\uFF08\u542B\u9009\u9879/\u6743\u8861\uFF09, options?: \u6700\u591A ${MAX_OPTIONS_PER_QUESTION} \u4E2A\u5019\u9009\u7B54\u6848, recommendation: \u5177\u4F53\u63A8\u8350\u7B54\u6848, factQuery?: Host \u9700\u8981\u4EE3\u67E5\u7684\u4E8B\u5B9E\uFF08\u53EF\u9009\uFF0C\u4E0D\u80FD\u66FF\u4EE3\u5B66\u751F\u51B3\u7B56\uFF09 }]\uFF0C\u6B63\u5E38\u4E00\u8F6E ${MIN_QUESTIONS_PER_ROUND}\u2013${MAX_QUESTIONS_PER_ROUND} \u4E2A`,
+    readyForPlan: "boolean\uFF1Afrontier \u5DF2\u7A7A/\u5DF2\u8DB3\u591F\u5236\u5B9A\u8BA1\u5212\u65F6\u4E3A true\uFF1B\u6B64\u65F6 questions \u5FC5\u987B\u4E3A\u7A7A\u6570\u7EC4",
+    decisions: "\u53EF\u9009 [{ key, value, decidedBy: user|recommendation|fact }]\uFF1A\u672C\u8F6E\u5DF2\u6572\u5B9A\u7684\u51B3\u7B56"
+  }
+};
+var PLAN_BRIEF_JSON = {
+  name: "guided_planning_brief",
+  description: "\u6839\u636E\u5DF2\u6572\u5B9A\u7684\u8BBF\u8C08\u51B3\u7B56\u751F\u6210\u8BE6\u7EC6\u3001\u53EF\u6267\u884C\u7684\u5B66\u4E60\u8BA1\u5212\uFF08PlanBrief\uFF09",
+  fields: {
+    title: "\u8BA1\u5212\u6807\u9898\uFF08\u975E\u7A7A\uFF09",
+    goals: `\u5B66\u4E60\u76EE\u6807\u6570\u7EC4\uFF081\u2013${MAX_PLAN_GOALS} \u6761\uFF0C\u53EF\u68C0\u9A8C\u3001\u5177\u4F53\uFF09`,
+    level: "\u5B66\u751F\u6C34\u5E73\uFF08\u53EF\u9009\uFF0C\u5982 \u5165\u95E8/\u8FDB\u9636/\u8003\u7814\uFF09",
+    background: "\u5B66\u751F\u80CC\u666F\uFF08\u53EF\u9009\uFF09",
+    duration: "\u603B\u65F6\u957F\uFF08\u53EF\u9009\uFF0C\u5982 8 \u5468\uFF09",
+    weeklyHours: "\u6BCF\u5468\u6295\u5165\uFF08\u53EF\u9009\uFF0C\u5982 \u6BCF\u5468 6 \u5C0F\u65F6\uFF09",
+    language: "zh | en | bilingual",
+    chapters: `[{ title, topics: string[], prerequisites?: string[] }]\uFF0C1\u2013${MAX_PLAN_CHAPTERS} \u7AE0\uFF0C\u6BCF\u7AE0 1\u2013${MAX_TOPICS_PER_CHAPTER} \u4E2A\u4E3B\u9898`,
+    practiceStyle: "\u7EC3\u4E60\u65B9\u5F0F\uFF08\u53EF\u9009\uFF0C\u5982 \u6BCF\u7AE0 2 \u9053\u8BC1\u660E + 1 \u4E2A\u5C0F\u9879\u76EE\uFF09",
+    exclusions: `\u660E\u786E\u4E0D\u5B66\u7684\u5185\u5BB9\uFF08\u53EF\u9009\uFF0C\u6700\u591A ${MAX_EXCLUSIONS} \u6761\uFF09`,
+    searchTopics: `\u7528\u4E8E\u68C0\u7D22\u5916\u90E8\u8D44\u6599\u7684\u68C0\u7D22\u4E3B\u9898\uFF081\u2013${MAX_SEARCH_TOPICS} \u6761\uFF0C\u5177\u4F53\u3001\u53EF\u641C\u7D22\uFF09`
+  }
+};
+function languageInstruction2(language) {
+  switch (language) {
+    case "en":
+      return "Write every question, recommendation and plan field in English; keep proper nouns and technical terms in their original form.";
+    case "bilingual":
+      return "\u7528\u53CC\u8BED\u8F93\u51FA\uFF1A\u6807\u9898\u4E0E\u5173\u952E\u672F\u8BED\u4FDD\u7559\u82F1\u6587\uFF0C\u6B63\u6587\u4EE5\u4E2D\u6587\u4E3A\u4E3B\uFF1B\u5FC5\u8981\u65F6\u4E2D\u82F1\u5BF9\u7167\u3002";
+    default:
+      return "\u7528\u4E2D\u6587\u8F93\u51FA\uFF1B\u5173\u952E\u82F1\u6587\u672F\u8BED\u4FDD\u7559\u539F\u6587\u3002";
+  }
+}
+function truncate3(text2, max2) {
+  const clean2 = text2.replace(/\s+/g, " ").trim();
+  return clean2.length <= max2 ? clean2 : `${clean2.slice(0, max2)}\u2026`;
+}
+function decidedByLabel(decidedBy) {
+  return decidedBy === "user" ? "\u5B66\u751F\u51B3\u5B9A" : decidedBy === "recommendation" ? "\u91C7\u7528\u63A8\u8350" : "Host \u67E5\u8BC1";
+}
+function formatDecisions(decisions) {
+  if (decisions.length === 0) return ["\uFF08\u5C1A\u672A\u6572\u5B9A\u4EFB\u4F55\u51B3\u7B56\uFF1B\u672C\u8F6E\u5E94\u95EE\u6700\u4E0A\u6E38\u7684 frontier \u95EE\u9898\uFF09"];
+  return decisions.map((decision) => `- ${truncate3(decision.key, 80)}\uFF1A${truncate3(decision.value, 240)}\uFF08${decidedByLabel(decision.decidedBy)}\uFF09`);
+}
+function formatRounds(rounds) {
+  if (rounds.length === 0) return ["\uFF08\u5C1A\u65E0\u5DF2\u5B8C\u6210\u8F6E\u6B21\uFF09"];
+  return rounds.map((round) => {
+    const questions = round.questions.map((question, index) => `Q${index + 1}\u300C${truncate3(question.title, 80)}\u300D`).join("\uFF1B");
+    const answers = (round.answers ?? []).map((answer) => `${truncate3(answer.questionId, 40)}=${truncate3(answer.answer, 120)}`).join("\uFF1B");
+    return `- \u7B2C ${round.index + 1} \u8F6E\uFF1A${questions}${answers === "" ? "" : `\uFF1B\u5B66\u751F\u56DE\u7B54\uFF1A${answers}`}`;
+  });
+}
+function formatFactNotes(factNotes) {
+  if (factNotes === void 0 || factNotes.length === 0) return ["\uFF08\u65E0\uFF1B\u4E0D\u8981\u5411\u5B66\u751F\u8BE2\u95EE Host \u53EF\u67E5\u8BE2\u7684\u4E8B\u5B9E\uFF09"];
+  return factNotes.map((note) => `- ${truncate3(note, 300)}`);
+}
+function normalizeRounds(input) {
+  const rawMax = Number.isFinite(input.maxRounds) ? Math.trunc(input.maxRounds) : MAX_INTERVIEW_ROUNDS;
+  const maxRounds = Math.min(MAX_INTERVIEW_ROUNDS, Math.max(1, rawMax));
+  const rawIndex = Number.isFinite(input.roundIndex) ? Math.trunc(input.roundIndex) : 0;
+  return { roundIndex: Math.max(0, rawIndex), maxRounds };
+}
+function buildInterviewRequest(input) {
+  const { roundIndex, maxRounds } = normalizeRounds(input);
+  const exhausted = roundIndex >= maxRounds;
+  const finalRound = !exhausted && roundIndex + 1 >= maxRounds;
+  const roundLabel = `${roundIndex + 1}/${maxRounds}`;
+  const systemLines = [
+    "\u4F60\u662F\u300CAI \u77E5\u8BC6\u5E93\u6559\u5B66\u63D2\u4EF6\u300D\u7684\u8BFE\u7A0B\u89C4\u5212\u8BBF\u8C08\u8005\u3002\u4F60\u7684\u4EFB\u52A1\u662F\u901A\u8FC7\u591A\u8F6E\u8BBF\u8C08\uFF0C\u628A\u5B66\u751F\u7684\u6A21\u7CCA\u5B66\u4E60\u9700\u6C42\u6536\u655B\u6210\u4E00\u4EFD\u53EF\u6267\u884C\u7684\u5B66\u4E60\u8BA1\u5212\u3002",
+    "",
+    "## \u8BBF\u8C08\u65B9\u5F0F\uFF1A\u8BBE\u8BA1\u6811 / frontier\uFF08\u5FC5\u987B\u9075\u5B88\uFF09",
+    "- \u628A\u9700\u6C42\u60F3\u6210\u4E00\u68F5 design tree\uFF1A\u6BCF\u4E2A decision \u5206\u652F\u5230\u4F9D\u8D56\u5B83\u7684 decisions\u3002",
+    "- \u6BCF\u8F6E\u53EA\u95EE\u5F53\u524D frontier\uFF1A\u8FD9\u4E9B\u95EE\u9898\u7684 prerequisites\uFF08\u524D\u7F6E\u51B3\u7B56\uFF09\u5DF2\u7ECF\u6572\u5B9A\uFF0C\u5B66\u751F\u73B0\u5728\u5C31\u80FD\u56DE\u7B54\uFF1B\u7B54\u6848\u4F9D\u8D56\u672C\u8F6E\u5176\u5B83\u672A\u51B3\u95EE\u9898\u7684\uFF0C\u7559\u5230\u66F4\u665A\u8F6E\u6B21\u3002",
+    "- \u5DF2\u6572\u5B9A\u7684\u51B3\u7B56\u4E0D\u8981\u91CD\u590D\u8BE2\u95EE\uFF0C\u4E5F\u4E0D\u8981\u6362\u4E2A\u8BF4\u6CD5\u91CD\u95EE\uFF1B\u6BCF\u8F6E\u95EE\u9898\u5FC5\u987B\u4E92\u4E0D\u91CD\u53E0\u3002",
+    `- \u6B63\u5E38\u4E00\u8F6E\u63D0\u51FA ${MIN_QUESTIONS_PER_ROUND}\u2013${MAX_QUESTIONS_PER_ROUND} \u4E2A\u5E26\u7F16\u53F7\u7684\u95EE\u9898\uFF1B\u6BCF\u4E2A\u95EE\u9898\u5FC5\u987B\u7ED9\u5177\u4F53\u3001\u53EF\u6267\u884C\u7684\u63A8\u8350\u7B54\u6848\uFF08recommendation\uFF09\uFF0C\u800C\u4E0D\u662F\u7A7A\u6CDB\u5EFA\u8BAE\u3002`,
+    "- \u4E8B\u5B9E\u7531 Host \u67E5\uFF0C\u4E0D\u95EE\u5B66\u751F\uFF1A\u51E1\u662F\u6587\u4EF6\u3001\u8DEF\u5F84\u3001\u73AF\u5883\u3001\u5DE5\u5177\u7248\u672C\u3001\u5DF2\u6709\u8D44\u6599\u3001\u8BFE\u7A0B\u5927\u7EB2\u7B49 Host \u80FD\u67E5\u5230\u7684\u4E8B\u5B9E\uFF0C\u4E0D\u8981\u5199\u6210\u95EE\u9898\uFF1B\u5728\u76F8\u5173\u95EE\u9898\u91CC\u8BBE\u7F6E factQuery\uFF08Host \u67E5\u8BE2\u540E\u4F5C\u4E3A\u80CC\u666F\uFF09\uFF0C\u95EE\u9898\u672C\u8EAB\u4ECD\u5FC5\u987B\u662F\u5B66\u751F\u8981\u505A\u7684\u51B3\u7B56\u3002",
+    "- \u95EE\u9898\u8981\u80FD\u63A8\u8FDB\u8BA1\u5212\uFF1A\u56F4\u7ED5\u76EE\u6807\u3001\u6C34\u5E73\u3001\u65F6\u95F4\u6295\u5165\u3001\u8303\u56F4\u53D6\u820D\u3001\u7AE0\u8282\u987A\u5E8F\u3001\u7EC3\u4E60\u65B9\u5F0F\u3001\u6392\u9664\u5185\u5BB9\u3001\u8BC4\u4F30\u65B9\u5F0F\u7B49\u8BBE\u8BA1\u51B3\u7B56\u3002",
+    "- readyForPlan\uFF1A\u5F53 frontier \u5DF2\u7A7A\u6216\u5269\u4F59\u7EC6\u8282\u4E0D\u503C\u5F97\u518D\u95EE\u65F6\u7F6E true\uFF0Cquestions \u5FC5\u987B\u4E3A\u7A7A\u6570\u7EC4\uFF0C\u8BBF\u8C08\u7ED3\u675F\u3002",
+    exhausted ? "- \u5DF2\u8FBE\u5230\u6700\u5927\u8F6E\u6B21\uFF1A\u672C\u8F6E\u4E0D\u5F97\u518D\u63D0\u95EE\uFF1Bquestions \u5FC5\u987B\u4E3A\u7A7A\u6570\u7EC4\uFF0CreadyForPlan \u5FC5\u987B\u4E3A true\u3002" : finalRound ? `- \u8FD9\u662F\u6700\u540E\u4E00\u8F6E\uFF1A\u6700\u591A\u63D0 ${MAX_FINAL_ROUND_QUESTIONS} \u4E2A\u5173\u952E\u786E\u8BA4\u95EE\u9898\uFF1B\u82E5\u5DF2\u8DB3\u591F\uFF0C\u76F4\u63A5 questions=[]\u3001readyForPlan=true\u3002` : `- \u6700\u591A ${maxRounds} \u8F6E\uFF1B\u8DB3\u591F\u65F6\u63D0\u524D\u6536\u675F\uFF08readyForPlan=true\uFF09\u3002`,
+    "",
+    "## \u8F93\u51FA\u683C\u5F0F\uFF08\u4E25\u683C JSON\uFF09",
+    "\u53EA\u8F93\u51FA\u4E00\u4E2A JSON \u5BF9\u8C61\uFF0C\u4E0D\u8981 Markdown \u4EE3\u7801\u56F4\u680F\u3001\u4E0D\u8981\u89E3\u91CA\u6587\u5B57\uFF1A",
+    "{",
+    '  "questions": [',
+    `    { "id": "target-level", "title": "\u76EE\u6807\u6C34\u5E73", "body": "\u4F60\u5E0C\u671B\u8FBE\u5230\u4EC0\u4E48\u7A0B\u5EA6\uFF1F", "options": ["\u5165\u95E8", "\u8FDB\u9636", "\u8003\u7814"], "recommendation": "\u5148\u6309\u8FDB\u9636\u76EE\u6807\u8BBE\u8BA1\uFF0C\u4FDD\u7559\u8003\u7814\u771F\u9898\u4F5C\u4E3A\u8FC1\u79FB\u7EC3\u4E60\u3002", "factQuery": "\u53EF\u9009\uFF1A\u9700\u8981 Host \u4EE3\u67E5\u7684\u4E8B\u5B9E\u65F6\u586B\u5199" }`,
+    "  ],",
+    '  "readyForPlan": false,',
+    '  "decisions": [{ "key": "target-level", "value": "\u8FDB\u9636", "decidedBy": "recommendation" }]',
+    "}",
+    `- questions \u6570\u91CF\uFF1A\u6B63\u5E38 ${MIN_QUESTIONS_PER_ROUND}\u2013${MAX_QUESTIONS_PER_ROUND}\uFF1BreadyForPlan=true \u65F6\u5FC5\u987B\u4E3A 0\uFF1B\u6700\u540E\u4E00\u8F6E\u6700\u591A ${MAX_FINAL_ROUND_QUESTIONS} \u4E2A\u3002`,
+    "- id \u7528\u77ED\u6A2A\u7EBF\u5C0F\u5199\u82F1\u6587\uFF1Btitle/body/recommendation \u975E\u7A7A\uFF1Boptions \u53EF\u9009\u4E14\u4E0D\u8D85\u8FC7 " + MAX_OPTIONS_PER_QUESTION + " \u4E2A\u3002",
+    `- ${languageInstruction2(input.language)}`
+  ];
+  const userLines = [
+    `## \u89C4\u5212\u4E3B\u9898`,
+    truncate3(input.topic, 500) || "\uFF08\u5B66\u751F\u672A\u6307\u5B9A\u4E3B\u9898\uFF1B\u5148\u95EE\u6E05\u4E3B\u9898\u4E0E\u76EE\u6807\uFF09",
+    "",
+    `## \u8F6E\u6B21`,
+    `\u7B2C ${roundLabel} \u8F6E\uFF08roundIndex=${roundIndex}\uFF0CmaxRounds=${maxRounds}\uFF09`,
+    "",
+    "## \u5DF2\u6572\u5B9A\u7684\u8BBE\u8BA1\u51B3\u7B56\uFF08frontier \u7684 prerequisites\uFF1B\u4E0D\u8981\u91CD\u590D\u8BE2\u95EE\uFF09",
+    ...formatDecisions(input.decisions),
+    "",
+    "## \u4E4B\u524D\u7684\u8BBF\u8C08\u8F6E\u6B21\uFF08\u4E0D\u8981\u91CD\u590D\u8FD9\u4E9B\u95EE\u9898\uFF09",
+    ...formatRounds(input.previousRounds),
+    "",
+    "## Host \u5DF2\u67E5\u5230\u7684\u4E8B\u5B9E\uFF08\u4F5C\u4E3A\u80CC\u666F\uFF1B\u4E0D\u8981\u5411\u5B66\u751F\u91CD\u590D\u8BE2\u95EE\uFF09",
+    ...formatFactNotes(input.factNotes),
+    "",
+    "## \u672C\u8F6E\u4EFB\u52A1",
+    exhausted ? "\u5DF2\u8FBE\u5230\u6700\u5927\u8F6E\u6B21\uFF1A\u8F93\u51FA\u7A7A questions \u4E0E readyForPlan=true\u3002" : finalRound ? `\u6700\u540E\u4E00\u8F6E\uFF1A\u6700\u591A ${MAX_FINAL_ROUND_QUESTIONS} \u4E2A\u5173\u952E\u786E\u8BA4\u95EE\u9898\uFF0C\u6216\u76F4\u63A5\u6536\u675F\u3002` : `\u53EA\u95EE\u5F53\u524D frontier \u7684 ${MIN_QUESTIONS_PER_ROUND}\u2013${MAX_QUESTIONS_PER_ROUND} \u4E2A\u95EE\u9898\uFF0C\u6BCF\u9898\u9644\u63A8\u8350\u7B54\u6848\u3002`,
+    "\u53EA\u8F93\u51FA JSON \u5BF9\u8C61\u3002"
+  ];
+  return {
+    system: systemLines.join("\n"),
+    messages: [{ role: "user", text: userLines.join("\n") }],
+    json: INTERVIEW_JSON,
+    purpose: "course-draft",
+    language: input.language,
+    maxTokens: 8192,
+    temperature: 0.3
+  };
+}
+function buildPlanBriefRequest(input) {
+  const systemLines = [
+    "\u4F60\u662F\u300CAI \u77E5\u8BC6\u5E93\u6559\u5B66\u63D2\u4EF6\u300D\u7684\u8BFE\u7A0B\u89C4\u5212\u8005\u3002\u6839\u636E\u5DF2\u6572\u5B9A\u7684\u8BBF\u8C08\u51B3\u7B56\uFF0C\u5199\u4E00\u4EFD\u8BE6\u7EC6\u3001\u53EF\u6267\u884C\u3001\u53EF\u6838\u5BF9\u7684 PlanBrief\uFF08\u5B66\u4E60\u8BA1\u5212\uFF09\uFF0C\u4F9B\u5B66\u751F\u786E\u8BA4\u540E\u518D\u68C0\u7D22\u8D44\u6599\u5E76\u751F\u6210\u8BFE\u7A0B\u7ED3\u6784\u3002",
+    "",
+    "## \u8BA1\u5212\u8981\u6C42",
+    "- \u53EA\u4F7F\u7528\u8BBF\u8C08\u4E2D\u5DF2\u6572\u5B9A\u7684\u51B3\u7B56\uFF1B\u4E0D\u8981\u5F15\u5165\u672A\u8BA8\u8BBA\u7684\u91CD\u5927\u5047\u8BBE\uFF1B\u4FE1\u606F\u4E0D\u8DB3\u65F6\u6309\u6700\u4FDD\u5B88\u7684\u5408\u7406\u9ED8\u8BA4\u63A8\u8FDB\uFF0C\u5E76\u5728\u80CC\u666F/\u6392\u9664\u9879\u4E2D\u5199\u660E\u3002",
+    "- \u76EE\u6807\uFF08goals\uFF09\u8981\u5177\u4F53\u3001\u53EF\u68C0\u9A8C\uFF08\u4F8B\u5982\u201C\u80FD\u89E3\u91CA X \u5E76\u5B8C\u6210 Y \u7C7B\u9898\u201D\uFF09\uFF0C\u4E0D\u8981\u5199\u201C\u4E86\u89E3 X\u201D\u3002",
+    "- \u7AE0\u8282\uFF08chapters\uFF09\u6309\u5B66\u4E60\u987A\u5E8F\u6392\u5217\uFF0C\u6BCF\u7AE0\u7ED9\u5177\u4F53\u4E3B\u9898\uFF08topics\uFF09\uFF1B\u8DE8\u7AE0\u4F9D\u8D56\u5199\u8FDB prerequisites\uFF1B\u96BE\u5EA6\u4ECE\u5B66\u751F\u7684 level/background \u51FA\u53D1\u3002",
+    "- practiceStyle \u8BF4\u660E\u7EC3\u4E60/\u68C0\u9A8C\u65B9\u5F0F\uFF1Bexclusions \u5199\u6E05\u672C\u6B21\u660E\u786E\u4E0D\u5B66\u7684\u8303\u56F4\u3002",
+    "- searchTopics \u662F\u4E4B\u540E\u68C0\u7D22\u5916\u90E8\u8D44\u6599\u7528\u7684\u5177\u4F53\u68C0\u7D22\u4E3B\u9898\uFF08\u6559\u6750\u540D\u3001\u7AE0\u8282\u3001\u9898\u578B\u7B49\uFF09\uFF0C\u4E0D\u8981\u5199\u7A7A\u6CDB\u53E3\u53F7\u3002",
+    `- \u4E0A\u9650\uFF1Agoals \u2264 ${MAX_PLAN_GOALS}\uFF0Cchapters \u2264 ${MAX_PLAN_CHAPTERS}\uFF0C\u6BCF\u7AE0 topics \u2264 ${MAX_TOPICS_PER_CHAPTER}\uFF0C\u6BCF\u7AE0 prerequisites \u2264 ${MAX_PREREQUISITES_PER_CHAPTER}\uFF0CsearchTopics \u2264 ${MAX_SEARCH_TOPICS}\u3002`,
+    "- \u4E0D\u865A\u6784\u5B66\u751F\u6CA1\u6709\u7684\u80CC\u666F\u3001\u5B66\u6821\u3001\u8003\u8BD5\u65F6\u95F4\uFF1B\u4E0D\u77E5\u9053\u7684\u5B57\u6BB5\u7701\u7565\u3002",
+    "",
+    "## \u8F93\u51FA\u683C\u5F0F\uFF08\u4E25\u683C JSON\uFF09",
+    "\u53EA\u8F93\u51FA\u4E00\u4E2A JSON \u5BF9\u8C61\uFF0C\u4E0D\u8981 Markdown \u4EE3\u7801\u56F4\u680F\u3001\u4E0D\u8981\u89E3\u91CA\u6587\u5B57\uFF1A",
+    "{",
+    '  "title": "\u8BA1\u5212\u6807\u9898",',
+    '  "goals": ["\u53EF\u68C0\u9A8C\u76EE\u6807"],',
+    '  "level": "\u5165\u95E8/\u8FDB\u9636/\u8003\u7814\uFF08\u53EF\u9009\uFF09",',
+    '  "background": "\u5B66\u751F\u80CC\u666F\uFF08\u53EF\u9009\uFF09",',
+    '  "duration": "\u603B\u65F6\u957F\uFF08\u53EF\u9009\uFF09",',
+    '  "weeklyHours": "\u6BCF\u5468\u6295\u5165\uFF08\u53EF\u9009\uFF09",',
+    '  "language": "zh | en | bilingual",',
+    '  "chapters": [{ "title": "\u7AE0\u8282\u6807\u9898", "topics": ["\u4E3B\u9898"], "prerequisites": ["\u524D\u7F6E"] }],',
+    '  "practiceStyle": "\u7EC3\u4E60\u65B9\u5F0F\uFF08\u53EF\u9009\uFF09",',
+    '  "exclusions": ["\u660E\u786E\u4E0D\u5B66\u7684\u5185\u5BB9\uFF08\u53EF\u9009\uFF09"],',
+    '  "searchTopics": ["\u68C0\u7D22\u4E3B\u9898"]',
+    "}",
+    `- ${languageInstruction2(input.language)}`
+  ];
+  const userLines = [
+    "## \u89C4\u5212\u4E3B\u9898",
+    truncate3(input.topic, 500),
+    "",
+    "## \u5DF2\u6572\u5B9A\u7684\u8BBE\u8BA1\u51B3\u7B56",
+    ...formatDecisions(input.decisions),
+    "",
+    "## \u8BBF\u8C08\u8BB0\u5F55\uFF08\u95EE\u9898\u4E0E\u56DE\u7B54\uFF09",
+    ...formatRounds(input.rounds),
+    "",
+    "## \u8F93\u51FA",
+    "\u6309\u4E0A\u8FF0 JSON \u7ED3\u6784\u8F93\u51FA\u5B8C\u6574 PlanBrief\uFF1B\u53EA\u8F93\u51FA JSON \u5BF9\u8C61\u3002"
+  ];
+  return {
+    system: systemLines.join("\n"),
+    messages: [{ role: "user", text: userLines.join("\n") }],
+    json: PLAN_BRIEF_JSON,
+    purpose: "course-draft",
+    language: input.language,
+    maxTokens: 8192,
+    temperature: 0.2
+  };
+}
+
+// packages/teaching-core/src/planning/parse.ts
+function isRecord4(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function textValue(value, max2) {
+  if (typeof value !== "string") return void 0;
+  const trimmed = value.trim();
+  if (trimmed === "") return void 0;
+  return trimmed.length <= max2 ? trimmed : `${trimmed.slice(0, max2)}\u2026`;
+}
+function requireText(value, max2, what) {
+  const text2 = textValue(value, max2);
+  return text2 === void 0 ? { error: `${what}\u5FC5\u987B\u662F\u975E\u7A7A\u5B57\u7B26\u4E32` } : { text: text2 };
+}
+function normalizePlanTopic(text2) {
+  return text2.toLowerCase().replace(/[\s\p{P}\p{S}]+/gu, "");
+}
+function findJsonCandidate(text2) {
+  const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(text2);
+  if (fenced !== null && fenced[1] !== void 0 && fenced[1].trim() !== "") {
+    return fenced[1].trim();
+  }
+  const start = text2.search(/[{[]/);
+  if (start === -1) return void 0;
+  const first = text2[start];
+  if (first === void 0) return void 0;
+  const stack = [first === "{" ? "}" : "]"];
+  let inString = false;
+  let escaped = false;
+  for (let index = start + 1; index < text2.length; index += 1) {
+    const char = text2[index];
+    if (char === void 0) break;
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+    if (char === "{" || char === "[") {
+      stack.push(char === "{" ? "}" : "]");
+      continue;
+    }
+    if (char === "}" || char === "]") {
+      const expected = stack.at(-1);
+      if (char !== expected) return void 0;
+      stack.pop();
+      if (stack.length === 0) return text2.slice(start, index + 1);
+    }
+  }
+  return void 0;
+}
+function extractPlanningJson(input) {
+  if (typeof input !== "string") {
+    if (isRecord4(input) || Array.isArray(input)) return { value: input };
+    return { error: "\u6A21\u578B\u8F93\u51FA\u4E0D\u662F JSON \u5BF9\u8C61/\u6570\u7EC4" };
+  }
+  const direct = input.trim();
+  if (direct === "") return { error: "\u6A21\u578B\u8F93\u51FA\u4E3A\u7A7A" };
+  try {
+    return { value: JSON.parse(direct) };
+  } catch {
+  }
+  const candidate = findJsonCandidate(input);
+  if (candidate === void 0) return { error: "\u65E0\u6CD5\u4ECE\u6A21\u578B\u8F93\u51FA\u4E2D\u63D0\u53D6 JSON\uFF08\u672A\u627E\u5230\u5B8C\u6574\u5BF9\u8C61/\u6570\u7EC4\uFF09" };
+  try {
+    return { value: JSON.parse(candidate) };
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause);
+    return { error: `JSON \u89E3\u6790\u5931\u8D25\uFF1A${message}` };
+  }
+}
+var DECIDED_BY = /* @__PURE__ */ new Set(["user", "recommendation", "fact"]);
+function parseQuestion(value, index, seenIds, seenTitles, previousTitles) {
+  if (!isRecord4(value)) return { error: `questions[${index}] \u5FC5\u987B\u662F\u5BF9\u8C61` };
+  const label = `questions[${index}]`;
+  const id = textValue(value.id, 80);
+  if (id === void 0) return { error: `${label} \u7F3A\u5C11\u975E\u7A7A id` };
+  if (seenIds.has(id)) return { error: `${label} \u7684 id\u300C${id}\u300D\u91CD\u590D` };
+  const title = textValue(value.title, 120);
+  if (title === void 0) return { error: `${label} \u7F3A\u5C11\u975E\u7A7A title` };
+  const normalizedTitle = normalizePlanTopic(title);
+  if (seenTitles.has(normalizedTitle)) return { error: `${label} \u7684\u6807\u9898\u300C${title}\u300D\u5728\u672C\u8F6E\u91CD\u590D` };
+  if (previousTitles.has(normalizedTitle)) {
+    return { error: `${label} \u7684\u6807\u9898\u300C${title}\u300D\u4E0E\u4E4B\u524D\u8F6E\u6B21\u91CD\u590D\uFF1A\u4E0D\u8981\u91CD\u590D\u8BE2\u95EE\u5DF2\u6572\u5B9A\u7684 frontier` };
+  }
+  const body = textValue(value.body, 1200);
+  if (body === void 0) return { error: `${label}\uFF08${title}\uFF09\u7F3A\u5C11\u975E\u7A7A body` };
+  const recommendation = textValue(value.recommendation, 600);
+  const factQuery = value.factQuery === void 0 ? void 0 : textValue(value.factQuery, 200);
+  if (recommendation === void 0) {
+    if (value.factQuery !== void 0) {
+      return { error: `${label}\uFF08${title}\uFF09\u7F3A\u5C11 recommendation\uFF1AfactQuery \u4E0D\u80FD\u66FF\u4EE3\u5B66\u751F\u51B3\u7B56\u95EE\u9898\uFF0C\u5FC5\u987B\u7ED9\u51FA\u5177\u4F53\u63A8\u8350\u7B54\u6848` };
+    }
+    return { error: `${label}\uFF08${title}\uFF09\u7F3A\u5C11 recommendation\uFF08\u6BCF\u4E2A\u5B66\u751F\u95EE\u9898\u5FC5\u987B\u7ED9\u51FA\u5177\u4F53\u63A8\u8350\u7B54\u6848\uFF09` };
+  }
+  let options;
+  if (value.options !== void 0) {
+    if (!Array.isArray(value.options)) return { error: `${label}\uFF08${title}\uFF09\u7684 options \u5FC5\u987B\u662F\u5B57\u7B26\u4E32\u6570\u7EC4` };
+    if (value.options.length > MAX_OPTIONS_PER_QUESTION) {
+      return { error: `${label}\uFF08${title}\uFF09\u7684 options \u8D85\u8FC7 ${MAX_OPTIONS_PER_QUESTION} \u4E2A\u4E0A\u9650` };
+    }
+    const parsedOptions = [];
+    for (const item of value.options) {
+      const option = textValue(item, 200);
+      if (option === void 0) return { error: `${label}\uFF08${title}\uFF09\u7684 options \u542B\u7A7A\u9879` };
+      parsedOptions.push(option);
+    }
+    if (parsedOptions.length > 0) options = parsedOptions;
+  }
+  if (value.factQuery !== void 0 && factQuery === void 0) {
+    return { error: `${label}\uFF08${title}\uFF09\u7684 factQuery \u5FC5\u987B\u662F\u975E\u7A7A\u5B57\u7B26\u4E32` };
+  }
+  seenIds.add(id);
+  seenTitles.add(normalizedTitle);
+  return {
+    question: {
+      id,
+      title,
+      body,
+      ...options === void 0 ? {} : { options },
+      recommendation,
+      ...factQuery === void 0 ? {} : { factQuery }
+    }
+  };
+}
+function parseDecisions(value) {
+  if (!Array.isArray(value)) return { error: "decisions \u5FC5\u987B\u662F\u6570\u7EC4" };
+  if (value.length > 12) return { error: "decisions \u4E0D\u80FD\u8D85\u8FC7 12 \u6761" };
+  const decisions = [];
+  const seenKeys = /* @__PURE__ */ new Set();
+  for (let index = 0; index < value.length; index += 1) {
+    const item = value[index];
+    if (!isRecord4(item)) return { error: `decisions[${index}] \u5FC5\u987B\u662F\u5BF9\u8C61` };
+    const key = textValue(item.key, 80);
+    const decisionValue = textValue(item.value, 300);
+    if (key === void 0) return { error: `decisions[${index}] \u7F3A\u5C11\u975E\u7A7A key` };
+    if (decisionValue === void 0) return { error: `decisions[${index}]\uFF08${key}\uFF09\u7F3A\u5C11\u975E\u7A7A value` };
+    if (seenKeys.has(key)) return { error: `decisions \u4E2D key\u300C${key}\u300D\u91CD\u590D` };
+    const decidedBy = textValue(item.decidedBy, 20);
+    if (decidedBy === void 0 || !DECIDED_BY.has(decidedBy)) {
+      return { error: `decisions[${index}]\uFF08${key}\uFF09\u7684 decidedBy \u5FC5\u987B\u662F user/recommendation/fact` };
+    }
+    seenKeys.add(key);
+    decisions.push({ key, value: decisionValue, decidedBy });
+  }
+  return decisions.length === 0 ? {} : { decisions };
+}
+function previousQuestionTitles(options) {
+  const titles = /* @__PURE__ */ new Set();
+  for (const round of options.previousRounds ?? []) {
+    for (const question of round.questions) titles.add(normalizePlanTopic(question.title));
+  }
+  for (const question of options.previousQuestions ?? []) titles.add(normalizePlanTopic(question.title));
+  return titles;
+}
+function parseInterviewResponse(input, options = {}) {
+  const extracted = extractPlanningJson(input);
+  if (extracted.error !== void 0) return { questions: [], readyForPlan: false, error: extracted.error };
+  const root = extracted.value;
+  if (!isRecord4(root)) return { questions: [], readyForPlan: false, error: "\u8BBF\u8C08\u54CD\u5E94\u5FC5\u987B\u662F JSON \u5BF9\u8C61" };
+  if (!Array.isArray(root.questions)) {
+    return { questions: [], readyForPlan: false, error: "\u8BBF\u8C08\u54CD\u5E94\u7F3A\u5C11 questions \u6570\u7EC4" };
+  }
+  if (typeof root.readyForPlan !== "boolean") {
+    return { questions: [], readyForPlan: false, error: "\u8BBF\u8C08\u54CD\u5E94\u7F3A\u5C11 readyForPlan \u5E03\u5C14\u503C" };
+  }
+  const readyForPlan = root.readyForPlan;
+  const maxQuestions = Math.min(
+    MAX_QUESTIONS_PER_ROUND,
+    Math.max(1, Number.isFinite(options.maxQuestions) ? Math.trunc(options.maxQuestions ?? MAX_QUESTIONS_PER_ROUND) : MAX_QUESTIONS_PER_ROUND)
+  );
+  const rawQuestions = root.questions;
+  if (rawQuestions.length > maxQuestions) {
+    return { questions: [], readyForPlan, error: `questions \u6570\u91CF\u4E0D\u80FD\u8D85\u8FC7 ${maxQuestions}\uFF08\u5B9E\u9645 ${rawQuestions.length}\uFF09` };
+  }
+  if (readyForPlan && rawQuestions.length > 0) {
+    return { questions: [], readyForPlan, error: "readyForPlan=true \u65F6 questions \u5FC5\u987B\u4E3A\u7A7A\u6570\u7EC4\uFF08\u8BBF\u8C08\u5DF2\u7ED3\u675F\uFF09" };
+  }
+  if (!readyForPlan && rawQuestions.length === 0) {
+    return { questions: [], readyForPlan, error: "questions \u4E3A\u7A7A\u65F6\u5FC5\u987B\u6807\u8BB0 readyForPlan=true" };
+  }
+  const previousTitles = previousQuestionTitles(options);
+  const seenIds = /* @__PURE__ */ new Set();
+  const seenTitles = /* @__PURE__ */ new Set();
+  const questions = [];
+  for (let index = 0; index < rawQuestions.length; index += 1) {
+    const parsed = parseQuestion(rawQuestions[index], index, seenIds, seenTitles, previousTitles);
+    if (parsed.error !== void 0) return { questions: [], readyForPlan, error: parsed.error };
+    if (parsed.question !== void 0) questions.push(parsed.question);
+  }
+  let decisions;
+  if (root.decisions !== void 0) {
+    const parsedDecisions = parseDecisions(root.decisions);
+    if (parsedDecisions.error !== void 0) {
+      return { questions: [], readyForPlan, error: parsedDecisions.error };
+    }
+    decisions = parsedDecisions.decisions;
+  }
+  return {
+    questions,
+    readyForPlan,
+    ...decisions === void 0 ? {} : { decisions }
+  };
+}
+var LANGUAGES = /* @__PURE__ */ new Set(["zh", "en", "bilingual"]);
+function parseChapters(value) {
+  if (!Array.isArray(value)) return { error: "PlanBrief \u7F3A\u5C11 chapters \u6570\u7EC4" };
+  if (value.length === 0) return { error: "PlanBrief \u7684 chapters \u4E0D\u80FD\u4E3A\u7A7A\uFF08\u81F3\u5C11 1 \u7AE0\uFF09" };
+  if (value.length > MAX_PLAN_CHAPTERS) {
+    return { error: `PlanBrief \u7684 chapters \u4E0D\u80FD\u8D85\u8FC7 ${MAX_PLAN_CHAPTERS} \u7AE0\uFF08\u5B9E\u9645 ${value.length}\uFF09` };
+  }
+  const chapters = [];
+  for (let index = 0; index < value.length; index += 1) {
+    const item = value[index];
+    if (!isRecord4(item)) return { error: `chapters[${index}] \u5FC5\u987B\u662F\u5BF9\u8C61` };
+    const title = textValue(item.title, 200);
+    if (title === void 0) return { error: `chapters[${index}] \u7F3A\u5C11\u975E\u7A7A title` };
+    if (!Array.isArray(item.topics)) return { error: `chapters[${index}]\uFF08${title}\uFF09\u7F3A\u5C11 topics \u6570\u7EC4` };
+    if (item.topics.length === 0) return { error: `chapters[${index}]\uFF08${title}\uFF09\u7684 topics \u4E0D\u80FD\u4E3A\u7A7A` };
+    if (item.topics.length > MAX_TOPICS_PER_CHAPTER) {
+      return { error: `chapters[${index}]\uFF08${title}\uFF09\u7684 topics \u4E0D\u80FD\u8D85\u8FC7 ${MAX_TOPICS_PER_CHAPTER} \u4E2A` };
+    }
+    const topics = [];
+    for (const topicValue of item.topics) {
+      const topic = textValue(topicValue, 200);
+      if (topic === void 0) return { error: `chapters[${index}]\uFF08${title}\uFF09\u7684 topics \u542B\u7A7A\u9879` };
+      topics.push(topic);
+    }
+    let prerequisites;
+    if (item.prerequisites !== void 0) {
+      if (!Array.isArray(item.prerequisites)) {
+        return { error: `chapters[${index}]\uFF08${title}\uFF09\u7684 prerequisites \u5FC5\u987B\u662F\u5B57\u7B26\u4E32\u6570\u7EC4` };
+      }
+      if (item.prerequisites.length > MAX_PREREQUISITES_PER_CHAPTER) {
+        return { error: `chapters[${index}]\uFF08${title}\uFF09\u7684 prerequisites \u4E0D\u80FD\u8D85\u8FC7 ${MAX_PREREQUISITES_PER_CHAPTER} \u6761` };
+      }
+      const parsedPrerequisites = [];
+      for (const prerequisiteValue of item.prerequisites) {
+        const prerequisite = textValue(prerequisiteValue, 120);
+        if (prerequisite === void 0) return { error: `chapters[${index}]\uFF08${title}\uFF09\u7684 prerequisites \u542B\u7A7A\u9879` };
+        parsedPrerequisites.push(prerequisite);
+      }
+      if (parsedPrerequisites.length > 0) prerequisites = parsedPrerequisites;
+    }
+    chapters.push({
+      title,
+      topics,
+      ...prerequisites === void 0 ? {} : { prerequisites }
+    });
+  }
+  return { chapters };
+}
+function parseStringList(value, what, maxItems, itemMax) {
+  if (!Array.isArray(value)) return { error: `PlanBrief \u7F3A\u5C11 ${what} \u6570\u7EC4` };
+  if (value.length === 0) return { error: `PlanBrief \u7684 ${what} \u4E0D\u80FD\u4E3A\u7A7A` };
+  if (value.length > maxItems) return { error: `PlanBrief \u7684 ${what} \u4E0D\u80FD\u8D85\u8FC7 ${maxItems} \u6761\uFF08\u5B9E\u9645 ${value.length}\uFF09` };
+  const items = [];
+  for (const item of value) {
+    const text2 = textValue(item, itemMax);
+    if (text2 === void 0) return { error: `PlanBrief \u7684 ${what} \u542B\u7A7A\u9879` };
+    items.push(text2);
+  }
+  return { items };
+}
+function parsePlanBrief(input, fallbackLanguage = "zh") {
+  const extracted = extractPlanningJson(input);
+  if (extracted.error !== void 0) return { error: extracted.error };
+  const root = extracted.value;
+  if (!isRecord4(root)) return { error: "PlanBrief \u5FC5\u987B\u662F JSON \u5BF9\u8C61" };
+  const title = requireText(root.title, 200, "PlanBrief \u7684 title");
+  if ("error" in title) return { error: title.error };
+  const goals = parseStringList(root.goals, "goals", MAX_PLAN_GOALS, 300);
+  if (goals.error !== void 0) return { error: goals.error };
+  const chapters = parseChapters(root.chapters);
+  if (chapters.error !== void 0) return { error: chapters.error };
+  const searchTopics = parseStringList(root.searchTopics, "searchTopics", MAX_SEARCH_TOPICS, 120);
+  if (searchTopics.error !== void 0) return { error: searchTopics.error };
+  const languageRaw = textValue(root.language, 20);
+  const language = languageRaw !== void 0 && LANGUAGES.has(languageRaw) ? languageRaw : fallbackLanguage;
+  let exclusions;
+  if (root.exclusions !== void 0) {
+    if (!Array.isArray(root.exclusions)) return { error: "PlanBrief \u7684 exclusions \u5FC5\u987B\u662F\u5B57\u7B26\u4E32\u6570\u7EC4" };
+    const parsedExclusions = [];
+    for (const item of root.exclusions.slice(0, MAX_EXCLUSIONS)) {
+      const text2 = textValue(item, 200);
+      if (text2 !== void 0) parsedExclusions.push(text2);
+    }
+    if (parsedExclusions.length > 0) exclusions = parsedExclusions;
+  }
+  const brief = {
+    title: title.text,
+    goals: goals.items ?? [],
+    language,
+    chapters: chapters.chapters ?? [],
+    searchTopics: searchTopics.items ?? [],
+    ...textValue(root.level, 80) === void 0 ? {} : { level: textValue(root.level, 80) },
+    ...textValue(root.background, 600) === void 0 ? {} : { background: textValue(root.background, 600) },
+    ...textValue(root.duration, 80) === void 0 ? {} : { duration: textValue(root.duration, 80) },
+    ...textValue(root.weeklyHours, 80) === void 0 ? {} : { weeklyHours: textValue(root.weeklyHours, 80) },
+    ...textValue(root.practiceStyle, 300) === void 0 ? {} : { practiceStyle: textValue(root.practiceStyle, 300) },
+    ...exclusions === void 0 ? {} : { exclusions }
+  };
+  return { brief };
+}
+
+// packages/teaching-core/src/planning/search.ts
+var SUFFIXES = {
+  zh: ["\u6559\u7A0B", "\u6559\u6750 PDF", "\u8BFE\u7A0B\u8BB2\u4E49", "\u7EC3\u4E60\u9898", "\u5165\u95E8\u8D44\u6599", "\u8FDB\u9636\u8D44\u6599", "\u4E60\u9898\u89E3\u7B54", "\u516C\u5F00\u8BFE"],
+  en: ["tutorial", "textbook pdf", "lecture notes", "practice problems", "course materials", "exercises", "study guide", "open course"],
+  bilingual: [
+    "\u6559\u7A0B tutorial",
+    "\u6559\u6750 textbook PDF",
+    "\u8BFE\u7A0B\u8BB2\u4E49 lecture notes",
+    "\u7EC3\u4E60\u9898 practice problems",
+    "\u5165\u95E8\u8D44\u6599 beginner guide",
+    "\u8FDB\u9636\u8D44\u6599 advanced guide",
+    "\u4E60\u9898\u89E3\u7B54 solutions",
+    "\u516C\u5F00\u8BFE open course"
+  ]
+};
+function cleanQuery(text2) {
+  const clean2 = text2.replace(/\s+/g, " ").trim();
+  return clean2.length <= 200 ? clean2 : clean2.slice(0, 200);
+}
+function buildSearchQueries(brief) {
+  const suffixes = SUFFIXES[brief.language] ?? SUFFIXES.zh;
+  const queries = [];
+  const seen = /* @__PURE__ */ new Set();
+  const push = (query) => {
+    const cleaned = cleanQuery(query);
+    if (cleaned === "") return;
+    const key = cleaned.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    queries.push(cleaned);
+  };
+  brief.searchTopics.slice(0, 4).forEach((topic, index) => {
+    push(`${topic} ${suffixes[index % suffixes.length] ?? suffixes[0] ?? ""}`);
+  });
+  push(`${brief.title} ${suffixes[0] ?? ""}`);
+  brief.goals.slice(0, 2).forEach((goal, index) => {
+    push(`${goal} ${suffixes[(index + 2) % suffixes.length] ?? suffixes[0] ?? ""}`);
+  });
+  brief.chapters.slice(0, 2).forEach((chapter, index) => {
+    push(`${chapter.title} ${suffixes[(index + 1) % suffixes.length] ?? suffixes[0] ?? ""}`);
+  });
+  for (const suffix of suffixes) {
+    if (queries.length >= MIN_SEARCH_QUERIES) break;
+    push(`${brief.title} ${suffix}`);
+  }
+  return queries.slice(0, MAX_SEARCH_QUERIES);
 }
 
 // packages/dsh-plugin/src/host/minimal.ts
@@ -63347,6 +64617,419 @@ ${buildSummaryInput(selection.compacted)}
     const saved = await services.sessions.save({ ...rest, updatedAt: nowIso() });
     return envelope({ session: saved });
   });
+  const plans = new PlanRepository(services.state);
+  const planLanguage = (value) => value === "en" || value === "bilingual" ? value : "zh";
+  const planId = () => `plan-${randomUUID2().slice(0, 8)}`;
+  const planBriefDraft = (course, brief) => {
+    const concepts = [];
+    const chapters = [];
+    for (const [chapterIndex, chapter] of brief.chapters.entries()) {
+      const topics = chapter.topics.length > 0 ? chapter.topics : [chapter.title];
+      const chapterConcepts = [];
+      for (const [topicIndex, topic] of topics.entries()) {
+        const id = conceptId();
+        concepts.push({
+          id,
+          title: topic.slice(0, 120),
+          summary: `${chapter.title}\uFF1A${topic}`.slice(0, 1200),
+          prerequisites: [],
+          sourceAnchors: []
+        });
+        chapterConcepts.push(id);
+        void topicIndex;
+      }
+      chapters.push({
+        id: `chapter-plan-${chapterIndex + 1}`,
+        title: chapter.title.slice(0, 160),
+        ...chapter.prerequisites !== void 0 && chapter.prerequisites.length > 0 ? { summary: `\u524D\u7F6E\uFF1A${chapter.prerequisites.join("\uFF1B")}` } : {},
+        conceptIds: chapterConcepts,
+        role: "chapter"
+      });
+    }
+    return {
+      id: courseRevisionId(),
+      courseId: course.id,
+      version: 2,
+      createdAt: nowIso(),
+      state: "draft",
+      provenance: "ai-draft",
+      goals: [...brief.goals],
+      language: brief.language,
+      sources: [],
+      concepts,
+      sequence: concepts.map((concept) => concept.id),
+      chapters,
+      basedOn: [],
+      changeSummary: "\u6309\u5B66\u4E60\u8BA1\u5212\u751F\u6210\u7684\u7ED3\u6784\uFF1B\u6682\u65E0\u53EF\u5F15\u7528\u7684\u8BFE\u7A0B\u8D44\u6599\u951A\u70B9\uFF0C\u53EF\u7A0D\u540E\u6DFB\u52A0\u8D44\u6599\u5E76\u6574\u5408\u3002"
+    };
+  };
+  const askInterview = async (plan, roundIndex, signal) => {
+    const request = buildInterviewRequest({
+      topic: plan.topic,
+      language: plan.language ?? "zh",
+      roundIndex,
+      maxRounds: MAX_INTERVIEW_ROUNDS,
+      decisions: plan.decisions,
+      previousRounds: plan.rounds
+    });
+    let completion = await services.model.complete(request, signal);
+    let parsed = parseInterviewResponse(completion.json ?? completion.text, {
+      previousRounds: plan.rounds,
+      ...plan.frontier === void 0 || plan.frontier.length === 0 ? {} : { previousQuestions: plan.frontier }
+    });
+    if (parsed.error !== void 0) {
+      completion = await services.model.complete(request, signal);
+      parsed = parseInterviewResponse(completion.json ?? completion.text, { previousRounds: plan.rounds });
+    }
+    if (parsed.error !== void 0) {
+      services.logger("planning interview parse failed", {
+        message: parsed.error,
+        chars: completion.text.length,
+        preview: completion.text.slice(0, 800),
+        tail: completion.text.slice(-400)
+      });
+      throw appError("uncertain", `\u8BBF\u8C08\u95EE\u9898\u751F\u6210\u5931\u8D25\uFF1A${parsed.error}`);
+    }
+    return { questions: parsed.questions, ready: parsed.readyForPlan };
+  };
+  route("planning.start", async ({ body }) => {
+    const input = body;
+    const topic = normalizePlanTopic(input?.topic ?? "");
+    if (topic.length < 2) throw appError("invalid-input", "\u8BF7\u5148\u8BF4\u660E\u4F60\u60F3\u5B66\u4E60\u4EC0\u4E48\uFF08\u81F3\u5C11 2 \u4E2A\u5B57\u7B26\uFF09");
+    const language = planLanguage(input?.language);
+    const now = nowIso();
+    const plan = {
+      id: planId(),
+      status: "interviewing",
+      topic,
+      language,
+      createdAt: now,
+      updatedAt: now,
+      rounds: [],
+      decisions: []
+    };
+    const interview = await askInterview(plan, 0);
+    const firstRound = { index: 0, questions: interview.questions, createdAt: nowIso() };
+    const next = {
+      ...plan,
+      rounds: interview.questions.length === 0 ? [] : [firstRound],
+      frontier: interview.ready ? [] : interview.questions,
+      status: interview.ready ? "plan-ready" : "interviewing"
+    };
+    return envelope({ plan: await plans.save(next) });
+  });
+  route("planning.get", async ({ query }) => {
+    const id = requireQuery(query, "planId");
+    const plan = await plans.get(id);
+    if (plan === void 0) throw notFoundError("\u89C4\u5212");
+    return envelope({ plan });
+  });
+  route("planning.answer", async ({ body }) => {
+    const input = body;
+    if (typeof input?.planId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 planId");
+    if (!Array.isArray(input.answers)) throw appError("invalid-input", "\u7F3A\u5C11 answers");
+    const plan = await plans.get(input.planId);
+    if (plan === void 0) throw notFoundError("\u89C4\u5212");
+    if (plan.status !== "interviewing") throw appError("invalid-input", "\u5F53\u524D\u89C4\u5212\u4E0D\u5728\u8BBF\u8C08\u9636\u6BB5");
+    const frontier = plan.frontier ?? [];
+    if (frontier.length === 0) throw appError("invalid-input", "\u5F53\u524D\u6CA1\u6709\u5F85\u56DE\u7B54\u7684\u95EE\u9898");
+    const byQuestion = /* @__PURE__ */ new Map();
+    for (const answer of input.answers) {
+      if (typeof answer?.questionId === "string" && typeof answer?.answer === "string" && answer.answer.trim() !== "") {
+        byQuestion.set(answer.questionId, { ...answer, answer: answer.answer.trim() });
+      }
+    }
+    const missing = frontier.filter((question) => !byQuestion.has(question.id));
+    if (missing.length > 0) {
+      for (const question of missing) {
+        byQuestion.set(question.id, {
+          questionId: question.id,
+          answer: question.recommendation ?? "\u6309\u63A8\u8350",
+          usedRecommendation: true
+        });
+      }
+    }
+    const answers = frontier.map((question) => byQuestion.get(question.id));
+    const decisions = [
+      ...plan.decisions,
+      ...frontier.map((question) => {
+        const answer = byQuestion.get(question.id);
+        return {
+          key: question.id,
+          value: answer.answer,
+          decidedBy: answer.usedRecommendation === true ? "recommendation" : "user"
+        };
+      })
+    ];
+    const rounds = plan.rounds.map((round, index) => index === plan.rounds.length - 1 ? { ...round, answers } : round);
+    const updated = { ...plan, rounds, decisions, frontier: [] };
+    if (rounds.length >= MAX_INTERVIEW_ROUNDS) {
+      const ready = { ...updated, status: "plan-ready" };
+      return envelope({ plan: await plans.save(ready), ready: true });
+    }
+    const interview = await askInterview(updated, rounds.length);
+    if (interview.ready || interview.questions.length === 0) {
+      const ready = { ...updated, status: "plan-ready", frontier: [] };
+      return envelope({ plan: await plans.save(ready), ready: true });
+    }
+    const nextRound = {
+      index: rounds.length,
+      questions: interview.questions,
+      createdAt: nowIso()
+    };
+    const next = {
+      ...updated,
+      rounds: [...rounds, nextRound],
+      frontier: interview.questions,
+      status: "interviewing"
+    };
+    return envelope({ plan: await plans.save(next), ready: false });
+  });
+  route("planning.brief", async ({ body }) => {
+    const input = body;
+    if (typeof input?.planId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 planId");
+    const plan = await plans.get(input.planId);
+    if (plan === void 0) throw notFoundError("\u89C4\u5212");
+    let brief = input.brief;
+    if (brief === void 0) {
+      const request = buildPlanBriefRequest({
+        topic: plan.topic,
+        decisions: plan.decisions,
+        rounds: plan.rounds,
+        language: plan.language ?? "zh"
+      });
+      let completion = await services.model.complete(request);
+      let parsed = parsePlanBrief(completion.json ?? completion.text, plan.language ?? "zh");
+      if (parsed.brief === void 0) {
+        completion = await services.model.complete(request);
+        parsed = parsePlanBrief(completion.json ?? completion.text, plan.language ?? "zh");
+      }
+      if (parsed.brief === void 0) {
+        services.logger("planning brief parse failed", {
+          message: parsed.error ?? "no brief",
+          chars: completion.text.length,
+          preview: completion.text.slice(0, 800)
+        });
+        throw appError("uncertain", `\u5B66\u4E60\u8BA1\u5212\u6821\u9A8C\u5931\u8D25\uFF1A${parsed.error ?? "\u6A21\u578B\u6CA1\u6709\u8FD4\u56DE\u6709\u6548\u8BA1\u5212"}`);
+      }
+      brief = parsed.brief;
+    }
+    if (brief.title.trim() === "" || brief.chapters.length === 0 || brief.searchTopics.length === 0) {
+      throw appError("invalid-input", "\u5B66\u4E60\u8BA1\u5212\u7F3A\u5C11\u6807\u9898\u3001\u7AE0\u8282\u6216\u68C0\u7D22\u4E3B\u9898");
+    }
+    const searchQueries = buildSearchQueries(brief);
+    const next = { ...plan, brief, searchQueries, status: "plan-ready" };
+    return envelope({ plan: await plans.save(next) });
+  });
+  route("planning.search", async ({ body }) => {
+    const input = body;
+    if (typeof input?.planId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 planId");
+    const plan = await plans.get(input.planId);
+    if (plan === void 0) throw notFoundError("\u89C4\u5212");
+    if (plan.brief === void 0) throw appError("invalid-input", "\u8BF7\u5148\u751F\u6210/\u786E\u8BA4\u5B66\u4E60\u8BA1\u5212");
+    const queries = (plan.searchQueries ?? buildSearchQueries(plan.brief)).slice(0, 8);
+    const handle = services.tasks.start({
+      kind: "planning-search",
+      label: "\u8054\u7F51\u641C\u7D22\u5B66\u4E60\u8D44\u6599",
+      steps: queries.map((query, index) => ({ id: `query-${index}`, label: query }))
+    }, async (context) => {
+      const candidates = [];
+      const seen = /* @__PURE__ */ new Set();
+      const warnings = [];
+      for (let index = 0; index < queries.length; index += 1) {
+        if (context.cancelled()) break;
+        const query = queries[index];
+        context.step(`query-${index}`, { status: "running" });
+        const result = await services.web.search(query, { maxResults: 4, signal: context.signal });
+        if (!result.ok) {
+          warnings.push(`${query}\uFF1A${result.error.message}`);
+          context.step(`query-${index}`, { status: "failed", detail: result.error.message });
+          continue;
+        }
+        for (const hit of result.value) {
+          if (seen.has(hit.url) || candidates.length >= 24) continue;
+          seen.add(hit.url);
+          let domain = "";
+          try {
+            domain = new URL(hit.url).hostname.replace(/^www\./u, "");
+          } catch {
+            domain = "";
+          }
+          const official = /(^|\.)(edu|ac\.[a-z]{2}|gov)(\.|$)/iu.test(domain) || /docs\.|developer\.|official/iu.test(domain);
+          candidates.push({
+            id: `cand-${candidates.length + 1}`,
+            url: hit.url,
+            title: hit.title.slice(0, 200),
+            snippet: hit.snippet.slice(0, 500),
+            domain,
+            score: official ? 2 : 1,
+            selected: official || candidates.length < 6,
+            status: "candidate"
+          });
+        }
+        context.step(`query-${index}`, { status: "done", detail: `${result.value.length} \u4E2A\u7ED3\u679C` });
+      }
+      const next = {
+        ...plan,
+        status: "materials-review",
+        searchQueries: queries,
+        candidates,
+        selectedCandidateIds: candidates.filter((candidate) => candidate.selected === true).map((candidate) => candidate.id),
+        warnings
+      };
+      await plans.save(next);
+      context.result({ candidates, warnings });
+      return { candidates };
+    });
+    return envelope({ task: handle });
+  });
+  route("planning.fetch", async ({ body }) => {
+    const input = body;
+    if (typeof input?.planId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 planId");
+    const plan = await plans.get(input.planId);
+    if (plan === void 0) throw notFoundError("\u89C4\u5212");
+    const candidates = plan.candidates ?? [];
+    const wanted = input.candidateIds === void 0 ? candidates.filter((candidate) => candidate.selected === true) : candidates.filter((candidate) => input.candidateIds?.includes(candidate.id) === true);
+    if (wanted.length === 0) throw appError("invalid-input", "\u8BF7\u81F3\u5C11\u9009\u62E9\u4E00\u4EFD\u5019\u9009\u8D44\u6599");
+    const handle = services.tasks.start({
+      kind: "planning-materials",
+      label: `\u6293\u53D6 ${wanted.length} \u4EFD\u7F51\u9875\u8D44\u6599`,
+      steps: wanted.map((candidate, index) => ({ id: `page-${index}`, label: candidate.title }))
+    }, async (context) => {
+      const sourceIds = [];
+      const failed = [];
+      const warnings = [];
+      const updatedCandidates = candidates.map((candidate) => ({ ...candidate }));
+      for (let index = 0; index < wanted.length; index += 1) {
+        const candidate = wanted[index];
+        if (context.cancelled()) break;
+        context.step(`page-${index}`, { status: "running" });
+        const fetched = await services.web.fetch(candidate.url, { signal: context.signal });
+        const target = updatedCandidates.find((item) => item.id === candidate.id);
+        if (!fetched.ok) {
+          if (target !== void 0) {
+            target.status = "failed";
+            target.reason = fetched.error.message;
+          }
+          failed.push(`${candidate.url}\uFF1A${fetched.error.message}`);
+          context.step(`page-${index}`, { status: "failed", detail: fetched.error.message });
+          continue;
+        }
+        const imported = await importWebPage(services.corpus, {
+          url: candidate.url,
+          finalUrl: fetched.value.url,
+          title: candidate.title,
+          ...fetched.value.kind === "html" ? { html: fetched.value.content } : { text: fetched.value.content },
+          fetchedAt: nowIso(),
+          cached: false
+        });
+        if (!imported.ok) {
+          if (target !== void 0) {
+            target.status = "failed";
+            target.reason = imported.error.message;
+          }
+          failed.push(`${candidate.url}\uFF1A${imported.error.message}`);
+          context.step(`page-${index}`, { status: "failed", detail: imported.error.message });
+          continue;
+        }
+        sourceIds.push(imported.value.document.id);
+        if (target !== void 0) target.status = "fetched";
+        if (imported.value.document.status === "needs-review") {
+          warnings.push(`${candidate.title}\uFF1A\u62BD\u53D6\u5185\u5BB9\u6709\u9700\u8981\u6838\u5BF9\u7684\u95EE\u9898`);
+        }
+        context.step(`page-${index}`, { status: "done" });
+      }
+      const next = {
+        ...plan,
+        status: "materials-review",
+        candidates: updatedCandidates,
+        importedSourceIds: sourceIds,
+        selectedCandidateIds: updatedCandidates.filter((candidate) => candidate.status === "fetched").map((candidate) => candidate.id),
+        warnings: [...plan.warnings ?? [], ...warnings]
+      };
+      await plans.save(next);
+      context.result({ sources: sourceIds, failed, warnings });
+      return { sources: sourceIds, failed, warnings };
+    });
+    return envelope({ task: handle });
+  });
+  route("planning.createCourse", async ({ body }) => {
+    const input = body;
+    if (typeof input?.planId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 planId");
+    const plan = await plans.get(input.planId);
+    if (plan === void 0) throw notFoundError("\u89C4\u5212");
+    if (plan.brief === void 0) throw appError("invalid-input", "\u7F3A\u5C11\u5B66\u4E60\u8BA1\u5212");
+    const handle = services.tasks.start({
+      kind: "planning-course",
+      label: "\u521B\u5EFA\u8BFE\u7A0B\u5E76\u751F\u6210 llm-wiki \u7ED3\u6784",
+      steps: [
+        { id: "course", label: "\u521B\u5EFA\u8BFE\u7A0B" },
+        { id: "sources", label: "\u5173\u8054\u8D44\u6599" },
+        { id: "structure", label: "\u751F\u6210\u8BFE\u7A0B\u7ED3\u6784" }
+      ]
+    }, async (context) => {
+      const brief = plan.brief;
+      const courseTitle = brief.title.trim().slice(0, 120) || "AI \u89C4\u5212\u8BFE\u7A0B";
+      const courseGoals = brief.goals.map((goal) => goal.trim().slice(0, 240)).filter((goal) => goal !== "");
+      const courseDescription = courseGoals.join("\uFF1B").slice(0, 2e3);
+      context.step("course", { status: "running" });
+      const { course, revision } = createCourseRecord(
+        courseTitle,
+        courseDescription,
+        brief.language,
+        courseGoals
+      );
+      const createdCourse = await services.courses.save(course);
+      await services.courses.saveRevision(revision);
+      await services.courses.save({ ...createdCourse, draftRevisionId: revision.id });
+      context.step("course", { status: "done" });
+      context.step("sources", { status: "running" });
+      for (const sourceId2 of plan.importedSourceIds ?? []) {
+        await services.courses.setSourceCourse(sourceId2, createdCourse.id, true).catch(() => void 0);
+      }
+      context.step("sources", { status: "done" });
+      context.step("structure", { status: "running" });
+      const sourceIds = plan.importedSourceIds ?? [];
+      let structureRevision;
+      let structureWarning;
+      if (sourceIds.length > 0) {
+        const proposed = await services.corpus.proposeCourseStructure({
+          courseId: createdCourse.id,
+          courseTitle: createdCourse.title,
+          goal: brief.goals.join("\uFF1B") || createdCourse.description,
+          language: brief.language,
+          strategy: "llm-wiki",
+          instruction: "\u8FD9\u662F\u5F15\u5BFC\u5B66\u751F\u89C4\u5212\u540E\u521B\u5EFA\u7684\u8BFE\u7A0B\uFF1B\u6309 llm-wiki \u7ED3\u6784\u6574\u7406\u8054\u7F51\u8D44\u6599\u3002"
+        }, context.signal);
+        if (proposed.ok) structureRevision = proposed.value;
+        else structureWarning = `llm-wiki \u7ED3\u6784\u751F\u6210\u5931\u8D25\uFF08${proposed.error.message}\uFF09\uFF0C\u5DF2\u6309\u5B66\u4E60\u8BA1\u5212\u751F\u6210\u65E0\u8D44\u6599\u951A\u70B9\u7684\u521D\u59CB\u7ED3\u6784`;
+      }
+      if (structureRevision === void 0) {
+        structureRevision = planBriefDraft(createdCourse, brief);
+        structureWarning ??= "\u672C\u6B21\u6CA1\u6709\u53EF\u7528\u7F51\u9875\u8D44\u6599\uFF0C\u8BFE\u7A0B\u6309\u5B66\u4E60\u8BA1\u5212\u751F\u6210\uFF1B\u6982\u5FF5\u6682\u65E0\u8D44\u6599\u951A\u70B9\uFF0C\u53EF\u7A0D\u540E\u5728\u8D44\u6599\u533A\u6DFB\u52A0\u5E76\u6574\u5408\u3002";
+      }
+      await services.courses.saveRevision(structureRevision);
+      await services.courses.save({ ...createdCourse, draftRevisionId: structureRevision.id });
+      context.step("structure", { status: "done", detail: `${structureRevision.concepts.length} \u4E2A\u6982\u5FF5` });
+      if (structureWarning !== void 0) context.warn(structureWarning);
+      await plans.save({
+        ...plan,
+        status: "done",
+        courseId: createdCourse.id,
+        warnings: [...plan.warnings ?? [], ...structureWarning === void 0 ? [] : [structureWarning]]
+      });
+      context.result({ courseId: createdCourse.id, revisionId: structureRevision.id, warning: structureWarning });
+      return { courseId: createdCourse.id, revisionId: structureRevision.id };
+    });
+    return envelope({ task: handle });
+  });
+  route("planning.cancel", async ({ body }) => {
+    const input = body;
+    if (typeof input?.planId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 planId");
+    const plan = await plans.get(input.planId);
+    if (plan === void 0) throw notFoundError("\u89C4\u5212");
+    return envelope({ plan: await plans.save({ ...plan, status: "cancelled", frontier: [] }) });
+  });
   route("courses.list", async () => {
     const courses = await services.courses.list();
     const summaries = [];
@@ -63513,6 +65196,101 @@ ${buildSummaryInput(selection.compacted)}
         });
       }
       return { imported: outcome.documents.map((document2) => document2.id) };
+    });
+    return envelope({ task: handle });
+  });
+  route("sources.importWeb", async ({ body }) => {
+    const input = body;
+    if (typeof input?.courseId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 courseId");
+    const course = await services.courses.get(input.courseId);
+    if (course === void 0) throw notFoundError("\u8BFE\u7A0B");
+    const urls = (input.urls ?? []).filter((url) => typeof url === "string" && /^https?:\/\//iu.test(url.trim())).map((url) => url.trim());
+    if (urls.length === 0) throw appError("invalid-input", "\u8BF7\u63D0\u4F9B\u81F3\u5C11\u4E00\u4E2A http(s) \u7F51\u9875 URL");
+    const uniqueUrls = [...new Set(urls)].slice(0, 12);
+    const handle = services.tasks.start({
+      kind: "source-import-web",
+      label: `\u6293\u53D6 ${uniqueUrls.length} \u4E2A\u7F51\u9875`,
+      steps: uniqueUrls.map((url, index) => ({ id: `web-${index}`, label: url.slice(0, 80) }))
+    }, async (context) => {
+      const sourceIds = [];
+      const failures = [];
+      for (let index = 0; index < uniqueUrls.length; index += 1) {
+        if (context.cancelled()) break;
+        const url = uniqueUrls[index];
+        context.step(`web-${index}`, { status: "running" });
+        const fetched = await services.web.fetch(url, { signal: context.signal });
+        if (!fetched.ok) {
+          failures.push({ url, error: fetched.error.message });
+          context.step(`web-${index}`, { status: "failed", detail: fetched.error.message });
+          continue;
+        }
+        const meta = input.metadata?.[url];
+        const imported = await importWebPage(services.corpus, {
+          courseId: course.id,
+          url,
+          finalUrl: fetched.value.url,
+          ...meta?.title !== void 0 ? { title: meta.title } : {},
+          ...fetched.value.kind === "html" ? { html: fetched.value.content } : { text: fetched.value.content },
+          fetchedAt: nowIso(),
+          cached: false
+        });
+        if (!imported.ok) {
+          failures.push({ url, error: imported.error.message });
+          context.step(`web-${index}`, { status: "failed", detail: imported.error.message });
+          continue;
+        }
+        sourceIds.push(imported.value.document.id);
+        context.step(`web-${index}`, { status: "done" });
+      }
+      context.result({ imported: sourceIds, failures });
+      if (failures.length > 0) context.warn(`${failures.length} \u4E2A\u7F51\u9875\u6293\u53D6/\u89E3\u6790\u5931\u8D25`);
+      return { imported: sourceIds, failures };
+    });
+    return envelope({ task: handle });
+  });
+  route("sources.integrate", async ({ body }) => {
+    const input = body;
+    if (typeof input?.courseId !== "string") throw appError("invalid-input", "\u7F3A\u5C11 courseId");
+    const course = await services.courses.get(input.courseId);
+    if (course === void 0) throw notFoundError("\u8BFE\u7A0B");
+    const active = await services.courses.getActiveRevision(course);
+    if (active === void 0) throw appError("invalid-input", "\u8BFE\u7A0B\u8FD8\u6CA1\u6709\u5DF2\u786E\u8BA4\u7ED3\u6784\uFF0C\u8BF7\u5148\u751F\u6210\u5E76\u786E\u8BA4\u8BFE\u7A0B\u8349\u6848");
+    const profile = await services.profiles.get();
+    const handle = services.tasks.start({
+      kind: "source-integrate",
+      label: "\u7528 llm-wiki \u6574\u5408\u65B0\u8D44\u6599",
+      steps: [
+        { id: "digest", label: "\u8BFB\u53D6\u5168\u90E8\u8D44\u6599" },
+        { id: "structure", label: "\u751F\u6210\u6574\u5408\u7ED3\u6784" },
+        { id: "reconcile", label: "\u4FDD\u7559\u65E2\u6709\u6982\u5FF5\u4E0E\u638C\u63E1\u8BB0\u5F55" }
+      ]
+    }, async (context) => {
+      context.step("digest", { status: "done", detail: `${(await services.courses.listSources(course.id)).length} \u4EFD\u8D44\u6599` });
+      context.step("structure", { status: "running" });
+      const proposed = await services.corpus.proposeCourseStructure({
+        courseId: course.id,
+        courseTitle: course.title,
+        goal: active.goals.join("\uFF1B") || course.description || `\u7CFB\u7EDF\u5B66\u4E60\u300A${course.title}\u300B`,
+        ...active.background === void 0 ? {} : { background: active.background },
+        language: profile.language,
+        strategy: "llm-wiki",
+        instruction: "\u5DE6\u4FA7\u8D44\u6599\u533A\u65B0\u589E\u4E86\u8D44\u6599\u3002\u8BF7\u6309 llm-wiki \u89C4\u5219\u6574\u5408\u5168\u90E8\u73B0\u6709\u8D44\u6599\uFF1B\u4FDD\u6301\u65E2\u6709\u6982\u5FF5\u8BED\u4E49\u8FDE\u7EED\uFF0C\u65B0\u589E\u8D44\u6599\u5BF9\u5E94\u7684\u6982\u5FF5\u8981\u6709 anchors\u3002"
+      }, context.signal);
+      if (!proposed.ok) throw appError(proposed.error.code, proposed.error.message, proposed.error.details);
+      context.step("structure", { status: "done", detail: `${proposed.value.concepts.length} \u4E2A\u6982\u5FF5` });
+      context.step("reconcile", { status: "running" });
+      const draft = await services.courses.getRevision(course.id, proposed.value.id);
+      if (draft === void 0) throw notFoundError("\u8BFE\u7A0B\u8349\u6848");
+      const reconciled = reconcileDraftWithActive(active, draft);
+      const saved = { ...reconciled.revision, changeSummary: `${reconciled.revision.changeSummary ?? ""}\uFF1B\u6574\u5408\u65B0\u589E\u8D44\u6599\uFF08\u590D\u7528 ${reconciled.stats.reusedConcepts}\uFF0C\u65B0\u589E ${reconciled.stats.addedConcepts}\uFF0C\u4FDD\u7559\u65E7\u6982\u5FF5 ${reconciled.stats.preservedOldConcepts}\uFF09`.trim() };
+      await services.courses.saveRevision(saved);
+      await services.courses.save({ ...course, draftRevisionId: saved.id });
+      context.step("reconcile", { status: "done", detail: `\u590D\u7528 ${reconciled.stats.reusedConcepts} / \u65B0\u589E ${reconciled.stats.addedConcepts} / \u4FDD\u7559 ${reconciled.stats.preservedOldConcepts}` });
+      context.result({
+        revisionId: saved.id,
+        integration: { mode: "incremental", ...reconciled.stats }
+      });
+      return { revisionId: saved.id, integration: reconciled.stats };
     });
     return envelope({ task: handle });
   });
@@ -64776,7 +66554,8 @@ function requestSpec(operation) {
     "runs.latest",
     "model.catalog",
     "model.info",
-    "context.usage"
+    "context.usage",
+    "planning.get"
   ]);
   return { method: getOperations.has(operation) ? "GET" : "POST" };
 }
@@ -64881,6 +66660,28 @@ async function collectImportFiles(paths) {
 async function buildDraftView(services, course, revision) {
   const origin = revision.provenance === "kb-structure" ? "kb-structure" : revision.provenance === "llm-wiki" ? "llm-wiki" : "ai";
   const structureNotes = revision.provenance === "kb-structure" || revision.provenance === "llm-wiki" ? revision.changeSummary === void 0 ? [] : [revision.changeSummary] : [];
+  const active = await services.courses.getActiveRevision(course);
+  let integration;
+  if (active !== void 0 && active.id !== revision.id) {
+    const activeIds = new Set(active.concepts.map((concept) => concept.id));
+    const draftIds = new Set(revision.concepts.map((concept) => concept.id));
+    const reusedConcepts = revision.concepts.filter((concept) => activeIds.has(concept.id)).length;
+    const addedConcepts = revision.concepts.filter((concept) => !activeIds.has(concept.id)).length;
+    const preservedOldConcepts = active.concepts.filter((concept) => draftIds.has(concept.id)).length;
+    const oldAnchorCount = active.concepts.reduce((sum, concept) => sum + concept.sourceAnchors.length, 0);
+    const newAnchorCount = revision.concepts.reduce((sum, concept) => sum + concept.sourceAnchors.length, 0);
+    integration = {
+      mode: "incremental",
+      reusedConcepts,
+      addedConcepts,
+      preservedOldConcepts,
+      addedAnchors: Math.max(0, newAnchorCount - oldAnchorCount),
+      warnings: [
+        ...preservedOldConcepts < active.concepts.length ? [`\u6709 ${active.concepts.length - preservedOldConcepts} \u4E2A\u65E7\u6982\u5FF5\u672A\u51FA\u73B0\u5728\u8349\u6848\u4E2D\uFF0C\u786E\u8BA4\u524D\u8BF7\u68C0\u67E5`] : [],
+        ...revision.provenance === "llm-wiki" ? [] : []
+      ]
+    };
+  }
   const coverage = await services.corpus.buildCourseDraftCoverage(course.id, revision.id);
   if (!coverage.ok) {
     return {
@@ -64889,6 +66690,7 @@ async function buildDraftView(services, course, revision) {
       coverage: [],
       warnings: [`\u65E0\u6CD5\u8BFB\u53D6\u8D44\u6599\u8986\u76D6\u60C5\u51B5\uFF1A${coverage.error.message}`],
       origin,
+      ...integration === void 0 ? {} : { integration },
       ...structureNotes.length > 0 ? { structureNotes } : {}
     };
   }
@@ -64898,6 +66700,7 @@ async function buildDraftView(services, course, revision) {
     coverage: coverage.value.coverage,
     warnings: coverage.value.warnings,
     origin,
+    ...integration === void 0 ? {} : { integration },
     ...structureNotes.length > 0 ? { structureNotes } : {}
   };
 }

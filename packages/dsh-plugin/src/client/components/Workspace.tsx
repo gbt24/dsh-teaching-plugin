@@ -28,6 +28,7 @@ import { isGraphicalActivityKind } from '../activity-kinds.ts'
 import { Onboarding, type WizardResult } from './Onboarding.tsx'
 import type { DraftConfirmEdits } from '../draft-edits.ts'
 import { CourseSetupCard } from './CourseSetupCard.tsx'
+import { DraftReview } from './DraftReview.tsx'
 import { loadLayoutPrefs, saveLayoutPrefs } from '../layout-prefs.ts'
 import {
   COMPRESSION_CONFIRM_TEXT, COMPRESSION_FORCE_TEXT, compressionSuccessMessage,
@@ -103,6 +104,8 @@ export function TeachingWorkspace(props: {
   /** Pending learning-session deletion awaiting the shared confirm modal. */
   const [sessionDeleteTarget, setSessionDeleteTarget] = useState<SessionSummary | undefined>(undefined)
   const [deleteSessionBusy, setDeleteSessionBusy] = useState(false)
+  /** Draft produced by "integrate new materials" on an existing course. */
+  const [integrationDraft, setIntegrationDraft] = useState<CourseDraftView | undefined>(undefined)
   const [goalsEditor, setGoalsEditor] = useState<{ readonly courseId: string; readonly goals: string; readonly background: string } | undefined>(undefined)
   const [savingGoals, setSavingGoals] = useState(false)
   const [deleteSources, setDeleteSources] = useState(false)
@@ -1205,6 +1208,25 @@ export function TeachingWorkspace(props: {
   const busy = state.busy !== undefined || isChatBusy(state)
   const draftForOnboarding: CourseDraftView | undefined = state.courseDraft
 
+  const finishGuidedCourse = useCallback(async (courseId: string): Promise<void> => {
+    try {
+      const [detail, sessionsResponse] = await Promise.all([
+        apiGet('courses.get', { courseId: courseId as never }),
+        apiGet('sessions.list', { courseId: courseId as never }),
+      ])
+      if (!mounted.current) return
+      dispatch({ type: 'course/loaded', detail, sessions: sessionsResponse.sessions })
+      if (detail.draftRevision !== undefined) {
+        setSetup({ phase: 'draft', draft: detail.draft })
+      }
+      const { courses } = await apiGet('courses.list')
+      if (mounted.current) dispatch({ type: 'courses/loaded', courses })
+      notify({ kind: 'info', message: '课程与资料已准备好，请确认课程结构后开始学习。' })
+    } catch (error) {
+      notify({ kind: 'error', message: `打开规划生成的课程失败：${describeError(error)}` })
+    }
+  }, [notify])
+
   const onboardingCallbacks = {
     ...(state.bootstrap !== undefined ? { bootstrap: state.bootstrap } : {}),
     ...(state.busy !== undefined ? { busy: state.busy } : {}),
@@ -1221,6 +1243,7 @@ export function TeachingWorkspace(props: {
     onConfirmDraft: confirmDraft,
     onStartAdhoc: startAdhocSession,
     ...(props.pickDirectory === undefined ? {} : { onPickDirectory: props.pickDirectory }),
+    onGuidedCourseCreated: finishGuidedCourse,
   }
 
   return (
@@ -1285,6 +1308,21 @@ export function TeachingWorkspace(props: {
           onAdhoc={() => { void adhocSetup(detail.course.id) }}
         />
       )}
+      {integrationDraft !== undefined && detail !== undefined && (
+        <div className="ai-integration-review" role="region" aria-label="新资料整合草案确认">
+          <DraftReview
+            draft={integrationDraft}
+            busy={busy}
+            onConfirm={async (edits) => {
+              const result = await confirmDraft(detail.course.id, integrationDraft.revision.id, edits)
+              if (result.ok) setIntegrationDraft(undefined)
+            }}
+            onRegenerate={() => setIntegrationDraft(undefined)}
+            onAdhoc={() => setIntegrationDraft(undefined)}
+            onBack={() => setIntegrationDraft(undefined)}
+          />
+        </div>
+      )}
       {state.phase === 'ready' && !needsCourseSetup(detail) && (
         <div
           className="ai-teaching-body"
@@ -1308,6 +1346,13 @@ export function TeachingWorkspace(props: {
             }}
             onEditGoals={openGoalsEditor}
             onSelectSession={sessionId => { void selectSession(sessionId) }}
+            onImportLocalPaths={importPaths}
+            {...(props.pickDirectory === undefined ? {} : { onPickDirectory: props.pickDirectory })}
+            onMaterialsChanged={() => { if (detail !== undefined) void refreshCourse(detail.course.id) }}
+            onDraftReady={(draft) => {
+              setIntegrationDraft(draft)
+              if (detail !== undefined) void refreshCourse(detail.course.id)
+            }}
             onDeleteSession={requestDeleteSession}
             onNewSession={() => {
               const courseId = detail?.course.id

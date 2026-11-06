@@ -161,7 +161,11 @@ async function createHarness(replies: ConstructorParameters<typeof ScriptedModel
     },
     state,
     model,
-    web: { available: () => false, search: async () => ({ ok: false, error: { code: 'capability-missing', message: '无联网能力' } }) },
+    web: {
+      available: () => false,
+      search: async () => ({ ok: false, error: { code: 'capability-missing', message: '无联网能力' } }),
+      fetch: async () => ({ ok: false, error: { code: 'capability-missing', message: '无网页抓取能力' } }),
+    },
     tasks: new TaskManager(state),
     corpus: corpus as never,
     teaching,
@@ -777,6 +781,57 @@ describe('teaching host routes', () => {
     assert.equal(list.sessions.length, 0)
     const missing = await harness.call('sessions.get', { method: 'GET', query: { sessionId } })
     assert.equal((missing.json as { ok: boolean }).ok, false)
+  })
+
+  it('runs the guided planning interview and produces a validated plan brief', async () => {
+    const questions = {
+      questions: [
+        { id: 'goal', title: '学习目标', body: '你希望达到什么程度？', options: ['入门', '进阶'], recommendation: '按进阶设计，保留基础复习。' },
+        { id: 'time', title: '时间投入', body: '每周能投入多少时间？', recommendation: '按每周 6 小时设计。' },
+        { id: 'practice', title: '练习方式', body: '更喜欢哪种练习？', recommendation: '以真实例题为主，配少量自测。' },
+      ],
+      readyForPlan: false,
+    }
+    const finalRound = { questions: [], readyForPlan: true }
+    const brief = {
+      title: '机器学习进阶计划',
+      goals: ['能解释常见模型并完成实践'],
+      level: '进阶',
+      language: 'zh',
+      chapters: [{ title: '基础回顾', topics: ['线性代数', '概率'], prerequisites: [] }],
+      practiceStyle: '例题 + 小测',
+      exclusions: [],
+      searchTopics: ['机器学习 线性代数 基础', '机器学习 概率统计'],
+    }
+    const harness = await createHarness([
+      { kind: 'text', text: JSON.stringify(questions) },
+      { kind: 'text', text: JSON.stringify(finalRound) },
+      { kind: 'text', text: JSON.stringify(brief) },
+    ])
+    const started = unwrap<{ plan: { id: string; status: string; frontier: { id: string }[]; rounds: unknown[] } }>((
+      await harness.call('planning.start', { body: { topic: '机器学习', language: 'zh' } })
+    ).json)
+    assert.equal(started.plan.status, 'interviewing')
+    assert.equal(started.plan.frontier.length, 3)
+    const answered = unwrap<{ plan: { status: string; frontier?: unknown[] }; ready: boolean }>((
+      await harness.call('planning.answer', {
+        body: {
+          planId: started.plan.id,
+          answers: started.plan.frontier.map(question => ({ questionId: question.id, answer: '按推荐', usedRecommendation: true })),
+        },
+      })
+    ).json)
+    assert.equal(answered.ready, true)
+    assert.equal(answered.plan.status, 'plan-ready')
+    const withBrief = unwrap<{ plan: { brief?: { searchTopics: string[] }; searchQueries?: string[] } }>((
+      await harness.call('planning.brief', { body: { planId: started.plan.id } })
+    ).json)
+    assert.ok(withBrief.plan.brief !== undefined)
+    assert.ok((withBrief.plan.searchQueries ?? []).length >= 4)
+    const loaded = unwrap<{ plan: { status: string } }>((
+      await harness.call('planning.get', { method: 'GET', query: { planId: started.plan.id } })
+    ).json)
+    assert.equal(loaded.plan.status, 'plan-ready')
   })
 
   it('lists models, applies a plugin model override and resets to the host default', async () => {

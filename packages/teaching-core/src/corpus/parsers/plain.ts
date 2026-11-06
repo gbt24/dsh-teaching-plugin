@@ -125,6 +125,32 @@ async function addTextBlock(
   },
 ): Promise<void> {
   const { lines, starts } = options
+  // 单行超长（如网页正文被压成一行）：按字符上限切块，保证抽取预算/截断语义正确
+  if (options.startIndex === options.endIndex) {
+    const onlyLine = lines[options.startIndex] ?? ''
+    if (onlyLine.length > budget.limits.maxUnitChars) {
+      const lineStart = starts[options.startIndex] ?? 0
+      let offset = 0
+      while (offset < onlyLine.length) {
+        budget.checkAbort()
+        const chunk = onlyLine.slice(offset, offset + budget.limits.maxUnitChars)
+        const chars: readonly [number, number] = [lineStart + offset, lineStart + offset + Math.max(0, chunk.length - 1)]
+        budget.addUnit({
+          kind: 'paragraph',
+          locator: {
+            ...(options.baseLocator ?? {}),
+            ...(options.sectionPath.length > 0 ? { sectionPath: [...options.sectionPath] } : {}),
+            lines: linesRange(options.startIndex, options.endIndex),
+            chars,
+          },
+          text: chunk,
+          confidence: 'high',
+        })
+        offset += chunk.length
+      }
+      return
+    }
+  }
   let cursor = options.startIndex
   while (cursor <= options.endIndex) {
     budget.checkAbort()

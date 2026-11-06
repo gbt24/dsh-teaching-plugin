@@ -12,6 +12,7 @@ import { basename, extname, join } from 'node:path'
 import type {
   ActivityState, ApiRequests, AppError, AttemptOutcome, AttemptValidation, BootstrapInfo,
   ChatMessage, ChatStreamEvent, Concept, ContextUsageView, Course, CourseDraftView, CourseRevision, CourseSummary,
+  CoursePlan, PlanAnswer, PlanBrief, PlanMaterialCandidate, PlanQuestion, PlanRound,
   CourseLearningRecord, EnvironmentDirectory, ExperimentRun, LearningAttempt, LearningService, LessonActivity,
   MasteryRecord, ModelCapabilities, ModelCatalogView, ModelInfoView, ModelSelectionView, ReviewItem, SessionSummary, SessionView,
   SourceAnchor, SourceDocument, SourceView, TeachingService, TeachingSession, TeachingTurnInput,
@@ -40,6 +41,13 @@ import {
   resolveCompactionPolicy, selectCompactionRange, SUMMARY_MAX_TOKENS, TEACHING_COMPACTION_INSTRUCTION,
 } from './context.ts'
 import { toSearchQuery, wantsWebLookup } from './web.ts'
+import { reconcileDraftWithActive } from '@deepseek-teaching/core/corpus'
+import { PlanRepository } from './plans.ts'
+import { importWebPage } from './web-ingest.ts'
+import {
+  buildInterviewRequest, buildPlanBriefRequest, buildSearchQueries, normalizePlanTopic,
+  parseInterviewResponse, parsePlanBrief, MAX_INTERVIEW_ROUNDS,
+} from '@deepseek-teaching/core/planning'
 import type { CorpusServiceApi } from '@deepseek-teaching/core/corpus'
 import {
   activityFromProposal, appError, createCourseRecord, createSessionRecord,
@@ -522,6 +530,442 @@ ${buildSummaryInput(selection.compacted)}
   })
 
   /* ------------------------------------------------------------------ */
+  /* Guided course planning                                               */
+  /* ------------------------------------------------------------------ */
+
+  const plans = new PlanRepository(services.state)
+
+  const planLanguage = (value: unknown): 'zh' | 'en' | 'bilingual' =>
+    value === 'en' || value === 'bilingual' ? value : 'zh'
+
+  const planId = (): string => `plan-${randomUUID().slice(0, 8)}`
+
+  /** Model-only fallback: build a draft directly from the confirmed PlanBrief. */
+  const planBriefDraft = (course: Course, brief: PlanBrief): CourseRevision => {
+    const concepts: Concept[] = []
+    const chapters: Array<NonNullable<CourseRevision['chapters']>[number]> = []
+    for (const [chapterIndex, chapter] of brief.chapters.entries()) {
+      const topics = chapter.topics.length > 0 ? chapter.topics : [chapter.title]
+      const chapterConcepts: string[] = []
+      for (const [topicIndex, topic] of topics.entries()) {
+        const id = newConceptId()
+        concepts.push({
+          id,
+          title: topic.slice(0, 120),
+          summary: `${chapter.title}：${topic}`.slice(0, 1200),
+          prerequisites: [],
+          sourceAnchors: [],
+        })
+        chapterConcepts.push(id)
+        void topicIndex
+      }
+      chapters.push({
+        id: `chapter-plan-${chapterIndex + 1}`,
+        title: chapter.title.slice(0, 160),
+        ...(chapter.prerequisites !== undefined && chapter.prerequisites.length > 0
+          ? { summary: `前置：${chapter.prerequisites.join('；')}` }
+          : {}),
+        conceptIds: chapterConcepts as never,
+        role: 'chapter',
+      })
+    }
+    return {
+      id: newCourseRevisionId(),
+      courseId: course.id,
+      version: 2,
+      createdAt: nowIso(),
+      state: 'draft',
+      provenance: 'ai-draft',
+      goals: [...brief.goals],
+      language: brief.language,
+      sources: [],
+      concepts,
+      sequence: concepts.map(concept => concept.id),
+      chapters,
+      basedOn: [],
+      changeSummary: '按学习计划生成的结构；暂无可引用的课程资料锚点，可稍后添加资料并整合。',
+    }
+  }
+
+  /** Ask the model for the next frontier and validate it. One bounded retry. */
+  const askInterview = async (
+    plan: CoursePlan,
+    roundIndex: number,
+    signal?: AbortSignal,
+  ): Promise<{ questions: readonly PlanQuestion[]; ready: boolean }> => {
+    const request = buildInterviewRequest({
+      topic: plan.topic,
+      language: plan.language ?? 'zh',
+      roundIndex,
+      maxRounds: MAX_INTERVIEW_ROUNDS,
+      decisions: plan.decisions,
+      previousRounds: plan.rounds,
+    })
+    let completion = await services.model.complete(request, signal)
+    let parsed = parseInterviewResponse(completion.json ?? completion.text, {
+      previousRounds: plan.rounds,
+      ...(plan.frontier === undefined || plan.frontier.length === 0 ? {} : { previousQuestions: plan.frontier }),
+    })
+    if (parsed.error !== undefined) {
+      completion = await services.model.complete(request, signal)
+      parsed = parseInterviewResponse(completion.json ?? completion.text, { previousRounds: plan.rounds })
+    }
+    if (parsed.error !== undefined) {
+      services.logger('planning interview parse failed', {
+        message: parsed.error,
+        chars: completion.text.length,
+        preview: completion.text.slice(0, 800),
+        tail: completion.text.slice(-400),
+      })
+      throw appError('uncertain', `访谈问题生成失败：${parsed.error}`)
+    }
+    return { questions: parsed.questions, ready: parsed.readyForPlan }
+  }
+
+  route('planning.start', async ({ body }) => {
+    const input = body as ApiRequests['planning.start']['body']
+    const topic = normalizePlanTopic(input?.topic ?? '')
+    if (topic.length < 2) throw appError('invalid-input', '请先说明你想学习什么（至少 2 个字符）')
+    const language = planLanguage(input?.language)
+    const now = nowIso()
+    const plan: CoursePlan = {
+      id: planId(),
+      status: 'interviewing',
+      topic,
+      language,
+      createdAt: now,
+      updatedAt: now,
+      rounds: [],
+      decisions: [],
+    }
+    const interview = await askInterview(plan, 0)
+    const firstRound: PlanRound = { index: 0, questions: interview.questions, createdAt: nowIso() }
+    const next: CoursePlan = {
+      ...plan,
+      rounds: interview.questions.length === 0 ? [] : [firstRound],
+      frontier: interview.ready ? [] : interview.questions,
+      status: interview.ready ? 'plan-ready' : 'interviewing',
+    }
+    return envelope({ plan: await plans.save(next) })
+  })
+
+  route('planning.get', async ({ query }) => {
+    const id = requireQuery(query, 'planId')
+    const plan = await plans.get(id)
+    if (plan === undefined) throw notFoundError('规划')
+    return envelope({ plan })
+  })
+
+  route('planning.answer', async ({ body }) => {
+    const input = body as ApiRequests['planning.answer']['body']
+    if (typeof input?.planId !== 'string') throw appError('invalid-input', '缺少 planId')
+    if (!Array.isArray(input.answers)) throw appError('invalid-input', '缺少 answers')
+    const plan = await plans.get(input.planId)
+    if (plan === undefined) throw notFoundError('规划')
+    if (plan.status !== 'interviewing') throw appError('invalid-input', '当前规划不在访谈阶段')
+    const frontier = plan.frontier ?? []
+    if (frontier.length === 0) throw appError('invalid-input', '当前没有待回答的问题')
+    const byQuestion = new Map<string, PlanAnswer>()
+    for (const answer of input.answers) {
+      if (typeof answer?.questionId === 'string' && typeof answer?.answer === 'string' && answer.answer.trim() !== '') {
+        byQuestion.set(answer.questionId, { ...answer, answer: answer.answer.trim() })
+      }
+    }
+    const missing = frontier.filter(question => !byQuestion.has(question.id))
+    if (missing.length > 0) {
+      // Recommendations are first-class answers; fill them so a skipped optional
+      // question cannot dead-end the interview.
+      for (const question of missing) {
+        byQuestion.set(question.id, {
+          questionId: question.id,
+          answer: question.recommendation ?? '按推荐',
+          usedRecommendation: true,
+        })
+      }
+    }
+    const answers = frontier.map(question => byQuestion.get(question.id)!)
+    const decisions: CoursePlan['decisions'] = [
+      ...plan.decisions,
+      ...frontier.map(question => {
+        const answer = byQuestion.get(question.id)!
+        return {
+          key: question.id,
+          value: answer.answer,
+          decidedBy: answer.usedRecommendation === true ? 'recommendation' as const : 'user' as const,
+        }
+      }),
+    ]
+    const rounds = plan.rounds.map((round, index) =>
+      index === plan.rounds.length - 1 ? { ...round, answers } : round)
+    const updated: CoursePlan = { ...plan, rounds, decisions, frontier: [] }
+    // Ask the next frontier unless the round cap is reached.
+    if (rounds.length >= MAX_INTERVIEW_ROUNDS) {
+      const ready: CoursePlan = { ...updated, status: 'plan-ready' }
+      return envelope({ plan: await plans.save(ready), ready: true })
+    }
+    const interview = await askInterview(updated, rounds.length)
+    if (interview.ready || interview.questions.length === 0) {
+      const ready: CoursePlan = { ...updated, status: 'plan-ready', frontier: [] }
+      return envelope({ plan: await plans.save(ready), ready: true })
+    }
+    const nextRound: PlanRound = {
+      index: rounds.length,
+      questions: interview.questions,
+      createdAt: nowIso(),
+    }
+    const next: CoursePlan = {
+      ...updated,
+      rounds: [...rounds, nextRound],
+      frontier: interview.questions,
+      status: 'interviewing',
+    }
+    return envelope({ plan: await plans.save(next), ready: false })
+  })
+
+  route('planning.brief', async ({ body }) => {
+    const input = body as ApiRequests['planning.brief']['body']
+    if (typeof input?.planId !== 'string') throw appError('invalid-input', '缺少 planId')
+    const plan = await plans.get(input.planId)
+    if (plan === undefined) throw notFoundError('规划')
+    let brief = input.brief
+    if (brief === undefined) {
+      const request = buildPlanBriefRequest({
+        topic: plan.topic,
+        decisions: plan.decisions,
+        rounds: plan.rounds,
+        language: plan.language ?? 'zh',
+      })
+      let completion = await services.model.complete(request)
+      let parsed = parsePlanBrief(completion.json ?? completion.text, plan.language ?? 'zh')
+      if (parsed.brief === undefined) {
+        completion = await services.model.complete(request)
+        parsed = parsePlanBrief(completion.json ?? completion.text, plan.language ?? 'zh')
+      }
+      if (parsed.brief === undefined) {
+        services.logger('planning brief parse failed', {
+          message: parsed.error ?? 'no brief',
+          chars: completion.text.length,
+          preview: completion.text.slice(0, 800),
+        })
+        throw appError('uncertain', `学习计划校验失败：${parsed.error ?? '模型没有返回有效计划'}`)
+      }
+      brief = parsed.brief
+    }
+    if (brief.title.trim() === '' || brief.chapters.length === 0 || brief.searchTopics.length === 0) {
+      throw appError('invalid-input', '学习计划缺少标题、章节或检索主题')
+    }
+    const searchQueries = buildSearchQueries(brief)
+    const next: CoursePlan = { ...plan, brief, searchQueries, status: 'plan-ready' }
+    return envelope({ plan: await plans.save(next) })
+  })
+
+  route('planning.search', async ({ body }) => {
+    const input = body as ApiRequests['planning.search']['body']
+    if (typeof input?.planId !== 'string') throw appError('invalid-input', '缺少 planId')
+    const plan = await plans.get(input.planId)
+    if (plan === undefined) throw notFoundError('规划')
+    if (plan.brief === undefined) throw appError('invalid-input', '请先生成/确认学习计划')
+    const queries = (plan.searchQueries ?? buildSearchQueries(plan.brief)).slice(0, 8)
+    const handle = services.tasks.start({
+      kind: 'planning-search',
+      label: '联网搜索学习资料',
+      steps: queries.map((query, index) => ({ id: `query-${index}`, label: query })),
+    }, async context => {
+      const candidates: PlanMaterialCandidate[] = []
+      const seen = new Set<string>()
+      const warnings: string[] = []
+      for (let index = 0; index < queries.length; index += 1) {
+        if (context.cancelled()) break
+        const query = queries[index]!
+        context.step(`query-${index}`, { status: 'running' })
+        const result = await services.web.search(query, { maxResults: 4, signal: context.signal })
+        if (!result.ok) {
+          warnings.push(`${query}：${result.error.message}`)
+          context.step(`query-${index}`, { status: 'failed', detail: result.error.message })
+          continue
+        }
+        for (const hit of result.value) {
+          if (seen.has(hit.url) || candidates.length >= 24) continue
+          seen.add(hit.url)
+          let domain = ''
+          try { domain = new URL(hit.url).hostname.replace(/^www\./u, '') } catch { domain = '' }
+          const official = /(^|\.)(edu|ac\.[a-z]{2}|gov)(\.|$)/iu.test(domain)
+            || /docs\.|developer\.|official/iu.test(domain)
+          candidates.push({
+            id: `cand-${candidates.length + 1}`,
+            url: hit.url,
+            title: hit.title.slice(0, 200),
+            snippet: hit.snippet.slice(0, 500),
+            domain,
+            score: official ? 2 : 1,
+            selected: official || candidates.length < 6,
+            status: 'candidate',
+          })
+        }
+        context.step(`query-${index}`, { status: 'done', detail: `${result.value.length} 个结果` })
+      }
+      const next: CoursePlan = {
+        ...plan,
+        status: 'materials-review',
+        searchQueries: queries,
+        candidates,
+        selectedCandidateIds: candidates.filter(candidate => candidate.selected === true).map(candidate => candidate.id),
+        warnings,
+      }
+      await plans.save(next)
+      context.result({ candidates, warnings })
+      return { candidates }
+    })
+    return envelope({ task: handle })
+  })
+
+  route('planning.fetch', async ({ body }) => {
+    const input = body as ApiRequests['planning.fetch']['body']
+    if (typeof input?.planId !== 'string') throw appError('invalid-input', '缺少 planId')
+    const plan = await plans.get(input.planId)
+    if (plan === undefined) throw notFoundError('规划')
+    const candidates = plan.candidates ?? []
+    const wanted = input.candidateIds === undefined
+      ? candidates.filter(candidate => candidate.selected === true)
+      : candidates.filter(candidate => input.candidateIds?.includes(candidate.id) === true)
+    if (wanted.length === 0) throw appError('invalid-input', '请至少选择一份候选资料')
+    const handle = services.tasks.start({
+      kind: 'planning-materials',
+      label: `抓取 ${wanted.length} 份网页资料`,
+      steps: wanted.map((candidate, index) => ({ id: `page-${index}`, label: candidate.title })),
+    }, async context => {
+      const sourceIds: string[] = []
+      const failed: string[] = []
+      const warnings: string[] = []
+      const updatedCandidates = candidates.map(candidate => ({ ...candidate }))
+      for (let index = 0; index < wanted.length; index += 1) {
+        const candidate = wanted[index]!
+        if (context.cancelled()) break
+        context.step(`page-${index}`, { status: 'running' })
+        const fetched = await services.web.fetch(candidate.url, { signal: context.signal })
+        const target = updatedCandidates.find(item => item.id === candidate.id)
+        if (!fetched.ok) {
+          if (target !== undefined) { target.status = 'failed'; target.reason = fetched.error.message }
+          failed.push(`${candidate.url}：${fetched.error.message}`)
+          context.step(`page-${index}`, { status: 'failed', detail: fetched.error.message })
+          continue
+        }
+        const imported = await importWebPage(services.corpus as never, {
+          url: candidate.url,
+          finalUrl: fetched.value.url,
+          title: candidate.title,
+          ...(fetched.value.kind === 'html' ? { html: fetched.value.content } : { text: fetched.value.content }),
+          fetchedAt: nowIso(),
+          cached: false,
+        } as never)
+        if (!imported.ok) {
+          if (target !== undefined) { target.status = 'failed'; target.reason = imported.error.message }
+          failed.push(`${candidate.url}：${imported.error.message}`)
+          context.step(`page-${index}`, { status: 'failed', detail: imported.error.message })
+          continue
+        }
+        sourceIds.push(imported.value.document.id)
+        if (target !== undefined) target.status = 'fetched'
+        if (imported.value.document.status === 'needs-review') {
+          warnings.push(`${candidate.title}：抽取内容有需要核对的问题`)
+        }
+        context.step(`page-${index}`, { status: 'done' })
+      }
+      const next: CoursePlan = {
+        ...plan,
+        status: 'materials-review',
+        candidates: updatedCandidates,
+        importedSourceIds: sourceIds as never,
+        selectedCandidateIds: updatedCandidates.filter(candidate => candidate.status === 'fetched').map(candidate => candidate.id),
+        warnings: [...(plan.warnings ?? []), ...warnings],
+      }
+      await plans.save(next)
+      context.result({ sources: sourceIds, failed, warnings })
+      return { sources: sourceIds, failed, warnings }
+    })
+    return envelope({ task: handle })
+  })
+
+  route('planning.createCourse', async ({ body }) => {
+    const input = body as ApiRequests['planning.createCourse']['body']
+    if (typeof input?.planId !== 'string') throw appError('invalid-input', '缺少 planId')
+    const plan = await plans.get(input.planId)
+    if (plan === undefined) throw notFoundError('规划')
+    if (plan.brief === undefined) throw appError('invalid-input', '缺少学习计划')
+    const handle = services.tasks.start({
+      kind: 'planning-course',
+      label: '创建课程并生成 llm-wiki 结构',
+      steps: [
+        { id: 'course', label: '创建课程' },
+        { id: 'sources', label: '关联资料' },
+        { id: 'structure', label: '生成课程结构' },
+      ],
+    }, async context => {
+      const brief = plan.brief as PlanBrief
+      const courseTitle = brief.title.trim().slice(0, 120) || 'AI 规划课程'
+      const courseGoals = brief.goals.map(goal => goal.trim().slice(0, 240)).filter(goal => goal !== '')
+      const courseDescription = courseGoals.join('；').slice(0, 2000)
+      context.step('course', { status: 'running' })
+      const { course, revision } = createCourseRecord(
+        courseTitle,
+        courseDescription,
+        brief.language,
+        courseGoals,
+      )
+      const createdCourse = await services.courses.save(course)
+      await services.courses.saveRevision(revision)
+      await services.courses.save({ ...createdCourse, draftRevisionId: revision.id })
+      context.step('course', { status: 'done' })
+      context.step('sources', { status: 'running' })
+      for (const sourceId of plan.importedSourceIds ?? []) {
+        await services.courses.setSourceCourse(sourceId, createdCourse.id, true).catch(() => undefined)
+      }
+      context.step('sources', { status: 'done' })
+      context.step('structure', { status: 'running' })
+      const sourceIds = plan.importedSourceIds ?? []
+      let structureRevision: CourseRevision | undefined
+      let structureWarning: string | undefined
+      if (sourceIds.length > 0) {
+        const proposed = await services.corpus.proposeCourseStructure({
+          courseId: createdCourse.id,
+          courseTitle: createdCourse.title,
+          goal: brief.goals.join('；') || createdCourse.description,
+          language: brief.language,
+          strategy: 'llm-wiki',
+          instruction: '这是引导学生规划后创建的课程；按 llm-wiki 结构整理联网资料。',
+        }, context.signal)
+        if (proposed.ok) structureRevision = proposed.value
+        else structureWarning = `llm-wiki 结构生成失败（${proposed.error.message}），已按学习计划生成无资料锚点的初始结构`
+      }
+      if (structureRevision === undefined) {
+        structureRevision = planBriefDraft(createdCourse, brief)
+        structureWarning ??= '本次没有可用网页资料，课程按学习计划生成；概念暂无资料锚点，可稍后在资料区添加并整合。'
+      }
+      await services.courses.saveRevision(structureRevision)
+      await services.courses.save({ ...createdCourse, draftRevisionId: structureRevision.id })
+      context.step('structure', { status: 'done', detail: `${structureRevision.concepts.length} 个概念` })
+      if (structureWarning !== undefined) context.warn(structureWarning)
+      await plans.save({
+        ...plan,
+        status: 'done',
+        courseId: createdCourse.id,
+        warnings: [...(plan.warnings ?? []), ...(structureWarning === undefined ? [] : [structureWarning])],
+      })
+      context.result({ courseId: createdCourse.id, revisionId: structureRevision.id, warning: structureWarning })
+      return { courseId: createdCourse.id, revisionId: structureRevision.id }
+    })
+    return envelope({ task: handle })
+  })
+
+  route('planning.cancel', async ({ body }) => {
+    const input = body as ApiRequests['planning.cancel']['body']
+    if (typeof input?.planId !== 'string') throw appError('invalid-input', '缺少 planId')
+    const plan = await plans.get(input.planId)
+    if (plan === undefined) throw notFoundError('规划')
+    return envelope({ plan: await plans.save({ ...plan, status: 'cancelled', frontier: [] }) })
+  })
+
+  /* ------------------------------------------------------------------ */
   /* Courses                                                              */
   /* ------------------------------------------------------------------ */
 
@@ -710,6 +1154,105 @@ ${buildSummaryInput(selection.compacted)}
         })
       }
       return { imported: outcome.documents.map(document => document.id) }
+    })
+    return envelope({ task: handle })
+  })
+
+  route('sources.importWeb', async ({ body }) => {
+    const input = body as ApiRequests['sources.importWeb']['body']
+    if (typeof input?.courseId !== 'string') throw appError('invalid-input', '缺少 courseId')
+    const course = await services.courses.get(input.courseId)
+    if (course === undefined) throw notFoundError('课程')
+    const urls = (input.urls ?? [])
+      .filter((url): url is string => typeof url === 'string' && /^https?:\/\//iu.test(url.trim()))
+      .map(url => url.trim())
+    if (urls.length === 0) throw appError('invalid-input', '请提供至少一个 http(s) 网页 URL')
+    const uniqueUrls = [...new Set(urls)].slice(0, 12)
+    const handle = services.tasks.start({
+      kind: 'source-import-web',
+      label: `抓取 ${uniqueUrls.length} 个网页`,
+      steps: uniqueUrls.map((url, index) => ({ id: `web-${index}`, label: url.slice(0, 80) })),
+    }, async context => {
+      const sourceIds: string[] = []
+      const failures: { url: string; error: string }[] = []
+      for (let index = 0; index < uniqueUrls.length; index += 1) {
+        if (context.cancelled()) break
+        const url = uniqueUrls[index]!
+        context.step(`web-${index}`, { status: 'running' })
+        const fetched = await services.web.fetch(url, { signal: context.signal })
+        if (!fetched.ok) {
+          failures.push({ url, error: fetched.error.message })
+          context.step(`web-${index}`, { status: 'failed', detail: fetched.error.message })
+          continue
+        }
+        const meta = input.metadata?.[url]
+        const imported = await importWebPage(services.corpus, {
+          courseId: course.id,
+          url,
+          finalUrl: fetched.value.url,
+          ...(meta?.title !== undefined ? { title: meta.title } : {}),
+          ...(fetched.value.kind === 'html' ? { html: fetched.value.content } : { text: fetched.value.content }),
+          fetchedAt: nowIso(),
+          cached: false,
+        } as never)
+        if (!imported.ok) {
+          failures.push({ url, error: imported.error.message })
+          context.step(`web-${index}`, { status: 'failed', detail: imported.error.message })
+          continue
+        }
+        sourceIds.push(imported.value.document.id)
+        context.step(`web-${index}`, { status: 'done' })
+      }
+      context.result({ imported: sourceIds, failures })
+      if (failures.length > 0) context.warn(`${failures.length} 个网页抓取/解析失败`)
+      return { imported: sourceIds, failures }
+    })
+    return envelope({ task: handle })
+  })
+
+  route('sources.integrate', async ({ body }) => {
+    const input = body as ApiRequests['sources.integrate']['body']
+    if (typeof input?.courseId !== 'string') throw appError('invalid-input', '缺少 courseId')
+    const course = await services.courses.get(input.courseId)
+    if (course === undefined) throw notFoundError('课程')
+    const active = await services.courses.getActiveRevision(course)
+    if (active === undefined) throw appError('invalid-input', '课程还没有已确认结构，请先生成并确认课程草案')
+    const profile = await services.profiles.get()
+    const handle = services.tasks.start({
+      kind: 'source-integrate',
+      label: '用 llm-wiki 整合新资料',
+      steps: [
+        { id: 'digest', label: '读取全部资料' },
+        { id: 'structure', label: '生成整合结构' },
+        { id: 'reconcile', label: '保留既有概念与掌握记录' },
+      ],
+    }, async context => {
+      context.step('digest', { status: 'done', detail: `${(await services.courses.listSources(course.id)).length} 份资料` })
+      context.step('structure', { status: 'running' })
+      const proposed = await services.corpus.proposeCourseStructure({
+        courseId: course.id,
+        courseTitle: course.title,
+        goal: active.goals.join('；') || course.description || `系统学习《${course.title}》`,
+        ...(active.background === undefined ? {} : { background: active.background }),
+        language: profile.language,
+        strategy: 'llm-wiki',
+        instruction: '左侧资料区新增了资料。请按 llm-wiki 规则整合全部现有资料；保持既有概念语义连续，新增资料对应的概念要有 anchors。',
+      }, context.signal)
+      if (!proposed.ok) throw appError(proposed.error.code, proposed.error.message, proposed.error.details)
+      context.step('structure', { status: 'done', detail: `${proposed.value.concepts.length} 个概念` })
+      context.step('reconcile', { status: 'running' })
+      const draft = await services.courses.getRevision(course.id, proposed.value.id)
+      if (draft === undefined) throw notFoundError('课程草案')
+      const reconciled = reconcileDraftWithActive(active, draft)
+      const saved: CourseRevision = { ...reconciled.revision, changeSummary: `${reconciled.revision.changeSummary ?? ''}；整合新增资料（复用 ${reconciled.stats.reusedConcepts}，新增 ${reconciled.stats.addedConcepts}，保留旧概念 ${reconciled.stats.preservedOldConcepts}）`.trim() }
+      await services.courses.saveRevision(saved)
+      await services.courses.save({ ...course, draftRevisionId: saved.id })
+      context.step('reconcile', { status: 'done', detail: `复用 ${reconciled.stats.reusedConcepts} / 新增 ${reconciled.stats.addedConcepts} / 保留 ${reconciled.stats.preservedOldConcepts}` })
+      context.result({
+        revisionId: saved.id,
+        integration: { mode: 'incremental', ...reconciled.stats },
+      })
+      return { revisionId: saved.id, integration: reconciled.stats }
     })
     return envelope({ task: handle })
   })
@@ -2115,7 +2658,7 @@ function requestSpec(operation: Operation): { method: 'GET' | 'POST' } {
     'bootstrap', 'courses.list', 'courses.get', 'courseDraft.get', 'sources.get',
     'sessions.list', 'sessions.get', 'activity.get', 'attempts.list', 'mastery.list',
     'review.list', 'profile.get', 'environments.list', 'tasks.get', 'tasks.list',
-    'capabilities.get', 'runs.latest', 'model.catalog', 'model.info', 'context.usage',
+    'capabilities.get', 'runs.latest', 'model.catalog', 'model.info', 'context.usage', 'planning.get',
   ])
   return { method: getOperations.has(operation) ? 'GET' : 'POST' }
 }
@@ -2214,6 +2757,32 @@ async function buildDraftView(
   const structureNotes = revision.provenance === 'kb-structure' || revision.provenance === 'llm-wiki'
     ? (revision.changeSummary === undefined ? [] : [revision.changeSummary])
     : []
+  // Compare with the current active revision so the review can show what an
+  // incremental material integration reused/added without hiding old concepts.
+  const active = await services.courses.getActiveRevision(course)
+  let integration: CourseDraftView['integration']
+  if (active !== undefined && active.id !== revision.id) {
+    const activeIds = new Set(active.concepts.map(concept => concept.id as string))
+    const draftIds = new Set(revision.concepts.map(concept => concept.id as string))
+    const reusedConcepts = revision.concepts.filter(concept => activeIds.has(concept.id as string)).length
+    const addedConcepts = revision.concepts.filter(concept => !activeIds.has(concept.id as string)).length
+    const preservedOldConcepts = active.concepts.filter(concept => draftIds.has(concept.id as string)).length
+    const oldAnchorCount = active.concepts.reduce((sum, concept) => sum + concept.sourceAnchors.length, 0)
+    const newAnchorCount = revision.concepts.reduce((sum, concept) => sum + concept.sourceAnchors.length, 0)
+    integration = {
+      mode: 'incremental',
+      reusedConcepts,
+      addedConcepts,
+      preservedOldConcepts,
+      addedAnchors: Math.max(0, newAnchorCount - oldAnchorCount),
+      warnings: [
+        ...(preservedOldConcepts < active.concepts.length
+          ? [`有 ${active.concepts.length - preservedOldConcepts} 个旧概念未出现在草案中，确认前请检查`]
+          : []),
+        ...(revision.provenance === 'llm-wiki' ? [] : []),
+      ],
+    }
+  }
   const coverage = await services.corpus.buildCourseDraftCoverage(course.id, revision.id)
   if (!coverage.ok) {
     return {
@@ -2222,6 +2791,7 @@ async function buildDraftView(
       coverage: [],
       warnings: [`无法读取资料覆盖情况：${coverage.error.message}`],
       origin,
+      ...(integration === undefined ? {} : { integration }),
       ...(structureNotes.length > 0 ? { structureNotes } : {}),
     }
   }
@@ -2231,6 +2801,7 @@ async function buildDraftView(
     coverage: coverage.value.coverage,
     warnings: coverage.value.warnings,
     origin,
+    ...(integration === undefined ? {} : { integration }),
     ...(structureNotes.length > 0 ? { structureNotes } : {}),
   }
 }

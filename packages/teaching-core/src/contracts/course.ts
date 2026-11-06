@@ -131,6 +131,15 @@ export interface CourseDraftView {
   readonly origin?: 'kb-structure' | 'llm-wiki' | 'ai'
   /** Human-readable notes about detection, roles and fallback coverage. */
   readonly structureNotes?: readonly string[]
+  /** Incremental material integration summary (present for integrate drafts). */
+  readonly integration?: {
+    readonly mode: 'initial' | 'incremental'
+    readonly reusedConcepts: number
+    readonly addedConcepts: number
+    readonly preservedOldConcepts: number
+    readonly addedAnchors: number
+    readonly warnings: readonly string[]
+  }
 }
 
 /** Cross-course reference allowed when it genuinely helps understanding. */
