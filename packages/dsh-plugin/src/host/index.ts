@@ -23,6 +23,7 @@ import { createPortabilityService } from '@deepseek-teaching/core/portability'
 import { createEnvironmentManager } from '@deepseek-teaching/core/environments'
 import type { LearningService } from '@deepseek-teaching/core'
 import type { LessonActivity } from '@deepseek-teaching/core'
+import { PLUGIN_VERSION } from '../version.ts'
 import { HarnessModelAdapter } from './model-adapter.ts'
 import { createWebBridge } from './web.ts'
 import { registerRoutes } from './routes.ts'
@@ -75,7 +76,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
     console.log(`[ai-teaching] ${message}`, fields === undefined ? '' : JSON.stringify(fields))
   }
 
-  const state = new LocalState({ dataDir, pluginVersion: '0.1.0' })
+  const state = new LocalState({ dataDir, pluginVersion: PLUGIN_VERSION })
   const profiles = new ProfileRepository(state)
   const courses = new CourseRepository(state)
   const sessions = new SessionRepository(state)
@@ -112,7 +113,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
     sessions,
     learning,
     profiles,
-    pluginVersion: '0.1.0',
+    pluginVersion: PLUGIN_VERSION,
     appVersion: '0.2.2-rc.1',
   })
 
@@ -229,7 +230,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
     courses,
     sessions,
     learning,
-    pluginVersion: '0.1.0',
+    pluginVersion: PLUGIN_VERSION,
     dataDir,
     logger,
     hostFacts: {

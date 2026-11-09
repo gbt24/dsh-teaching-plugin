@@ -1,4 +1,4 @@
-// dsh-ai-teaching v0.1.0 — Host half. Built for DeepSeek Harness 0.2.2-rc.1.
+// dsh-ai-teaching v0.1.1 — Host half. Built for DeepSeek Harness 0.2.2-rc.1.
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -62882,6 +62882,9 @@ function createEnvironmentManager(options) {
   return new Manager(options);
 }
 
+// packages/dsh-plugin/src/version.ts
+var PLUGIN_VERSION = "0.1.1";
+
 // packages/dsh-plugin/src/host/model-adapter.ts
 var DEFAULT_TIMEOUT_MS3 = 18e4;
 var MAX_ATTEMPTS = 2;
@@ -67064,7 +67067,7 @@ function apply(ctx, config = {}) {
   const logger = (message, fields) => {
     console.log(`[ai-teaching] ${message}`, fields === void 0 ? "" : JSON.stringify(fields));
   };
-  const state = new LocalState({ dataDir, pluginVersion: "0.1.0" });
+  const state = new LocalState({ dataDir, pluginVersion: PLUGIN_VERSION });
   const profiles = new ProfileRepository(state);
   const courses = new CourseRepository(state);
   const sessions = new SessionRepository(state);
@@ -67097,7 +67100,7 @@ function apply(ctx, config = {}) {
     sessions,
     learning,
     profiles,
-    pluginVersion: "0.1.0",
+    pluginVersion: PLUGIN_VERSION,
     appVersion: "0.2.2-rc.1"
   });
   const ocrState = {
@@ -67201,7 +67204,7 @@ function apply(ctx, config = {}) {
     courses,
     sessions,
     learning,
-    pluginVersion: "0.1.0",
+    pluginVersion: PLUGIN_VERSION,
     dataDir,
     logger,
     hostFacts: {

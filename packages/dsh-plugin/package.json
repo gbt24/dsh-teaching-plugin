@@ -1,6 +1,6 @@
 {
   "name": "dsh-ai-teaching",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "description": "AI 知识库教学插件：以学生本地资料为课程依据的对话式教学、练习与实验（DeepSeek Harness Desktop）",

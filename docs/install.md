@@ -1,6 +1,6 @@
 # 安装、升级与卸载（DeepSeek Harness Desktop）
 
-当前目标版本：DeepSeek Harness Desktop **0.2.2-rc.1**（本机实测）。插件包名 `dsh-ai-teaching`，版本 `0.1.0`。
+当前目标版本：DeepSeek Harness Desktop **0.2.2-rc.1**（本机实测）。插件包名 `dsh-ai-teaching`，版本 `0.1.1`。
 
 ## 前置
 
@@ -19,7 +19,7 @@
 # 1. 完全退出 DeepSeek Harness Desktop
 # 2. 用应用自带 CLI 安装分发包
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.0.tgz
+  plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.1.tgz
 
 # 3. 重新打开应用，左侧栏出现「AI 教学」
 ```
@@ -86,15 +86,15 @@ pnpm run pack                   # 生成 dist/dsh-ai-teaching-<version>.tgz|.zip
 ```bash
 DSH_HOME=/tmp/dsh-release-check \
   "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile web add dist/dsh-ai-teaching-0.1.0.tgz
+  plugin --profile web add dist/dsh-ai-teaching-0.1.1.tgz
 # 启动后日志出现 [ai-teaching] ready 即通过
 ```
 
 确认后推送 tag 并创建 Release：
 
 ```bash
-git tag v0.1.0 && git push origin v0.1.0
-gh release create v0.1.0 dist/dsh-ai-teaching-0.1.0.tgz dist/dsh-ai-teaching-0.1.0.zip dist/SHA256SUMS \
-  --title "v0.1.0" --notes-file docs/release-notes-v0.1.0.md
+git tag v0.1.1 && git push origin v0.1.1
+gh release create v0.1.1 dist/dsh-ai-teaching-0.1.1.tgz dist/dsh-ai-teaching-0.1.1.zip dist/SHA256SUMS \
+  --title "v0.1.1" --notes-file docs/release-notes-v0.1.1.md
 ```
 - **数据迁移/备份**：设置页或 API 可创建备份 ZIP（含清单与 sha256，不含凭据）；换机恢复后会提示缺失的原资料路径。

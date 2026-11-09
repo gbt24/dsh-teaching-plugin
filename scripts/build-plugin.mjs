@@ -27,10 +27,6 @@ const shared = {
   bundle: true,
   logLevel: 'warning',
   minify: false,
-  define: {
-    __TEACHING_PLUGIN_VERSION__: JSON.stringify(version),
-    __TEACHING_SCHEMA_VERSION__: JSON.stringify(1),
-  },
 }
 
 // ---------------------------------------------------------------------------
@@ -77,7 +73,6 @@ if (hasClient) {
     loader: { '.css': 'text' },
     define: {
       'process.env.NODE_ENV': '"production"',
-      __TEACHING_PLUGIN_VERSION__: JSON.stringify(version),
     },
   })
   const body = clientBuild.outputFiles[0]?.text ?? ''

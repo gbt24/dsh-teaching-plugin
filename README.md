@@ -11,9 +11,9 @@ AI 知识库教学插件（DeepSeek Harness Desktop）
 
 ## 项目状态
 
-- 插件版本 `0.1.0`；目标 **DeepSeek Harness Desktop `0.2.2-rc.1`**（`engines.dsh`: `>=0.2.2-rc.1 <0.3.0`）。
+- 插件版本 `0.1.1`；目标 **DeepSeek Harness Desktop `0.2.2-rc.1`**（`engines.dsh`: `>=0.2.2-rc.1 <0.3.0`）。
 - 已在 **macOS + 0.2.2-rc.1** 上完成真实桌面加载、模型调用、资料导入、教学流程与数据持久化验证；Windows / Linux 尚未验证。
-- 自动化验证：`tsc` 0 errors、`524` 项测试通过；客户端 bundle 约 `1.1 MiB`。
+- 自动化验证：`tsc` 0 errors、`525` 项测试通过；客户端 bundle 约 `1.1 MiB`。
 - 真实桌面验收清单中仍有若干人工教学/外部依赖项在持续补齐，详见 `docs/evidence/`。
 
 ## 功能
@@ -50,13 +50,13 @@ AI 知识库教学插件（DeepSeek Harness Desktop）
 
 ### 方式一：GitHub Release 分发包（推荐给其他同学）
 
-从 [Releases](https://github.com/gbt24/dsh-teaching-plugin/releases) 下载 `dsh-ai-teaching-0.1.0.tgz`（或 `.zip`），无需安装 Node/pnpm，也不需要克隆仓库。
+从 [Releases](https://github.com/gbt24/dsh-teaching-plugin/releases) 下载 `dsh-ai-teaching-0.1.1.tgz`（或 `.zip`），无需安装 Node/pnpm，也不需要克隆仓库。
 
 ```bash
 # 1. 完全退出 DeepSeek Harness Desktop
 # 2. 安装下载的分发包
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.0.tgz
+  plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.1.tgz
 
 # 3. 重新打开 DeepSeek Harness，左侧栏出现「AI 教学」
 ```
@@ -92,7 +92,7 @@ pnpm install
 
 node scripts/build-plugin.mjs   # 生成 packages/dsh-plugin/lib/{index.js,client.js}
 pnpm typecheck                  # tsc --noEmit
-pnpm test                       # node --test，524 项
+pnpm test                       # node --test，525 项
 pnpm run pack                   # 生成 dist/ 下的 tgz/zip 发布产物
 ```
 
