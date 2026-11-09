@@ -33,6 +33,8 @@ export interface MaterialsPanelProps {
   readonly onMaterialsChanged?: () => void | Promise<void>
   /** Draft refreshed after integration; open the draft review. */
   readonly onDraftReady?: (draft: CourseDraftView) => void
+  /** Open the full "sources" tab (the sidebar only lists the first few). */
+  readonly onShowAllSources?: () => void
 }
 
 type ModalTab = 'local' | 'web'
@@ -193,24 +195,33 @@ export function MaterialsPanel(props: MaterialsPanelProps): React.ReactElement {
         </button>
       </div>
       {props.sources.length === 0 && <div className="ai-muted">尚未导入资料</div>}
-      {props.sources.slice(0, 8).map(source => (
-        <button
-          key={source.id}
-          type="button"
-          className="ai-material-row"
-          onClick={() => props.onOpenSource(source.id as string)}
-          title={sourceDisplayLocation(source)}
-        >
-          <span className="ai-badge ai-material-origin" data-origin={sourceOriginLabel(source)}>
-            {sourceOriginLabel(source)}
-          </span>
-          <span className="ai-grow ai-material-title">
-            {source.missing === true ? '⚠ ' : ''}{source.title}
-          </span>
-        </button>
-      ))}
+      <div className="ai-materials-list">
+        {props.sources.slice(0, 8).map(source => (
+          <button
+            key={source.id}
+            type="button"
+            className="ai-material-row"
+            onClick={() => props.onOpenSource(source.id as string)}
+            title={sourceDisplayLocation(source)}
+          >
+            <span className="ai-badge ai-material-origin" data-origin={sourceOriginLabel(source)}>
+              {sourceOriginLabel(source)}
+            </span>
+            <span className="ai-grow ai-material-title">
+              {source.missing === true ? '⚠ ' : ''}{source.title}
+            </span>
+          </button>
+        ))}
+      </div>
       {props.sources.length > 8 && (
-        <div className="ai-muted">还有 {props.sources.length - 8} 份资料，可在「来源」标签查看全部。</div>
+        <button
+          type="button"
+          className="ai-link-button ai-materials-more"
+          onClick={() => props.onShowAllSources?.()}
+          disabled={props.onShowAllSources === undefined}
+        >
+          还有 {props.sources.length - 8} 份资料 · 查看全部
+        </button>
       )}
       {step === 'imported' && (
         <div className="ai-banner" data-kind="info" role="status" style={{ marginTop: 6, borderRadius: 8 }}>

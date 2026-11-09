@@ -494,6 +494,53 @@ window.__ModuleLoader__.load({
     .ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
     .ai-modal h3{margin:0 0 8px;font-size:15px}
     .ai-modal .ai-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+
+
+    /* Materials sidebar: compact rows; missing CSS previously let browser buttons
+       become huge pills in the narrow sidebar. */
+    .ai-materials-panel { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+    .ai-materials-panel .ai-sidebar-heading-row { margin-bottom: 4px; }
+    .ai-materials-panel .ai-sidebar-heading-row .ai-small-button { flex: 0 0 auto; font-size: 11px; padding: 2px 6px; }
+    .ai-materials-list { display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; min-width: 0; }
+    .ai-material-row { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0;
+      border: 1px solid transparent; border-radius: 7px; background: transparent; color: inherit;
+      cursor: pointer; font: inherit; font-size: 12px; text-align: left; padding: 3px 4px; }
+    .ai-material-row:hover { background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08)); }
+    .ai-material-origin { flex: 0 0 auto; font-size: 10px; padding: 0 4px; line-height: 16px; }
+    .ai-material-origin[data-origin="web"] { color: var(--dsw-alias-state-business-primary, #2563eb); }
+    .ai-material-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ai-materials-more { margin-top: 2px; text-align: left; font-size: 11px; }
+    .ai-materials-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+    .ai-materials-tabs .ai-small-button[data-active="true"] { border-color: var(--dsw-alias-state-business-primary, #2563eb);
+      color: var(--dsw-alias-state-business-primary, #2563eb); background: var(--dsw-alias-bg-layer-1, rgba(37,99,235,0.12)); }
+    .ai-materials-tab { border: 1px solid transparent; border-radius: 6px; background: transparent; color: inherit;
+      cursor: pointer; font: inherit; font-size: 12px; padding: 3px 10px; }
+    .ai-materials-tab[data-active="true"] { border-color: var(--dsw-alias-state-business-primary, #2563eb);
+      color: var(--dsw-alias-state-business-primary, #2563eb); background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08)); }
+    .ai-materials-modal .ai-planning-field, .ai-materials-modal .ai-field { margin-bottom: 8px; }
+    .ai-materials-modal textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; }
+
+    /* Planning interview: real selectable options (not text copied into a textarea). */
+    .ai-planning-option { display: flex; align-items: flex-start; gap: 8px; width: 100%; text-align: left;
+      border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3)); border-radius: 8px;
+      background: transparent; color: inherit; cursor: pointer; font: inherit; font-size: 12px;
+      padding: 6px 8px; margin: 3px 0; }
+    .ai-planning-option::before { content: "\u25CB"; flex: 0 0 auto; opacity: 0.65; }
+    .ai-planning-option:hover { background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08)); }
+    .ai-planning-option[data-active="true"] { border-color: var(--dsw-alias-state-business-primary, #2563eb);
+      background: var(--dsw-alias-bg-layer-1, rgba(37,99,235,0.12)); }
+    .ai-planning-option[data-active="true"]::before { content: "\u25CF"; opacity: 1; color: var(--dsw-alias-state-business-primary, #2563eb); }
+    .ai-planning-option:disabled { opacity: 0.55; cursor: default; }
+    .ai-planning-answer-state { font-size: 11px; opacity: 0.72; margin: 4px 0; }
+    .ai-planning-custom-toggle { margin-top: 2px; }
+    .ai-plan-summary { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.28));
+      border-radius: 10px; padding: 10px 12px; margin: 8px 0; background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.05)); }
+    .ai-plan-summary h4 { margin: 0 0 6px; font-size: 14px; }
+    .ai-plan-summary ul { margin: 4px 0 8px; padding-left: 18px; font-size: 12px; }
+    .ai-plan-summary .ai-plan-chapters { font-size: 12px; }
+    .ai-plan-summary .ai-plan-chapters li { margin: 2px 0; }
+    .ai-plan-advanced { margin-top: 10px; border-top: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); padding-top: 8px; }
+
     `;
 
     // packages/dsh-plugin/src/client/components/Workspace.tsx
@@ -20369,12 +20416,14 @@ window.__ModuleLoader__.load({
         props.initialPlan?.brief?.language ?? props.defaultLanguage ?? "zh"
       );
       const [answers, setAnswers] = (0, import_react7.useState)(() => props.initialPlan?.frontier !== void 0 ? answersFromRecommendations(props.initialPlan.frontier) : {});
+      const [customQuestions, setCustomQuestions] = (0, import_react7.useState)(/* @__PURE__ */ new Set());
       const [briefDraft, setBriefDraft] = (0, import_react7.useState)(() => briefToDraft(props.initialPlan?.brief, props.initialPlan?.topic));
       const [selectedIds, setSelectedIds] = (0, import_react7.useState)(() => props.initialPlan !== void 0 ? defaultSelectedCandidateIds(props.initialPlan) : []);
       const [busyLabel, setBusyLabel] = (0, import_react7.useState)(props.busy === true ? "\u5904\u7406\u4E2D\u2026" : void 0);
       const [error, setError] = (0, import_react7.useState)(void 0);
       const [note, setNote] = (0, import_react7.useState)(void 0);
       const [fetched, setFetched] = (0, import_react7.useState)(false);
+      const [advancedBrief, setAdvancedBrief] = (0, import_react7.useState)(false);
       const busy = props.busy === true || busyLabel !== void 0;
       const view = fetched && plan !== void 0 && (plan.status === "importing" || plan.status === "materials-review") ? "candidates" : viewFor(plan);
       const frontier = plan?.frontier ?? [];
@@ -20382,6 +20431,7 @@ window.__ModuleLoader__.load({
       const adoptPlan = (next) => {
         setPlan(next);
         setAnswers(next.frontier !== void 0 ? answersFromRecommendations(next.frontier) : {});
+        setCustomQuestions(/* @__PURE__ */ new Set());
         setBriefDraft(briefToDraft(next.brief, next.topic));
         setSelectedIds(defaultSelectedCandidateIds(next));
       };
@@ -20416,25 +20466,77 @@ window.__ModuleLoader__.load({
         }
         await run("\u6B63\u5728\u63D0\u4EA4\u672C\u8F6E\u56DE\u7B54\u2026", async () => {
           const response = await apiPost("planning.answer", { planId: plan.id, answers: payload });
-          adoptPlan(response.plan);
-          setNote(response.ready ? "\u89C4\u5212\u4FE1\u606F\u5DF2\u6536\u96C6\u5B8C\u6210\uFF0C\u8BF7\u786E\u8BA4\u8BFE\u7A0B\u8BBE\u8BA1\u3002" : void 0);
+          let next = response.plan;
+          if (response.ready && next.brief === void 0) {
+            setBusyLabel("AI \u6B63\u5728\u6574\u7406\u5B66\u4E60\u8BA1\u5212\u2026");
+            const briefResponse = await apiPost("planning.brief", { planId: next.id });
+            next = briefResponse.plan;
+          }
+          adoptPlan(next);
+          setNote(response.ready ? "AI \u5DF2\u751F\u6210\u5B66\u4E60\u8BA1\u5212\uFF0C\u8BF7\u786E\u8BA4\u540E\u641C\u7D22\u8D44\u6599\u3002" : void 0);
         });
       };
       const fillRecommendations = () => {
         setAnswers(answersFromRecommendations(frontier));
+        setCustomQuestions(/* @__PURE__ */ new Set());
         setError(void 0);
       };
       const changeAnswer = (questionId, answer, usedRecommendation) => {
         setAnswers((previous) => ({ ...previous, [questionId]: { questionId, answer, usedRecommendation } }));
       };
+      const selectOption = (questionId, option, usedRecommendation) => {
+        setCustomQuestions((previous) => {
+          if (!previous.has(questionId)) return previous;
+          const next = new Set(previous);
+          next.delete(questionId);
+          return next;
+        });
+        changeAnswer(questionId, option, usedRecommendation);
+      };
+      const enterCustomAnswer = (questionId) => {
+        setCustomQuestions((previous) => /* @__PURE__ */ new Set([...previous, questionId]));
+        changeAnswer(questionId, "", false);
+      };
+      const leaveCustomAnswer = (questionId) => {
+        setCustomQuestions((previous) => {
+          if (!previous.has(questionId)) return previous;
+          const next = new Set(previous);
+          next.delete(questionId);
+          return next;
+        });
+        changeAnswer(questionId, "", false);
+      };
+      const filledBriefDraft = () => {
+        const title = briefDraft.title.trim() || plan?.brief?.title || plan?.topic || "\u5B66\u4E60\u8BA1\u5212";
+        const goals = briefDraft.goals.trim() === "" ? (plan?.brief?.goals ?? []).join("\n") : briefDraft.goals;
+        const searchTopics = briefDraft.searchTopics.trim() === "" ? (plan?.brief?.searchTopics ?? []).join("\n") || title : briefDraft.searchTopics;
+        const chapters = briefDraft.chapters.length === 0 || briefDraft.chapters.every((chapter) => chapter.title.trim() === "") ? [{ title, topics: goals || title, prerequisites: "" }] : briefDraft.chapters;
+        return {
+          ...briefDraft,
+          title,
+          goals: goals === "" ? plan?.topic ?? title : goals,
+          searchTopics,
+          chapters
+        };
+      };
+      const regenerateBrief = async () => {
+        if (plan === void 0) return;
+        await run("AI \u6B63\u5728\u8865\u5168\u5B66\u4E60\u8BA1\u5212\u2026", async () => {
+          const response = await apiPost("planning.brief", { planId: plan.id });
+          adoptPlan(response.plan);
+          setNote("\u5B66\u4E60\u8BA1\u5212\u5DF2\u7531 AI \u91CD\u65B0\u8865\u5168\uFF0C\u8BF7\u786E\u8BA4\u3002");
+        });
+      };
       const saveBrief = async (andSearch) => {
         if (plan === void 0) return;
-        const validation = validateBriefDraft(briefDraft);
+        const draft = filledBriefDraft();
+        const validation = validateBriefDraft(draft);
         if (validation !== void 0) {
           setError(validation);
           return;
         }
-        const brief = draftToBrief(briefDraft);
+        if (draft !== briefDraft) setBriefDraft(draft);
+        const brief = draftToBrief(draft);
         await run(andSearch ? "\u6B63\u5728\u4FDD\u5B58\u5E76\u641C\u7D22\u8D44\u6599\u2026" : "\u6B63\u5728\u4FDD\u5B58\u89C4\u5212\u2026", async () => {
           const response = await apiPost("planning.brief", { planId: plan.id, brief });
           setPlan(response.plan);
@@ -20583,43 +20685,67 @@ window.__ModuleLoader__.load({
                   question.title
                 ] }),
                 /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-muted", children: question.body }),
-                question.options !== void 0 && question.options.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-planning-options", role: "group", "aria-label": `\u95EE\u9898 ${index + 1} \u9009\u9879`, children: question.options.map((option) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-                  "button",
-                  {
-                    type: "button",
-                    className: "ai-small-button",
-                    "data-active": draft.answer === option,
-                    disabled: busy,
-                    "aria-pressed": draft.answer === option,
-                    onClick: () => changeAnswer(question.id, option, option === recommended),
-                    children: option
-                  },
-                  option
-                )) }),
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-                  "textarea",
-                  {
-                    className: "ai-planning-textarea",
-                    value: draft.answer,
-                    disabled: busy,
-                    "aria-label": `\u95EE\u9898 ${index + 1} \u7684\u56DE\u7B54`,
-                    placeholder: "\u4E5F\u53EF\u4EE5\u81EA\u5DF1\u5199\u4E00\u4E2A\u56DE\u7B54\u2026",
-                    onChange: (event) => changeAnswer(question.id, event.target.value, false)
-                  }
-                ),
-                recommended !== void 0 && draft.answer !== recommended && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
-                  "button",
-                  {
-                    type: "button",
-                    className: "ai-link-button",
-                    disabled: busy,
-                    onClick: () => changeAnswer(question.id, recommended, true),
-                    children: [
-                      "\u91C7\u7528\u5EFA\u8BAE\uFF1A",
-                      recommended
-                    ]
-                  }
-                )
+                (() => {
+                  const options = question.options ?? [];
+                  const hasOptions = options.length > 0;
+                  const custom = customQuestions.has(question.id);
+                  const optionSelected = hasOptions && options.includes(draft.answer);
+                  const selectedLabel = optionSelected ? draft.answer : draft.usedRecommendation && !custom && draft.answer !== "" ? draft.answer : void 0;
+                  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+                    hasOptions && !custom && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-planning-options", role: "radiogroup", "aria-label": `\u95EE\u9898 ${index + 1} \u9009\u9879`, children: options.map((option) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                      "button",
+                      {
+                        type: "button",
+                        className: "ai-planning-option",
+                        "data-active": draft.answer === option,
+                        disabled: busy,
+                        "aria-pressed": draft.answer === option,
+                        onClick: () => selectOption(question.id, option, option === recommended),
+                        children: option
+                      },
+                      option
+                    )) }),
+                    hasOptions && !custom && selectedLabel !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-answer-state", "data-ai": draft.usedRecommendation === true ? "true" : void 0, children: [
+                      draft.usedRecommendation ? "AI \u5EFA\u8BAE\uFF08\u5DF2\u91C7\u7528\uFF09\uFF1A" : "\u5DF2\u9009\u62E9\uFF1A",
+                      selectedLabel.length > 140 ? `${selectedLabel.slice(0, 140)}\u2026` : selectedLabel
+                    ] }),
+                    hasOptions && !custom && selectedLabel === void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-planning-answer-state", children: "\u672A\u9009\u62E9\uFF1B\u53EF\u9009\u62E9\u4E0A\u65B9\u9009\u9879\uFF0C\u6216\u4F7F\u7528\u81EA\u5B9A\u4E49\u56DE\u7B54\u3002" }),
+                    recommended !== void 0 && draft.answer !== recommended && !custom && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+                      "button",
+                      {
+                        type: "button",
+                        className: "ai-link-button",
+                        disabled: busy,
+                        onClick: () => selectOption(question.id, recommended, true),
+                        children: [
+                          "\u91C7\u7528\u5EFA\u8BAE\uFF1A",
+                          recommended
+                        ]
+                      }
+                    ),
+                    hasOptions && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                      "button",
+                      {
+                        type: "button",
+                        className: "ai-link-button ai-planning-custom-toggle",
+                        disabled: busy,
+                        onClick: () => custom ? leaveCustomAnswer(question.id) : enterCustomAnswer(question.id),
+                        children: custom ? "\u8FD4\u56DE\u9009\u9879" : "\u81EA\u5B9A\u4E49\u56DE\u7B54"
+                      }
+                    ),
+                    (!hasOptions || custom) && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                      "textarea",
+                      {
+                        className: "ai-planning-textarea",
+                        value: draft.answer,
+                        disabled: busy,
+                        "aria-label": `\u95EE\u9898 ${index + 1} \u7684\u56DE\u7B54`,
+                        placeholder: "\u8BF7\u586B\u5199\u4F60\u7684\u56DE\u7B54\u2026",
+                        onChange: (event) => changeAnswer(question.id, event.target.value, false)
+                      }
+                    )
+                  ] });
+                })()
               ] }, question.id);
             }) }),
             /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-row", children: [
@@ -20633,53 +20759,52 @@ window.__ModuleLoader__.load({
           busy && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Spinner, { label: busyLabel ?? "\u5904\u7406\u4E2D\u2026" })
         ] }),
         view === "brief" && plan !== void 0 && briefDraft !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("section", { className: "ai-planning-card", "aria-label": "\u786E\u8BA4\u8BFE\u7A0B\u89C4\u5212", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "ai-muted", children: "\u4EE5\u4E0B\u662F AI \u6574\u7406\u7684\u8BFE\u7A0B\u89C4\u5212\uFF0C\u53EF\u76F4\u63A5\u4FEE\u6539\u540E\u4FDD\u5B58\u3002\u4FDD\u5B58\u540E\u5F00\u59CB\u8054\u7F51\u641C\u7D22\u5019\u9009\u8D44\u6599\u3002" }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u8BFE\u7A0B\u6807\u9898" }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-              "input",
-              {
-                className: "ai-edit-title",
-                value: briefDraft.title,
-                disabled: busy,
-                onChange: (event) => setBriefDraft({ ...briefDraft, title: event.target.value })
-              }
-            )
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u5B66\u4E60\u76EE\u6807\uFF08\u6BCF\u884C\u4E00\u4E2A\uFF09" }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-              "textarea",
-              {
-                className: "ai-planning-textarea",
-                value: briefDraft.goals,
-                disabled: busy,
-                onChange: (event) => setBriefDraft({ ...briefDraft, goals: event.target.value })
-              }
-            )
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "ai-muted", children: "AI \u5DF2\u6839\u636E\u8BBF\u8C08\u751F\u6210\u5B66\u4E60\u8BA1\u5212\u3002\u9ED8\u8BA4\u53EA\u9700\u786E\u8BA4\u6807\u9898\u3001\u76EE\u6807\u548C\u6BCF\u5468\u6295\u5165\uFF1B\u7AE0\u8282\u4E0E\u68C0\u7D22\u4E3B\u9898\u7531 AI \u8D1F\u8D23\uFF0C\u9700\u8981\u65F6\u53EF\u5C55\u5F00\u9AD8\u7EA7\u7F16\u8F91\u3002" }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-plan-summary", "aria-label": "AI \u5B66\u4E60\u8BA1\u5212\u6458\u8981", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h4", { children: plan.brief?.title ?? briefDraft.title ?? plan.topic }),
+            (plan.brief?.goals ?? []).length > 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-muted", children: "\u5B66\u4E60\u76EE\u6807" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("ul", { children: (plan.brief?.goals ?? []).slice(0, 4).map((goal) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("li", { children: goal }, goal)) }),
+              (plan.brief?.goals ?? []).length > 4 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-muted", children: [
+                "\u8FD8\u6709 ",
+                (plan.brief?.goals ?? []).length - 4,
+                " \u6761\u76EE\u6807\uFF08\u5728\u9AD8\u7EA7\u7F16\u8F91\u4E2D\u53EF\u67E5\u770B\u5B8C\u6574\u8BA1\u5212\uFF09"
+              ] })
+            ] }),
+            (plan.brief?.chapters ?? []).length > 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-muted", children: "\u7AE0\u8282\u5B89\u6392" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("ul", { className: "ai-plan-chapters", children: (plan.brief?.chapters ?? []).slice(0, 4).map((chapter) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("li", { children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("strong", { children: chapter.title }),
+                chapter.topics.length > 0 ? `\uFF1A${chapter.topics.slice(0, 3).join("\u3001")}` : ""
+              ] }, chapter.title)) }),
+              (plan.brief?.chapters ?? []).length > 4 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-muted", children: [
+                "\u8FD8\u6709 ",
+                (plan.brief?.chapters ?? []).length - 4,
+                " \u7AE0\uFF08\u5728\u9AD8\u7EA7\u7F16\u8F91\u4E2D\u53EF\u67E5\u770B\u5B8C\u6574\u8BA1\u5212\uFF09"
+              ] })
+            ] }),
+            (plan.brief?.searchTopics ?? []).length > 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-muted", children: [
+              "\u68C0\u7D22\u4E3B\u9898\uFF1A",
+              (plan.brief?.searchTopics ?? []).slice(0, 3).join("\uFF1B")
+            ] }),
+            plan.brief === void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-banner", "data-kind": "warning", role: "status", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "AI \u8BA1\u5212\u5B57\u6BB5\u4E0D\u5B8C\u6574\uFF1B\u53EF\u76F4\u63A5\u786E\u8BA4\u9ED8\u8BA4\u503C\uFF0C\u6216\u91CD\u65B0\u8865\u5168\u8BA1\u5212\u3002" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-small-button", disabled: busy, onClick: () => {
+                void regenerateBrief();
+              }, children: "\u91CD\u65B0\u8865\u5168\u8BA1\u5212" })
+            ] })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-grid", children: [
             /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u57FA\u7840\u6C34\u5E73" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u8BFE\u7A0B\u6807\u9898" }),
               /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                 "input",
                 {
                   className: "ai-edit-title",
-                  value: briefDraft.level,
+                  value: briefDraft.title,
                   disabled: busy,
-                  onChange: (event) => setBriefDraft({ ...briefDraft, level: event.target.value })
-                }
-              )
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u5B66\u4E60\u65F6\u957F" }),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-                "input",
-                {
-                  className: "ai-edit-title",
-                  value: briefDraft.duration,
-                  disabled: busy,
-                  onChange: (event) => setBriefDraft({ ...briefDraft, duration: event.target.value })
+                  placeholder: "AI \u5DF2\u751F\u6210\u6807\u9898\uFF0C\u53EF\u4FEE\u6539",
+                  onChange: (event) => setBriefDraft({ ...briefDraft, title: event.target.value })
                 }
               )
             ] }),
@@ -20691,134 +20816,199 @@ window.__ModuleLoader__.load({
                   className: "ai-edit-title",
                   value: briefDraft.weeklyHours,
                   disabled: busy,
+                  placeholder: plan.brief?.weeklyHours ?? "\u53EF\u7559\u7A7A\uFF0C\u7531 AI \u9ED8\u8BA4",
                   onChange: (event) => setBriefDraft({ ...briefDraft, weeklyHours: event.target.value })
                 }
               )
             ] }),
             /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u8BED\u8A00" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u5B66\u4E60\u5468\u671F" }),
               /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-                "select",
+                "input",
                 {
                   className: "ai-edit-title",
-                  value: briefDraft.language,
+                  value: briefDraft.duration,
                   disabled: busy,
-                  onChange: (event) => setBriefDraft({ ...briefDraft, language: event.target.value }),
-                  children: Object.keys(LANGUAGE_LABELS2).map((value) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("option", { value, children: LANGUAGE_LABELS2[value] }, value))
+                  placeholder: plan.brief?.duration ?? "\u53EF\u7559\u7A7A\uFF0C\u7531 AI \u9ED8\u8BA4",
+                  onChange: (event) => setBriefDraft({ ...briefDraft, duration: event.target.value })
                 }
               )
             ] })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u80CC\u666F\u8BF4\u660E" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u5B66\u4E60\u76EE\u6807\uFF08\u6BCF\u884C\u4E00\u4E2A\uFF1B\u5DF2\u7531 AI \u586B\u5199\uFF09" }),
             /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
               "textarea",
               {
                 className: "ai-planning-textarea",
-                value: briefDraft.background,
+                rows: 3,
+                value: briefDraft.goals,
                 disabled: busy,
-                onChange: (event) => setBriefDraft({ ...briefDraft, background: event.target.value })
+                placeholder: plan.brief?.goals?.join("\n") ?? "\u53EF\u7559\u7A7A\uFF0C\u63D0\u4EA4\u65F6\u4F7F\u7528\u8BA1\u5212\u6458\u8981\u4E2D\u7684\u76EE\u6807",
+                onChange: (event) => setBriefDraft({ ...briefDraft, goals: event.target.value })
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-chapters", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-row", style: { justifyContent: "space-between" }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-muted", children: "\u7AE0\u8282\u5B89\u6392" }),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-                "button",
-                {
-                  type: "button",
-                  className: "ai-small-button",
-                  disabled: busy,
-                  onClick: () => setBriefDraft({ ...briefDraft, chapters: [...briefDraft.chapters, { title: "", topics: "", prerequisites: "" }] }),
-                  children: "\uFF0B \u6DFB\u52A0\u7AE0\u8282"
-                }
-              )
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            "button",
+            {
+              type: "button",
+              className: "ai-link-button",
+              disabled: busy,
+              onClick: () => setAdvancedBrief(!advancedBrief),
+              children: advancedBrief ? "\u6536\u8D77\u9AD8\u7EA7\u7F16\u8F91" : "\u9AD8\u7EA7\u7F16\u8F91\uFF08\u7AE0\u8282\u3001\u68C0\u7D22\u4E3B\u9898\u3001\u80CC\u666F\u7B49\uFF09"
+            }
+          ),
+          advancedBrief && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-plan-advanced", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-grid", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u57FA\u7840\u6C34\u5E73" }),
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                  "input",
+                  {
+                    className: "ai-edit-title",
+                    value: briefDraft.level,
+                    disabled: busy,
+                    placeholder: plan.brief?.level ?? "AI \u672A\u63D0\u4F9B",
+                    onChange: (event) => setBriefDraft({ ...briefDraft, level: event.target.value })
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u8BED\u8A00" }),
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                  "select",
+                  {
+                    className: "ai-edit-title",
+                    value: briefDraft.language,
+                    disabled: busy,
+                    onChange: (event) => setBriefDraft({ ...briefDraft, language: event.target.value }),
+                    children: Object.keys(LANGUAGE_LABELS2).map((value) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("option", { value, children: LANGUAGE_LABELS2[value] }, value))
+                  }
+                )
+              ] })
             ] }),
-            briefDraft.chapters.map((chapter, index) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-chapter", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-                "input",
-                {
-                  className: "ai-edit-title",
-                  value: chapter.title,
-                  disabled: busy,
-                  placeholder: `\u7B2C ${index + 1} \u7AE0\u6807\u9898`,
-                  "aria-label": `\u7B2C ${index + 1} \u7AE0\u6807\u9898`,
-                  onChange: (event) => setBriefDraft({
-                    ...briefDraft,
-                    chapters: briefDraft.chapters.map((item, itemIndex) => itemIndex === index ? { ...item, title: event.target.value } : item)
-                  })
-                }
-              ),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u80CC\u666F\u8BF4\u660E" }),
               /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
                 "textarea",
                 {
                   className: "ai-planning-textarea",
-                  value: chapter.topics,
+                  value: briefDraft.background,
                   disabled: busy,
-                  "aria-label": `\u7B2C ${index + 1} \u7AE0\u4E3B\u9898`,
-                  placeholder: "\u4E3B\u9898\uFF08\u6BCF\u884C\u4E00\u4E2A\uFF09",
-                  onChange: (event) => setBriefDraft({
-                    ...briefDraft,
-                    chapters: briefDraft.chapters.map((item, itemIndex) => itemIndex === index ? { ...item, topics: event.target.value } : item)
-                  })
-                }
-              ),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-                "button",
-                {
-                  type: "button",
-                  className: "ai-danger-button",
-                  disabled: busy,
-                  onClick: () => setBriefDraft({ ...briefDraft, chapters: briefDraft.chapters.filter((_, itemIndex) => itemIndex !== index) }),
-                  children: "\u5220\u9664\u672C\u7AE0"
+                  placeholder: plan.brief?.background ?? "AI \u672A\u63D0\u4F9B",
+                  onChange: (event) => setBriefDraft({ ...briefDraft, background: event.target.value })
                 }
               )
-            ] }, index))
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-chapters", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-row", style: { justifyContent: "space-between" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-muted", children: "\u7AE0\u8282\u5B89\u6392" }),
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "ai-small-button",
+                    disabled: busy,
+                    onClick: () => setBriefDraft({ ...briefDraft, chapters: [...briefDraft.chapters, { title: "", topics: "", prerequisites: "" }] }),
+                    children: "\uFF0B \u6DFB\u52A0\u7AE0\u8282"
+                  }
+                )
+              ] }),
+              briefDraft.chapters.map((chapter, index) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-chapter", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                  "input",
+                  {
+                    className: "ai-edit-title",
+                    value: chapter.title,
+                    disabled: busy,
+                    placeholder: `\u7B2C ${index + 1} \u7AE0\u6807\u9898`,
+                    "aria-label": `\u7B2C ${index + 1} \u7AE0\u6807\u9898`,
+                    onChange: (event) => setBriefDraft({
+                      ...briefDraft,
+                      chapters: briefDraft.chapters.map((item, itemIndex) => itemIndex === index ? { ...item, title: event.target.value } : item)
+                    })
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                  "textarea",
+                  {
+                    className: "ai-planning-textarea",
+                    value: chapter.topics,
+                    disabled: busy,
+                    "aria-label": `\u7B2C ${index + 1} \u7AE0\u4E3B\u9898`,
+                    placeholder: "\u4E3B\u9898\uFF08\u6BCF\u884C\u4E00\u4E2A\uFF09",
+                    onChange: (event) => setBriefDraft({
+                      ...briefDraft,
+                      chapters: briefDraft.chapters.map((item, itemIndex) => itemIndex === index ? { ...item, topics: event.target.value } : item)
+                    })
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                  "button",
+                  {
+                    type: "button",
+                    className: "ai-danger-button",
+                    disabled: busy,
+                    onClick: () => setBriefDraft({ ...briefDraft, chapters: briefDraft.chapters.filter((_, itemIndex) => itemIndex !== index) }),
+                    children: "\u5220\u9664\u672C\u7AE0"
+                  }
+                )
+              ] }, index))
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u8D44\u6599\u68C0\u7D22\u4E3B\u9898\uFF08\u6BCF\u884C\u4E00\u4E2A\uFF09" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                "textarea",
+                {
+                  className: "ai-planning-textarea",
+                  value: briefDraft.searchTopics,
+                  disabled: busy,
+                  placeholder: plan.brief?.searchTopics?.join("\n") ?? "AI \u672A\u63D0\u4F9B\uFF1B\u63D0\u4EA4\u65F6\u4F1A\u7528\u8BFE\u7A0B\u6807\u9898\u8865\u5168",
+                  onChange: (event) => setBriefDraft({ ...briefDraft, searchTopics: event.target.value })
+                }
+              )
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u7EC3\u4E60\u504F\u597D" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                "input",
+                {
+                  className: "ai-edit-title",
+                  value: briefDraft.practiceStyle,
+                  disabled: busy,
+                  placeholder: plan.brief?.practiceStyle ?? "AI \u672A\u63D0\u4F9B",
+                  onChange: (event) => setBriefDraft({ ...briefDraft, practiceStyle: event.target.value })
+                }
+              )
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u6392\u9664\u5185\u5BB9\uFF08\u6BCF\u884C\u4E00\u4E2A\uFF09" }),
+              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                "textarea",
+                {
+                  className: "ai-planning-textarea",
+                  value: briefDraft.exclusions,
+                  disabled: busy,
+                  placeholder: (plan.brief?.exclusions ?? []).join("\n") || "AI \u672A\u63D0\u4F9B",
+                  onChange: (event) => setBriefDraft({ ...briefDraft, exclusions: event.target.value })
+                }
+              )
+            ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u8D44\u6599\u68C0\u7D22\u4E3B\u9898\uFF08\u6BCF\u884C\u4E00\u4E2A\uFF09" }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-              "textarea",
-              {
-                className: "ai-planning-textarea",
-                value: briefDraft.searchTopics,
-                disabled: busy,
-                onChange: (event) => setBriefDraft({ ...briefDraft, searchTopics: event.target.value })
-              }
-            )
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u7EC3\u4E60\u504F\u597D" }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-              "input",
-              {
-                className: "ai-edit-title",
-                value: briefDraft.practiceStyle,
-                disabled: busy,
-                onChange: (event) => setBriefDraft({ ...briefDraft, practiceStyle: event.target.value })
-              }
-            )
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-field", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { children: "\u6392\u9664\u5185\u5BB9\uFF08\u6BCF\u884C\u4E00\u4E2A\uFF09" }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-              "textarea",
-              {
-                className: "ai-planning-textarea",
-                value: briefDraft.exclusions,
-                disabled: busy,
-                onChange: (event) => setBriefDraft({ ...briefDraft, exclusions: event.target.value })
-              }
-            )
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-row", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-row", style: { flexWrap: "wrap" }, children: [
             /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-primary-button", disabled: busy, onClick: () => {
               void saveBrief(true);
-            }, children: busy ? "\u5904\u7406\u4E2D\u2026" : "\u4FDD\u5B58\u5E76\u641C\u7D22\u5019\u9009\u8D44\u6599" }),
+            }, children: busy ? "\u5904\u7406\u4E2D\u2026" : "\u786E\u8BA4\u8BA1\u5212\u5E76\u641C\u7D22\u8D44\u6599" }),
             /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-small-button", disabled: busy, onClick: () => {
               void saveBrief(false);
             }, children: "\u4EC5\u4FDD\u5B58" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-small-button", disabled: busy, onClick: () => {
+              void createCourseFromPlan();
+            }, children: "\u6309\u8BA1\u5212\u76F4\u63A5\u5EFA\u8BFE\uFF08\u65E0\u8D44\u6599\uFF09" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-link-button", disabled: busy, onClick: () => {
+              void regenerateBrief();
+            }, children: "AI \u91CD\u65B0\u751F\u6210\u8BA1\u5212" }),
             /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: "ai-link-button", onClick: cancelPlan, children: "\u53D6\u6D88\u89C4\u5212" })
           ] }),
           busy && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Spinner, { label: busyLabel ?? "\u5904\u7406\u4E2D\u2026" })
@@ -21447,7 +21637,7 @@ window.__ModuleLoader__.load({
           )
         ] }),
         props.sources.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-muted", children: "\u5C1A\u672A\u5BFC\u5165\u8D44\u6599" }),
-        props.sources.slice(0, 8).map((source) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "ai-materials-list", children: props.sources.slice(0, 8).map((source) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
           "button",
           {
             type: "button",
@@ -21463,12 +21653,21 @@ window.__ModuleLoader__.load({
             ]
           },
           source.id
-        )),
-        props.sources.length > 8 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-muted", children: [
-          "\u8FD8\u6709 ",
-          props.sources.length - 8,
-          " \u4EFD\u8D44\u6599\uFF0C\u53EF\u5728\u300C\u6765\u6E90\u300D\u6807\u7B7E\u67E5\u770B\u5168\u90E8\u3002"
-        ] }),
+        )) }),
+        props.sources.length > 8 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+          "button",
+          {
+            type: "button",
+            className: "ai-link-button ai-materials-more",
+            onClick: () => props.onShowAllSources?.(),
+            disabled: props.onShowAllSources === void 0,
+            children: [
+              "\u8FD8\u6709 ",
+              props.sources.length - 8,
+              " \u4EFD\u8D44\u6599 \xB7 \u67E5\u770B\u5168\u90E8"
+            ]
+          }
+        ),
         step === "imported" && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "ai-banner", "data-kind": "info", role: "status", style: { marginTop: 6, borderRadius: 8 }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: "\u65B0\u8D44\u6599\u5DF2\u6DFB\u52A0\uFF0C\u6574\u5408\u5230\u77E5\u8BC6\u5E93" }),
           /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { type: "button", className: "ai-small-button", disabled: busy, onClick: () => {
@@ -21877,7 +22076,8 @@ window.__ModuleLoader__.load({
             ...props.onImportLocalPaths !== void 0 ? { onImportLocalPaths: props.onImportLocalPaths } : {},
             ...props.onPickDirectory !== void 0 ? { onPickDirectory: props.onPickDirectory } : {},
             ...props.onMaterialsChanged !== void 0 ? { onMaterialsChanged: props.onMaterialsChanged } : {},
-            ...props.onDraftReady !== void 0 ? { onDraftReady: props.onDraftReady } : {}
+            ...props.onDraftReady !== void 0 ? { onDraftReady: props.onDraftReady } : {},
+            ...props.onShowAllSources !== void 0 ? { onShowAllSources: props.onShowAllSources } : {}
           }
         ) })
       ] });
@@ -23895,6 +24095,7 @@ window.__ModuleLoader__.load({
                     setIntegrationDraft(draft);
                     if (detail !== void 0) void refreshCourse(detail.course.id);
                   },
+                  onShowAllSources: () => dispatch({ type: "ui/tab", tab: "sources" }),
                   onDeleteSession: requestDeleteSession,
                   onNewSession: () => {
                     const courseId = detail?.course.id;

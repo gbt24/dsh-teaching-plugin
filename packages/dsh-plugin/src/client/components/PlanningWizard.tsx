@@ -60,6 +60,8 @@ export function PlanningWizard(props: PlanningWizardProps): React.ReactElement {
   )
   const [answers, setAnswers] = useState<Record<string, DraftAnswer>>(() =>
     props.initialPlan?.frontier !== undefined ? answersFromRecommendations(props.initialPlan.frontier) : {})
+  /** Questions whose free-text "custom answer" editor is open. */
+  const [customQuestions, setCustomQuestions] = useState<ReadonlySet<string>>(new Set())
   const [briefDraft, setBriefDraft] = useState<PlanBriefDraft>(() =>
     briefToDraft(props.initialPlan?.brief, props.initialPlan?.topic))
   const [selectedIds, setSelectedIds] = useState<readonly string[]>(() =>
@@ -68,6 +70,8 @@ export function PlanningWizard(props: PlanningWizardProps): React.ReactElement {
   const [error, setError] = useState<string | undefined>(undefined)
   const [note, setNote] = useState<string | undefined>(undefined)
   const [fetched, setFetched] = useState(false)
+  /** Full PlanBrief fields are hidden by default; only 3 light controls are shown. */
+  const [advancedBrief, setAdvancedBrief] = useState(false)
   const busy = props.busy === true || busyLabel !== undefined
 
   // After a successful fetch the Host may still report `importing` until the
@@ -83,6 +87,7 @@ export function PlanningWizard(props: PlanningWizardProps): React.ReactElement {
   const adoptPlan = (next: CoursePlan): void => {
     setPlan(next)
     setAnswers(next.frontier !== undefined ? answersFromRecommendations(next.frontier) : {})
+    setCustomQuestions(new Set())
     setBriefDraft(briefToDraft(next.brief, next.topic))
     setSelectedIds(defaultSelectedCandidateIds(next))
   }
@@ -120,13 +125,23 @@ export function PlanningWizard(props: PlanningWizardProps): React.ReactElement {
     }
     await run('正在提交本轮回答…', async () => {
       const response = await apiPost('planning.answer', { planId: plan.id, answers: payload })
-      adoptPlan(response.plan)
-      setNote(response.ready ? '规划信息已收集完成，请确认课程设计。' : undefined)
+      let next = response.plan
+      // plan-ready only means the interview is complete; the Host generates the
+      // detailed PlanBrief in a separate call. Do it automatically so the review
+      // page never opens as a wall of empty fields.
+      if (response.ready && next.brief === undefined) {
+        setBusyLabel('AI 正在整理学习计划…')
+        const briefResponse = await apiPost('planning.brief', { planId: next.id })
+        next = briefResponse.plan
+      }
+      adoptPlan(next)
+      setNote(response.ready ? 'AI 已生成学习计划，请确认后搜索资料。' : undefined)
     })
   }
 
   const fillRecommendations = (): void => {
     setAnswers(answersFromRecommendations(frontier))
+    setCustomQuestions(new Set())
     setError(undefined)
   }
 
@@ -134,14 +149,70 @@ export function PlanningWizard(props: PlanningWizardProps): React.ReactElement {
     setAnswers(previous => ({ ...previous, [questionId]: { questionId, answer, usedRecommendation } }))
   }
 
+  /** Clicking an option selects it; it never copies the option text into the editor. */
+  const selectOption = (questionId: string, option: string, usedRecommendation: boolean): void => {
+    setCustomQuestions(previous => {
+      if (!previous.has(questionId)) return previous
+      const next = new Set(previous)
+      next.delete(questionId)
+      return next
+    })
+    changeAnswer(questionId, option, usedRecommendation)
+  }
+
+  const enterCustomAnswer = (questionId: string): void => {
+    setCustomQuestions(previous => new Set([...previous, questionId]))
+    changeAnswer(questionId, '', false)
+  }
+
+  const leaveCustomAnswer = (questionId: string): void => {
+    setCustomQuestions(previous => {
+      if (!previous.has(questionId)) return previous
+      const next = new Set(previous)
+      next.delete(questionId)
+      return next
+    })
+    changeAnswer(questionId, '', false)
+  }
+
+  /** Fill defaults so an incomplete AI brief never dead-ends on blank fields. */
+  const filledBriefDraft = (): PlanBriefDraft => {
+    const title = briefDraft.title.trim() || plan?.brief?.title || plan?.topic || '学习计划'
+    const goals = briefDraft.goals.trim() === '' ? (plan?.brief?.goals ?? []).join('\n') : briefDraft.goals
+    const searchTopics = briefDraft.searchTopics.trim() === ''
+      ? (plan?.brief?.searchTopics ?? []).join('\n') || title
+      : briefDraft.searchTopics
+    const chapters = briefDraft.chapters.length === 0 || briefDraft.chapters.every(chapter => chapter.title.trim() === '')
+      ? [{ title, topics: goals || title, prerequisites: '' }]
+      : briefDraft.chapters
+    return {
+      ...briefDraft,
+      title,
+      goals: goals === '' ? plan?.topic ?? title : goals,
+      searchTopics,
+      chapters,
+    }
+  }
+
+  const regenerateBrief = async (): Promise<void> => {
+    if (plan === undefined) return
+    await run('AI 正在补全学习计划…', async () => {
+      const response = await apiPost('planning.brief', { planId: plan.id })
+      adoptPlan(response.plan)
+      setNote('学习计划已由 AI 重新补全，请确认。')
+    })
+  }
+
   const saveBrief = async (andSearch: boolean): Promise<void> => {
     if (plan === undefined) return
-    const validation = validateBriefDraft(briefDraft)
+    const draft = filledBriefDraft()
+    const validation = validateBriefDraft(draft)
     if (validation !== undefined) {
       setError(validation)
       return
     }
-    const brief = draftToBrief(briefDraft)
+    if (draft !== briefDraft) setBriefDraft(draft)
+    const brief = draftToBrief(draft)
     await run(andSearch ? '正在保存并搜索资料…' : '正在保存规划…', async () => {
       const response = await apiPost('planning.brief', { planId: plan.id, brief })
       setPlan(response.plan)
@@ -316,41 +387,75 @@ export function PlanningWizard(props: PlanningWizardProps): React.ReactElement {
                     <fieldset className="ai-planning-question" key={question.id}>
                       <legend>{index + 1}. {question.title}</legend>
                       <div className="ai-muted">{question.body}</div>
-                      {question.options !== undefined && question.options.length > 0 && (
-                        <div className="ai-planning-options" role="group" aria-label={`问题 ${index + 1} 选项`}>
-                          {question.options.map(option => (
-                            <button
-                              key={option}
-                              type="button"
-                              className="ai-small-button"
-                              data-active={draft.answer === option}
-                              disabled={busy}
-                              aria-pressed={draft.answer === option}
-                              onClick={() => changeAnswer(question.id, option, option === recommended)}
-                            >
-                              {option}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      <textarea
-                        className="ai-planning-textarea"
-                        value={draft.answer}
-                        disabled={busy}
-                        aria-label={`问题 ${index + 1} 的回答`}
-                        placeholder="也可以自己写一个回答…"
-                        onChange={event => changeAnswer(question.id, event.target.value, false)}
-                      />
-                      {recommended !== undefined && draft.answer !== recommended && (
-                        <button
-                          type="button"
-                          className="ai-link-button"
-                          disabled={busy}
-                          onClick={() => changeAnswer(question.id, recommended, true)}
-                        >
-                          采用建议：{recommended}
-                        </button>
-                      )}
+                      {(() => {
+                        const options = question.options ?? []
+                        const hasOptions = options.length > 0
+                        const custom = customQuestions.has(question.id)
+                        const optionSelected = hasOptions && options.includes(draft.answer)
+                        const selectedLabel = optionSelected
+                          ? draft.answer
+                          : draft.usedRecommendation && !custom && draft.answer !== '' ? draft.answer : undefined
+                        return (
+                          <>
+                            {hasOptions && !custom && (
+                              <div className="ai-planning-options" role="radiogroup" aria-label={`问题 ${index + 1} 选项`}>
+                                {options.map(option => (
+                                  <button
+                                    key={option}
+                                    type="button"
+                                    className="ai-planning-option"
+                                    data-active={draft.answer === option}
+                                    disabled={busy}
+                                    aria-pressed={draft.answer === option}
+                                    onClick={() => selectOption(question.id, option, option === recommended)}
+                                  >
+                                    {option}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            {hasOptions && !custom && selectedLabel !== undefined && (
+                              <div className="ai-planning-answer-state" data-ai={draft.usedRecommendation === true ? 'true' : undefined}>
+                                {draft.usedRecommendation ? 'AI 建议（已采用）：' : '已选择：'}
+                                {selectedLabel.length > 140 ? `${selectedLabel.slice(0, 140)}…` : selectedLabel}
+                              </div>
+                            )}
+                            {hasOptions && !custom && selectedLabel === undefined && (
+                              <div className="ai-planning-answer-state">未选择；可选择上方选项，或使用自定义回答。</div>
+                            )}
+                            {recommended !== undefined && draft.answer !== recommended && !custom && (
+                              <button
+                                type="button"
+                                className="ai-link-button"
+                                disabled={busy}
+                                onClick={() => selectOption(question.id, recommended, true)}
+                              >
+                                采用建议：{recommended}
+                              </button>
+                            )}
+                            {hasOptions && (
+                              <button
+                                type="button"
+                                className="ai-link-button ai-planning-custom-toggle"
+                                disabled={busy}
+                                onClick={() => custom ? leaveCustomAnswer(question.id) : enterCustomAnswer(question.id)}
+                              >
+                                {custom ? '返回选项' : '自定义回答'}
+                              </button>
+                            )}
+                            {(!hasOptions || custom) && (
+                              <textarea
+                                className="ai-planning-textarea"
+                                value={draft.answer}
+                                disabled={busy}
+                                aria-label={`问题 ${index + 1} 的回答`}
+                                placeholder="请填写你的回答…"
+                                onChange={event => changeAnswer(question.id, event.target.value, false)}
+                              />
+                            )}
+                          </>
+                        )
+                      })()}
                     </fieldset>
                   )
                 })}
@@ -370,82 +475,148 @@ export function PlanningWizard(props: PlanningWizardProps): React.ReactElement {
 
       {view === 'brief' && plan !== undefined && briefDraft !== undefined && (
         <section className="ai-planning-card" aria-label="确认课程规划">
-          <p className="ai-muted">以下是 AI 整理的课程规划，可直接修改后保存。保存后开始联网搜索候选资料。</p>
-          <label className="ai-planning-field">
-            <span>课程标题</span>
-            <input className="ai-edit-title" value={briefDraft.title} disabled={busy}
-              onChange={event => setBriefDraft({ ...briefDraft, title: event.target.value })} />
-          </label>
-          <label className="ai-planning-field">
-            <span>学习目标（每行一个）</span>
-            <textarea className="ai-planning-textarea" value={briefDraft.goals} disabled={busy}
-              onChange={event => setBriefDraft({ ...briefDraft, goals: event.target.value })} />
-          </label>
-          <div className="ai-planning-grid">
-            <label className="ai-planning-field"><span>基础水平</span>
-              <input className="ai-edit-title" value={briefDraft.level} disabled={busy}
-                onChange={event => setBriefDraft({ ...briefDraft, level: event.target.value })} /></label>
-            <label className="ai-planning-field"><span>学习时长</span>
-              <input className="ai-edit-title" value={briefDraft.duration} disabled={busy}
-                onChange={event => setBriefDraft({ ...briefDraft, duration: event.target.value })} /></label>
-            <label className="ai-planning-field"><span>每周投入</span>
-              <input className="ai-edit-title" value={briefDraft.weeklyHours} disabled={busy}
-                onChange={event => setBriefDraft({ ...briefDraft, weeklyHours: event.target.value })} /></label>
-            <label className="ai-planning-field"><span>语言</span>
-              <select className="ai-edit-title" value={briefDraft.language} disabled={busy}
-                onChange={event => setBriefDraft({ ...briefDraft, language: event.target.value as PlanBrief['language'] })}>
-                {(Object.keys(LANGUAGE_LABELS) as PlanBrief['language'][]).map(value => (
-                  <option key={value} value={value}>{LANGUAGE_LABELS[value]}</option>
-                ))}
-              </select></label>
-          </div>
-          <label className="ai-planning-field"><span>背景说明</span>
-            <textarea className="ai-planning-textarea" value={briefDraft.background} disabled={busy}
-              onChange={event => setBriefDraft({ ...briefDraft, background: event.target.value })} /></label>
-          <div className="ai-planning-chapters">
-            <div className="ai-row" style={{ justifyContent: 'space-between' }}>
-              <span className="ai-muted">章节安排</span>
-              <button type="button" className="ai-small-button" disabled={busy}
-                onClick={() => setBriefDraft({ ...briefDraft, chapters: [...briefDraft.chapters, { title: '', topics: '', prerequisites: '' }] })}>
-                ＋ 添加章节
-              </button>
-            </div>
-            {briefDraft.chapters.map((chapter, index) => (
-              <div className="ai-planning-chapter" key={index}>
-                <input className="ai-edit-title" value={chapter.title} disabled={busy} placeholder={`第 ${index + 1} 章标题`}
-                  aria-label={`第 ${index + 1} 章标题`}
-                  onChange={event => setBriefDraft({
-                    ...briefDraft,
-                    chapters: briefDraft.chapters.map((item, itemIndex) => itemIndex === index ? { ...item, title: event.target.value } : item),
-                  })} />
-                <textarea className="ai-planning-textarea" value={chapter.topics} disabled={busy}
-                  aria-label={`第 ${index + 1} 章主题`} placeholder="主题（每行一个）"
-                  onChange={event => setBriefDraft({
-                    ...briefDraft,
-                    chapters: briefDraft.chapters.map((item, itemIndex) => itemIndex === index ? { ...item, topics: event.target.value } : item),
-                  })} />
-                <button type="button" className="ai-danger-button" disabled={busy}
-                  onClick={() => setBriefDraft({ ...briefDraft, chapters: briefDraft.chapters.filter((_, itemIndex) => itemIndex !== index) })}>
-                  删除本章
+          <p className="ai-muted">
+            AI 已根据访谈生成学习计划。默认只需确认标题、目标和每周投入；章节与检索主题由 AI 负责，需要时可展开高级编辑。
+          </p>
+          <div className="ai-plan-summary" aria-label="AI 学习计划摘要">
+            <h4>{plan.brief?.title ?? briefDraft.title ?? plan.topic}</h4>
+            {(plan.brief?.goals ?? []).length > 0 && (
+              <>
+                <div className="ai-muted">学习目标</div>
+                <ul>{(plan.brief?.goals ?? []).slice(0, 4).map(goal => <li key={goal}>{goal}</li>)}</ul>
+                {(plan.brief?.goals ?? []).length > 4 && (
+                  <div className="ai-muted">还有 {(plan.brief?.goals ?? []).length - 4} 条目标（在高级编辑中可查看完整计划）</div>
+                )}
+              </>
+            )}
+            {(plan.brief?.chapters ?? []).length > 0 && (
+              <>
+                <div className="ai-muted">章节安排</div>
+                <ul className="ai-plan-chapters">
+                  {(plan.brief?.chapters ?? []).slice(0, 4).map(chapter => (
+                    <li key={chapter.title}>
+                      <strong>{chapter.title}</strong>
+                      {chapter.topics.length > 0 ? `：${chapter.topics.slice(0, 3).join('、')}` : ''}
+                    </li>
+                  ))}
+                </ul>
+                {(plan.brief?.chapters ?? []).length > 4 && (
+                  <div className="ai-muted">还有 {(plan.brief?.chapters ?? []).length - 4} 章（在高级编辑中可查看完整计划）</div>
+                )}
+              </>
+            )}
+            {(plan.brief?.searchTopics ?? []).length > 0 && (
+              <div className="ai-muted">检索主题：{(plan.brief?.searchTopics ?? []).slice(0, 3).join('；')}</div>
+            )}
+            {plan.brief === undefined && (
+              <div className="ai-banner" data-kind="warning" role="status">
+                <span>AI 计划字段不完整；可直接确认默认值，或重新补全计划。</span>
+                <button type="button" className="ai-small-button" disabled={busy} onClick={() => { void regenerateBrief() }}>
+                  重新补全计划
                 </button>
               </div>
-            ))}
+            )}
           </div>
-          <label className="ai-planning-field"><span>资料检索主题（每行一个）</span>
-            <textarea className="ai-planning-textarea" value={briefDraft.searchTopics} disabled={busy}
-              onChange={event => setBriefDraft({ ...briefDraft, searchTopics: event.target.value })} /></label>
-          <label className="ai-planning-field"><span>练习偏好</span>
-            <input className="ai-edit-title" value={briefDraft.practiceStyle} disabled={busy}
-              onChange={event => setBriefDraft({ ...briefDraft, practiceStyle: event.target.value })} /></label>
-          <label className="ai-planning-field"><span>排除内容（每行一个）</span>
-            <textarea className="ai-planning-textarea" value={briefDraft.exclusions} disabled={busy}
-              onChange={event => setBriefDraft({ ...briefDraft, exclusions: event.target.value })} /></label>
-          <div className="ai-row">
+
+          <div className="ai-planning-grid">
+            <label className="ai-planning-field"><span>课程标题</span>
+              <input className="ai-edit-title" value={briefDraft.title} disabled={busy}
+                placeholder="AI 已生成标题，可修改"
+                onChange={event => setBriefDraft({ ...briefDraft, title: event.target.value })} /></label>
+            <label className="ai-planning-field"><span>每周投入</span>
+              <input className="ai-edit-title" value={briefDraft.weeklyHours} disabled={busy}
+                placeholder={plan.brief?.weeklyHours ?? '可留空，由 AI 默认'}
+                onChange={event => setBriefDraft({ ...briefDraft, weeklyHours: event.target.value })} /></label>
+            <label className="ai-planning-field"><span>学习周期</span>
+              <input className="ai-edit-title" value={briefDraft.duration} disabled={busy}
+                placeholder={plan.brief?.duration ?? '可留空，由 AI 默认'}
+                onChange={event => setBriefDraft({ ...briefDraft, duration: event.target.value })} /></label>
+          </div>
+          <label className="ai-planning-field"><span>学习目标（每行一个；已由 AI 填写）</span>
+            <textarea className="ai-planning-textarea" rows={3} value={briefDraft.goals} disabled={busy}
+              placeholder={plan.brief?.goals?.join('\n') ?? '可留空，提交时使用计划摘要中的目标'}
+              onChange={event => setBriefDraft({ ...briefDraft, goals: event.target.value })} />
+          </label>
+
+          <button type="button" className="ai-link-button" disabled={busy}
+            onClick={() => setAdvancedBrief(!advancedBrief)}>
+            {advancedBrief ? '收起高级编辑' : '高级编辑（章节、检索主题、背景等）'}
+          </button>
+          {advancedBrief && (
+            <div className="ai-plan-advanced">
+              <div className="ai-planning-grid">
+                <label className="ai-planning-field"><span>基础水平</span>
+                  <input className="ai-edit-title" value={briefDraft.level} disabled={busy}
+                    placeholder={plan.brief?.level ?? 'AI 未提供'}
+                    onChange={event => setBriefDraft({ ...briefDraft, level: event.target.value })} /></label>
+                <label className="ai-planning-field"><span>语言</span>
+                  <select className="ai-edit-title" value={briefDraft.language} disabled={busy}
+                    onChange={event => setBriefDraft({ ...briefDraft, language: event.target.value as PlanBrief['language'] })}>
+                    {(Object.keys(LANGUAGE_LABELS) as PlanBrief['language'][]).map(value => (
+                      <option key={value} value={value}>{LANGUAGE_LABELS[value]}</option>
+                    ))}
+                  </select></label>
+              </div>
+              <label className="ai-planning-field"><span>背景说明</span>
+                <textarea className="ai-planning-textarea" value={briefDraft.background} disabled={busy}
+                  placeholder={plan.brief?.background ?? 'AI 未提供'}
+                  onChange={event => setBriefDraft({ ...briefDraft, background: event.target.value })} /></label>
+              <div className="ai-planning-chapters">
+                <div className="ai-row" style={{ justifyContent: 'space-between' }}>
+                  <span className="ai-muted">章节安排</span>
+                  <button type="button" className="ai-small-button" disabled={busy}
+                    onClick={() => setBriefDraft({ ...briefDraft, chapters: [...briefDraft.chapters, { title: '', topics: '', prerequisites: '' }] })}>
+                    ＋ 添加章节
+                  </button>
+                </div>
+                {briefDraft.chapters.map((chapter, index) => (
+                  <div className="ai-planning-chapter" key={index}>
+                    <input className="ai-edit-title" value={chapter.title} disabled={busy} placeholder={`第 ${index + 1} 章标题`}
+                      aria-label={`第 ${index + 1} 章标题`}
+                      onChange={event => setBriefDraft({
+                        ...briefDraft,
+                        chapters: briefDraft.chapters.map((item, itemIndex) => itemIndex === index ? { ...item, title: event.target.value } : item),
+                      })} />
+                    <textarea className="ai-planning-textarea" value={chapter.topics} disabled={busy}
+                      aria-label={`第 ${index + 1} 章主题`} placeholder="主题（每行一个）"
+                      onChange={event => setBriefDraft({
+                        ...briefDraft,
+                        chapters: briefDraft.chapters.map((item, itemIndex) => itemIndex === index ? { ...item, topics: event.target.value } : item),
+                      })} />
+                    <button type="button" className="ai-danger-button" disabled={busy}
+                      onClick={() => setBriefDraft({ ...briefDraft, chapters: briefDraft.chapters.filter((_, itemIndex) => itemIndex !== index) })}>
+                      删除本章
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <label className="ai-planning-field"><span>资料检索主题（每行一个）</span>
+                <textarea className="ai-planning-textarea" value={briefDraft.searchTopics} disabled={busy}
+                  placeholder={plan.brief?.searchTopics?.join('\n') ?? 'AI 未提供；提交时会用课程标题补全'}
+                  onChange={event => setBriefDraft({ ...briefDraft, searchTopics: event.target.value })} /></label>
+              <label className="ai-planning-field"><span>练习偏好</span>
+                <input className="ai-edit-title" value={briefDraft.practiceStyle} disabled={busy}
+                  placeholder={plan.brief?.practiceStyle ?? 'AI 未提供'}
+                  onChange={event => setBriefDraft({ ...briefDraft, practiceStyle: event.target.value })} /></label>
+              <label className="ai-planning-field"><span>排除内容（每行一个）</span>
+                <textarea className="ai-planning-textarea" value={briefDraft.exclusions} disabled={busy}
+                  placeholder={(plan.brief?.exclusions ?? []).join('\n') || 'AI 未提供'}
+                  onChange={event => setBriefDraft({ ...briefDraft, exclusions: event.target.value })} /></label>
+            </div>
+          )}
+
+          <div className="ai-row" style={{ flexWrap: 'wrap' }}>
             <button type="button" className="ai-primary-button" disabled={busy} onClick={() => { void saveBrief(true) }}>
-              {busy ? '处理中…' : '保存并搜索候选资料'}
+              {busy ? '处理中…' : '确认计划并搜索资料'}
             </button>
             <button type="button" className="ai-small-button" disabled={busy} onClick={() => { void saveBrief(false) }}>
               仅保存
+            </button>
+            <button type="button" className="ai-small-button" disabled={busy} onClick={() => { void createCourseFromPlan() }}>
+              按计划直接建课（无资料）
+            </button>
+            <button type="button" className="ai-link-button" disabled={busy} onClick={() => { void regenerateBrief() }}>
+              AI 重新生成计划
             </button>
             <button type="button" className="ai-link-button" onClick={cancelPlan}>取消规划</button>
           </div>

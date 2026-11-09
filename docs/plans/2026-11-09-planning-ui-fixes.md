@@ -1,6 +1,6 @@
-# 待实现计划：规划/资料 UI 修复（2026-11-09）
+# 已完成：规划/资料 UI 修复（2026-11-09）
 
-用户已确认此计划，当前先处理 DSH 0.2.2 兼容性，本计划后置。
+用户已确认此计划；DSH 0.2.2 兼容性修复后已实施。
 
 1. 左侧“资料”区 UI
 - `MaterialsPanel` 的 `.ai-material-row/.ai-materials-panel/.ai-material-origin` 在 `styles.ts` 中缺少样式，默认 button 被撑成巨大胶囊。

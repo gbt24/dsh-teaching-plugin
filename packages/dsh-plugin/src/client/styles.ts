@@ -453,4 +453,51 @@ export const TEACHING_CSS = `
 .ai-modal{background:var(--dsw-alias-bg-layer-1,#fff);color:var(--dsw-alias-label-primary,#111);border-radius:12px;padding:18px 20px;max-width:460px;width:calc(100vw - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
 .ai-modal h3{margin:0 0 8px;font-size:15px}
 .ai-modal .ai-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+
+
+/* Materials sidebar: compact rows; missing CSS previously let browser buttons
+   become huge pills in the narrow sidebar. */
+.ai-materials-panel { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ai-materials-panel .ai-sidebar-heading-row { margin-bottom: 4px; }
+.ai-materials-panel .ai-sidebar-heading-row .ai-small-button { flex: 0 0 auto; font-size: 11px; padding: 2px 6px; }
+.ai-materials-list { display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; min-width: 0; }
+.ai-material-row { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0;
+  border: 1px solid transparent; border-radius: 7px; background: transparent; color: inherit;
+  cursor: pointer; font: inherit; font-size: 12px; text-align: left; padding: 3px 4px; }
+.ai-material-row:hover { background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08)); }
+.ai-material-origin { flex: 0 0 auto; font-size: 10px; padding: 0 4px; line-height: 16px; }
+.ai-material-origin[data-origin="web"] { color: var(--dsw-alias-state-business-primary, #2563eb); }
+.ai-material-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-materials-more { margin-top: 2px; text-align: left; font-size: 11px; }
+.ai-materials-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+.ai-materials-tabs .ai-small-button[data-active="true"] { border-color: var(--dsw-alias-state-business-primary, #2563eb);
+  color: var(--dsw-alias-state-business-primary, #2563eb); background: var(--dsw-alias-bg-layer-1, rgba(37,99,235,0.12)); }
+.ai-materials-tab { border: 1px solid transparent; border-radius: 6px; background: transparent; color: inherit;
+  cursor: pointer; font: inherit; font-size: 12px; padding: 3px 10px; }
+.ai-materials-tab[data-active="true"] { border-color: var(--dsw-alias-state-business-primary, #2563eb);
+  color: var(--dsw-alias-state-business-primary, #2563eb); background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08)); }
+.ai-materials-modal .ai-planning-field, .ai-materials-modal .ai-field { margin-bottom: 8px; }
+.ai-materials-modal textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; }
+
+/* Planning interview: real selectable options (not text copied into a textarea). */
+.ai-planning-option { display: flex; align-items: flex-start; gap: 8px; width: 100%; text-align: left;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3)); border-radius: 8px;
+  background: transparent; color: inherit; cursor: pointer; font: inherit; font-size: 12px;
+  padding: 6px 8px; margin: 3px 0; }
+.ai-planning-option::before { content: "○"; flex: 0 0 auto; opacity: 0.65; }
+.ai-planning-option:hover { background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08)); }
+.ai-planning-option[data-active="true"] { border-color: var(--dsw-alias-state-business-primary, #2563eb);
+  background: var(--dsw-alias-bg-layer-1, rgba(37,99,235,0.12)); }
+.ai-planning-option[data-active="true"]::before { content: "●"; opacity: 1; color: var(--dsw-alias-state-business-primary, #2563eb); }
+.ai-planning-option:disabled { opacity: 0.55; cursor: default; }
+.ai-planning-answer-state { font-size: 11px; opacity: 0.72; margin: 4px 0; }
+.ai-planning-custom-toggle { margin-top: 2px; }
+.ai-plan-summary { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.28));
+  border-radius: 10px; padding: 10px 12px; margin: 8px 0; background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.05)); }
+.ai-plan-summary h4 { margin: 0 0 6px; font-size: 14px; }
+.ai-plan-summary ul { margin: 4px 0 8px; padding-left: 18px; font-size: 12px; }
+.ai-plan-summary .ai-plan-chapters { font-size: 12px; }
+.ai-plan-summary .ai-plan-chapters li { margin: 2px 0; }
+.ai-plan-advanced { margin-top: 10px; border-top: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); padding-top: 8px; }
+
 `

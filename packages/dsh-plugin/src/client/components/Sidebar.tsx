@@ -47,6 +47,8 @@ export interface SidebarProps {
   readonly onMaterialsChanged?: () => void | Promise<void>
   /** Refreshed draft after incremental integration; open the draft review. */
   readonly onDraftReady?: (draft: CourseDraftView) => void
+  /** Switch to the full source list tab. */
+  readonly onShowAllSources?: () => void
 }
 
 /** Ordered concepts of the active (or draft) course revision. */
@@ -354,6 +356,7 @@ export function Sidebar(props: SidebarProps): React.ReactElement {
             {...(props.onPickDirectory !== undefined ? { onPickDirectory: props.onPickDirectory } : {})}
             {...(props.onMaterialsChanged !== undefined ? { onMaterialsChanged: props.onMaterialsChanged } : {})}
             {...(props.onDraftReady !== undefined ? { onDraftReady: props.onDraftReady } : {})}
+            {...(props.onShowAllSources !== undefined ? { onShowAllSources: props.onShowAllSources } : {})}
           />
         </div>
       )}

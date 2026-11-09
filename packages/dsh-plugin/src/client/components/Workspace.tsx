@@ -1353,6 +1353,7 @@ export function TeachingWorkspace(props: {
               setIntegrationDraft(draft)
               if (detail !== undefined) void refreshCourse(detail.course.id)
             }}
+            onShowAllSources={() => dispatch({ type: 'ui/tab', tab: 'sources' })}
             onDeleteSession={requestDeleteSession}
             onNewSession={() => {
               const courseId = detail?.course.id
