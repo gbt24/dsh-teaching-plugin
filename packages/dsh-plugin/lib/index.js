@@ -1,4 +1,4 @@
-// dsh-ai-teaching v0.1.0 — Host half. Built for DeepSeek Harness 0.2.1-rc.5.
+// dsh-ai-teaching v0.1.0 — Host half. Built for DeepSeek Harness 0.2.2-rc.1.
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -64347,7 +64347,7 @@ function registerRoutes(services) {
     }
     const info2 = {
       pluginVersion: services.pluginVersion,
-      builtFor: "0.2.1-rc.5",
+      builtFor: "0.2.2-rc.1",
       host: {
         profile: services.hostFacts.profile,
         platform: services.hostFacts.platform,
@@ -67087,7 +67087,7 @@ function apply(ctx, config = {}) {
     learning,
     profiles,
     pluginVersion: "0.1.0",
-    appVersion: "0.2.1-rc.5"
+    appVersion: "0.2.2-rc.1"
   });
   const ocrState = {
     available: false,

@@ -113,7 +113,7 @@ export function apply(ctx: HostContext, config: Config = {}): void {
     learning,
     profiles,
     pluginVersion: '0.1.0',
-    appVersion: '0.2.1-rc.5',
+    appVersion: '0.2.2-rc.1',
   })
 
   // OCR capability is reported from the real host toolchain (tesseract +

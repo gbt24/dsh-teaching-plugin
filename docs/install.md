@@ -1,6 +1,6 @@
 # 安装、升级与卸载（DeepSeek Harness Desktop）
 
-当前目标版本：DeepSeek Harness Desktop **0.2.1-rc.5**（本机实测）。插件包名 `dsh-ai-teaching`，版本 `0.1.0`。
+当前目标版本：DeepSeek Harness Desktop **0.2.2-rc.1**（本机实测）。插件包名 `dsh-ai-teaching`，版本 `0.1.0`。
 
 ## 前置
 

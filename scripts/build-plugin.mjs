@@ -46,7 +46,7 @@ await build({
   sourcemap: 'linked',
   external: ['node:*'],
   banner: {
-    js: `// ${manifest.name} v${version} — Host half. Built for DeepSeek Harness 0.2.1-rc.5.`,
+    js: `// ${manifest.name} v${version} — Host half. Built for DeepSeek Harness 0.2.2-rc.1.`,
   },
 })
 

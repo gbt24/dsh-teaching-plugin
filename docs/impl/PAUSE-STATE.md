@@ -42,7 +42,7 @@
 
 ## 恢复时的环境速查
 
-- Desktop/runtime：0.2.1-rc.5（bundled Node 24.21.0 / Electron 44.7.0）。
+- Desktop/runtime：0.2.2-rc.1（bundled Node 24.21.0 / Electron 44.7.0）。
 - 构建：`node scripts/build-plugin.mjs`（Host `lib/index.js` + Client `lib/client.js`）；`pnpm build` 同义。
 - 依赖已装：pdfjs-dist、mammoth、fflate、fast-xml-parser、katex、biwascheme。
 - 宿主工具：python3 3.15.2、tesseract 5.5.4（eng+chi_sim）、pdftoppm/gs/cupsfilter。

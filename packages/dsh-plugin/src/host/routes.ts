@@ -221,7 +221,7 @@ export function registerRoutes(services: RouteServices): void {
     }
     const info: BootstrapInfo = {
       pluginVersion: services.pluginVersion,
-      builtFor: '0.2.1-rc.5',
+      builtFor: '0.2.2-rc.1',
       host: {
         profile: services.hostFacts.profile,
         platform: services.hostFacts.platform,
