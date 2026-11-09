@@ -11,7 +11,22 @@
 
 ## 安装
 
-### 方式 A：应用内插件管理器（推荐，可热加载）
+### 方式 A：GitHub Release 分发包（推荐给其他同学）
+
+从 [Releases](https://github.com/gbt24/deepseek-teaching-plugin/releases) 下载 `dsh-ai-teaching-<version>.tgz`（或 `.zip`），无需 Node/pnpm 环境，也不需要仓库源码。
+
+```bash
+# 1. 完全退出 DeepSeek Harness Desktop
+# 2. 用应用自带 CLI 安装分发包
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
+  plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.0.tgz
+
+# 3. 重新打开应用，左侧栏出现「AI 教学」
+```
+
+分发包只含 `lib/`（已内联 Host 侧依赖与 Client 产物）、`cordis.patch.yml` 和重写后的 `package.json`，安装后 profile 的 `dependencies.dsh-ai-teaching` 为 `file:`，bundles 列表包含 `dsh-ai-teaching`。
+
+### 方式 B：应用内插件管理器（本机开发，可热加载）
 
 插件管理入口（Host `plugin_manager` 工具）用本地路径安装：
 
@@ -21,7 +36,7 @@ install_bundle target=/absolute/path/to/deepseek-teaching-plugin/packages/dsh-pl
 
 安装成功后 profile 的 `dependencies.dsh-ai-teaching` 为 `link:` 路径，bundles 列表包含 `dsh-ai-teaching`，宿主侧立即激活（`application: applied`）；浏览器页面刷新后左侧栏出现「AI 教学」。
 
-### 方式 B：bundled CLI（需完全退出应用）
+### 方式 C：bundled CLI + 源码目录（本机开发）
 
 ```bash
 DSH_HOME="${DSH_HOME:-$HOME/.dsh}" \
@@ -41,9 +56,9 @@ DSH_HOME="${DSH_HOME:-$HOME/.dsh}" \
 
 ## 升级
 
-1. 更新插件源码后重新构建：`node scripts/build-plugin.mjs`（生成 `packages/dsh-plugin/lib/`）。
-2. 通过应用内插件管理器再次安装同一路径（或先移除再安装）；宿主会重新组合 profile。
-3. 刷新页面；若提示需要重启应用，按提示重启。数据 schema 升级由插件自动迁移并保留备份。
+1. 用新版本重复一次安装命令（分发包或源码目录均可）：`dsh plugin --profile desktop add <新路径>`；需要时先 `remove dsh-ai-teaching`。
+2. 重新打开应用；宿主会重新组合 profile。
+3. 数据 schema 升级由插件自动迁移并保留备份。
 
 ## 卸载
 
@@ -58,4 +73,28 @@ DSH_HOME="${DSH_HOME:-$HOME/.dsh}" \
 - **无法联网查证**：插件按需使用宿主 `ctx.web`；未配置搜索提供方时会明确显示能力缺失，不影响本地资料教学。
 - **OCR/扫描件不确定**：会显示原文供核对；宿主安装 `tesseract` 可增强识别，缺失时降级为图片/原文展示而非编造内容。
 - **实验无法运行**：检查 Python/Node/Scheme 环境记录；插件不会静默安装系统级依赖，需要时会请求确认。
+
+## 维护者：构建并发布新版本
+
+```bash
+node scripts/build-plugin.mjs   # 生成 packages/dsh-plugin/lib/
+pnpm run pack                   # 生成 dist/dsh-ai-teaching-<version>.tgz|.zip + SHA256SUMS
+```
+
+`pnpm run pack` 会把工作区专用的 `workspace:*` 依赖从发布清单中移除（Host 依赖已内联），再打 tar/zip。发布前建议在隔离 `DSH_HOME` 中用分发包做一次安装与启动验证：
+
+```bash
+DSH_HOME=/tmp/dsh-release-check \
+  "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
+  plugin --profile web add dist/dsh-ai-teaching-0.1.0.tgz
+# 启动后日志出现 [ai-teaching] ready 即通过
+```
+
+确认后推送 tag 并创建 Release：
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+gh release create v0.1.0 dist/dsh-ai-teaching-0.1.0.tgz dist/dsh-ai-teaching-0.1.0.zip dist/SHA256SUMS \
+  --title "v0.1.0" --notes-file docs/release-notes-v0.1.0.md
+```
 - **数据迁移/备份**：设置页或 API 可创建备份 ZIP（含清单与 sha256，不含凭据）；换机恢复后会提示缺失的原资料路径。

@@ -12,7 +12,8 @@
     "build:spike": "node scripts/build-spike.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test \"packages/**/tests/**/*.test.ts\"",
-    "test:all": "pnpm typecheck && pnpm test"
+    "test:all": "pnpm typecheck && pnpm test",
+    "pack": "node scripts/pack-plugin.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

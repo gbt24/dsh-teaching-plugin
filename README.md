@@ -1,5 +1,8 @@
 # AI 知识库教学插件（DeepSeek Harness Desktop）
 
+[![CI](https://github.com/gbt24/deepseek-teaching-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/gbt24/deepseek-teaching-plugin/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 以学生本地资料为课程依据的对话式教学插件：导入自己的课程资料，生成课程结构，在对话中学习、练习、做实验，并保留学习记录与证据。
 
 面向 [DeepSeek Harness Desktop](https://deepseek-harness.github.io/deepseek-harness/) 的 `desktop` profile，插件包名 `dsh-ai-teaching`。
@@ -39,17 +42,33 @@
 - 中文 / English / 中英双语界面；能力缺失提示可关闭（本次会话内）。
 - 数据默认保存在 `~/.dsh/teaching/`；模型凭据沿用 Harness 自身配置，插件不复制、不落盘凭据。
 
-## 安装（使用仓库提供的构建产物）
+## 安装
 
-前置：macOS，已安装并至少启动过一次 DeepSeek Harness Desktop `0.2.2-rc.1` 或更高兼容版本。仓库 `packages/dsh-plugin/lib/` 已包含构建好的 Host/Client 产物，无需自行构建。
+前置：macOS，已安装并至少启动过一次 DeepSeek Harness Desktop `0.2.2-rc.1` 或更高兼容版本。两种方式任选其一。
+
+### 方式一：GitHub Release 分发包（推荐给其他同学）
+
+从 [Releases](https://github.com/gbt24/deepseek-teaching-plugin/releases) 下载 `dsh-ai-teaching-0.1.0.tgz`（或 `.zip`），无需安装 Node/pnpm，也不需要克隆仓库。
 
 ```bash
 # 1. 完全退出 DeepSeek Harness Desktop
-# 2. 用应用自带的 CLI 把插件装进 desktop profile（路径换成你本机的仓库位置）
+# 2. 安装下载的分发包
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add /absolute/path/to/deepseek-teaching-plugin/packages/dsh-plugin
+  plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.0.tgz
 
 # 3. 重新打开 DeepSeek Harness，左侧栏出现「AI 教学」
+```
+
+### 方式二：克隆仓库后按目录安装（开发者）
+
+仓库 `packages/dsh-plugin/lib/` 已包含构建好的 Host/Client 产物，克隆后无需构建。
+
+```bash
+git clone https://github.com/gbt24/deepseek-teaching-plugin.git
+
+# 完全退出 DeepSeek Harness 后
+"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
+  plugin --profile desktop add /absolute/path/to/deepseek-teaching-plugin/packages/dsh-plugin
 ```
 
 卸载：
@@ -72,6 +91,7 @@ pnpm install
 node scripts/build-plugin.mjs   # 生成 packages/dsh-plugin/lib/{index.js,client.js}
 pnpm typecheck                  # tsc --noEmit
 pnpm test                       # node --test，524 项
+pnpm run pack                   # 生成 dist/ 下的 tgz/zip 发布产物
 ```
 
 开发调试时可用应用自带 CLI 在隔离的 `DSH_HOME` 中启动 Web GUI，例如：
