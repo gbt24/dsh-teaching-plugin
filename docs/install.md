@@ -13,7 +13,7 @@
 
 ### 方式 A：GitHub Release 分发包（推荐给其他同学）
 
-从 [Releases](https://github.com/gbt24/deepseek-teaching-plugin/releases) 下载 `dsh-ai-teaching-<version>.tgz`（或 `.zip`），无需 Node/pnpm 环境，也不需要仓库源码。
+从 [Releases](https://github.com/gbt24/dsh-teaching-plugin/releases) 下载 `dsh-ai-teaching-<version>.tgz`（或 `.zip`），无需 Node/pnpm 环境，也不需要仓库源码。
 
 ```bash
 # 1. 完全退出 DeepSeek Harness Desktop
@@ -31,7 +31,7 @@
 插件管理入口（Host `plugin_manager` 工具）用本地路径安装：
 
 ```text
-install_bundle target=/absolute/path/to/deepseek-teaching-plugin/packages/dsh-plugin
+install_bundle target=/absolute/path/to/dsh-teaching-plugin/packages/dsh-plugin
 ```
 
 安装成功后 profile 的 `dependencies.dsh-ai-teaching` 为 `link:` 路径，bundles 列表包含 `dsh-ai-teaching`，宿主侧立即激活（`application: applied`）；浏览器页面刷新后左侧栏出现「AI 教学」。

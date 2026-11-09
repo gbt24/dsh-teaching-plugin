@@ -1,5 +1,5 @@
 {
-  "name": "deepseek-teaching-plugin",
+  "name": "dsh-teaching-plugin",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -33,6 +33,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/gbt24/deepseek-teaching-plugin.git"
+    "url": "https://github.com/gbt24/dsh-teaching-plugin.git"
   }
 }

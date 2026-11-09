@@ -34,5 +34,10 @@
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.0.5"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gbt24/dsh-teaching-plugin.git",
+    "directory": "packages/dsh-plugin"
+  }
 }

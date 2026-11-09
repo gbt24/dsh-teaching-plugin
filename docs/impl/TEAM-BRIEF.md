@@ -4,7 +4,7 @@
 
 ## 当前基座（T01）
 
-- 项目：`deepseek-teaching-plugin`，pnpm workspace，两个包：
+- 项目：`dsh-teaching-plugin`，pnpm workspace，两个包：
   - `packages/teaching-core`：纯 Node/TypeScript 域逻辑，**不 import 任何 `@deepseek-ai/*`**，可被 `node --test` 直接运行（Node ≥ 22.19 原生剥离类型，import 需带 `.ts` 后缀）。
   - `packages/dsh-plugin`：可安装 bundle（Host entry + Client entry + `cordis.patch.yml`），由 Lead 负责；esbuild 打包时把 core 内联进 Host 产物。
 - 构建/检查：

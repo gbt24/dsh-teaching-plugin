@@ -1,6 +1,8 @@
-# AI 知识库教学插件（DeepSeek Harness Desktop）
+# dsh-teaching-plugin
 
-[![CI](https://github.com/gbt24/deepseek-teaching-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/gbt24/deepseek-teaching-plugin/actions/workflows/ci.yml)
+AI 知识库教学插件（DeepSeek Harness Desktop）
+
+[![CI](https://github.com/gbt24/dsh-teaching-plugin/actions/workflows/ci.yml/badge.svg)](https://github.com/gbt24/dsh-teaching-plugin/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 以学生本地资料为课程依据的对话式教学插件：导入自己的课程资料，生成课程结构，在对话中学习、练习、做实验，并保留学习记录与证据。
@@ -48,7 +50,7 @@
 
 ### 方式一：GitHub Release 分发包（推荐给其他同学）
 
-从 [Releases](https://github.com/gbt24/deepseek-teaching-plugin/releases) 下载 `dsh-ai-teaching-0.1.0.tgz`（或 `.zip`），无需安装 Node/pnpm，也不需要克隆仓库。
+从 [Releases](https://github.com/gbt24/dsh-teaching-plugin/releases) 下载 `dsh-ai-teaching-0.1.0.tgz`（或 `.zip`），无需安装 Node/pnpm，也不需要克隆仓库。
 
 ```bash
 # 1. 完全退出 DeepSeek Harness Desktop
@@ -64,11 +66,11 @@
 仓库 `packages/dsh-plugin/lib/` 已包含构建好的 Host/Client 产物，克隆后无需构建。
 
 ```bash
-git clone https://github.com/gbt24/deepseek-teaching-plugin.git
+git clone https://github.com/gbt24/dsh-teaching-plugin.git
 
 # 完全退出 DeepSeek Harness 后
 "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add /absolute/path/to/deepseek-teaching-plugin/packages/dsh-plugin
+  plugin --profile desktop add /absolute/path/to/dsh-teaching-plugin/packages/dsh-plugin
 ```
 
 卸载：
