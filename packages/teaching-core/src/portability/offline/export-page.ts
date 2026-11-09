@@ -834,7 +834,7 @@ export function buildOfflinePage(input: OfflinePageInput): OfflinePageResult {
   head.appendChild(el(document, 'meta', { attrs: { charset: 'utf-8' } }))
   head.appendChild(el(document, 'meta', { attrs: { name: 'viewport', content: 'width=device-width, initial-scale=1' } }))
   head.appendChild(el(document, 'meta', {
-    attrs: { name: 'generator', content: `dsh-ai-teaching offline export ${input.pluginVersion}` },
+    attrs: { name: 'generator', content: `dsh-teaching-plugin offline export ${input.pluginVersion}` },
   }))
   head.appendChild(el(document, 'title', { text: title }))
   const style = el(document, 'style')

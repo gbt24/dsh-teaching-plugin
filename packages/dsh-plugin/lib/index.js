@@ -1,4 +1,4 @@
-// dsh-ai-teaching v0.1.1 — Host half. Built for DeepSeek Harness 0.2.2-rc.1.
+// dsh-teaching-plugin v0.1.2 — Host half. Built for DeepSeek Harness 0.2.2-rc.1.
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -60126,7 +60126,7 @@ function buildOfflinePage(input) {
   head.appendChild(el(document2, "meta", { attrs: { charset: "utf-8" } }));
   head.appendChild(el(document2, "meta", { attrs: { name: "viewport", content: "width=device-width, initial-scale=1" } }));
   head.appendChild(el(document2, "meta", {
-    attrs: { name: "generator", content: `dsh-ai-teaching offline export ${input.pluginVersion}` }
+    attrs: { name: "generator", content: `dsh-teaching-plugin offline export ${input.pluginVersion}` }
   }));
   head.appendChild(el(document2, "title", { text: title }));
   const style = el(document2, "style");
@@ -62883,7 +62883,7 @@ function createEnvironmentManager(options) {
 }
 
 // packages/dsh-plugin/src/version.ts
-var PLUGIN_VERSION = "0.1.1";
+var PLUGIN_VERSION = "0.1.2";
 
 // packages/dsh-plugin/src/host/model-adapter.ts
 var DEFAULT_TIMEOUT_MS3 = 18e4;

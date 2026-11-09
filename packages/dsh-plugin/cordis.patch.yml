@@ -5,4 +5,4 @@
 # dsh.client so the browser loads lib/client.js for the sidebar panel.
 - insert:
     - id: ai-teaching
-      name: 'dsh-ai-teaching'
+      name: 'dsh-teaching-plugin'

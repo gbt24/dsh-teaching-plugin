@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 /**
- * Build the distributable plugin package used by GitHub Releases.
+ * Build the npm-publishable plugin package from the built lib/.
+ *
+ * `npm publish dist/<name>-<version>` is the distribution step. The tgz/zip
+ * archives and SHA256SUMS are produced for local verification only; GitHub
+ * Releases publish notes without binary assets.
  *
  * The repository package cannot be packed as-is:
  * - `private: true` blocks publishing;
@@ -11,10 +15,9 @@
  * workspace dependency entirely and ships only `lib/`, the patch and metadata.
  *
  * Output (gitignored `dist/`):
- *   dist/dsh-ai-teaching-<version>/          unpacked package (installable path)
- *   dist/dsh-ai-teaching-<version>.tgz       release tarball
- *   dist/dsh-ai-teaching-<version>.zip       release zip
- *   dist/SHA256SUMS                          checksums of both archives
+ *   dist/<name>-<version>/                   package to `npm publish`
+ *   dist/<name>-<version>.tgz/.zip           local verification archives
+ *   dist/SHA256SUMS                          checksums of the local archives
  */
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -26,7 +29,7 @@ const pluginDir = join(root, 'packages/dsh-plugin')
 const distDir = join(root, 'dist')
 const manifest = JSON.parse(await readFile(join(pluginDir, 'package.json'), 'utf8'))
 const version = manifest.version ?? '0.0.0'
-const packageName = `dsh-ai-teaching-${version}`
+const packageName = `${manifest.name}-${version}`
 const stage = join(distDir, packageName)
 
 for (const required of ['lib/index.js', 'lib/client.js', 'cordis.patch.yml']) {

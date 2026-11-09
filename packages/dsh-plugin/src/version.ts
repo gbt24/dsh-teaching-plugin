@@ -5,4 +5,4 @@
  * two in sync so the bundle banner, top-bar label and stored records cannot
  * drift from the published package version.
  */
-export const PLUGIN_VERSION = '0.1.1'
+export const PLUGIN_VERSION = '0.1.2'

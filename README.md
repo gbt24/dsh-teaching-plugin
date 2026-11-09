@@ -7,11 +7,11 @@ AI 知识库教学插件（DeepSeek Harness Desktop）
 
 以学生本地资料为课程依据的对话式教学插件：导入自己的课程资料，生成课程结构，在对话中学习、练习、做实验，并保留学习记录与证据。
 
-面向 [DeepSeek Harness Desktop](https://deepseek-harness.github.io/deepseek-harness/) 的 `desktop` profile，插件包名 `dsh-ai-teaching`。
+面向 [DeepSeek Harness Desktop](https://deepseek-harness.github.io/deepseek-harness/) 的 `desktop` profile，插件包名 `dsh-teaching-plugin`。
 
 ## 项目状态
 
-- 插件版本 `0.1.1`；目标 **DeepSeek Harness Desktop `0.2.2-rc.1`**（`engines.dsh`: `>=0.2.2-rc.1 <0.3.0`）。
+- 插件版本 `0.1.2`；目标 **DeepSeek Harness Desktop `0.2.2-rc.1`**（`engines.dsh`: `>=0.2.2-rc.1 <0.3.0`）。
 - 已在 **macOS + 0.2.2-rc.1** 上完成真实桌面加载、模型调用、资料导入、教学流程与数据持久化验证；Windows / Linux 尚未验证。
 - 自动化验证：`tsc` 0 errors、`525` 项测试通过；客户端 bundle 约 `1.1 MiB`。
 - 真实桌面验收清单中仍有若干人工教学/外部依赖项在持续补齐，详见 `docs/evidence/`。
@@ -46,18 +46,15 @@ AI 知识库教学插件（DeepSeek Harness Desktop）
 
 ## 安装
 
-前置：已安装并至少启动过一次 DeepSeek Harness Desktop `0.2.2-rc.1` 或更高兼容版本（本插件当前在 macOS 完成验证，Windows / Linux 尚未验证）。以下命令使用应用自带的 `dsh` CLI；请确保它在 `PATH` 中（不同平台的安装位置不同，使用对应平台的 CLI 可执行文件即可）。两种方式任选其一。
+前置：已安装并至少启动过一次 DeepSeek Harness Desktop `0.2.2-rc.1` 或更高兼容版本（当前在 macOS 完成验证，Windows / Linux 尚未验证）。命令中的 `dsh` 指应用自带的 CLI，请确保它在 `PATH` 中；其他平台使用对应平台的 CLI 可执行文件即可。安装前请先完全退出 DeepSeek Harness。
 
-### 方式一：GitHub Release 分发包（推荐给其他同学）
-
-从 [Releases](https://github.com/gbt24/dsh-teaching-plugin/releases) 下载 `dsh-ai-teaching-0.1.1.tgz`（或 `.zip`），无需安装 Node/pnpm，也不需要克隆仓库。
+### 方式一：npm 包（推荐，和 dsh-context 一样）
 
 ```bash
-# 1. 完全退出 DeepSeek Harness Desktop
-# 2. 安装下载的分发包
-dsh plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.1.tgz
+# 安装最新版（或固定版本：dsh-teaching-plugin@0.1.2）
+dsh plugin --profile desktop add dsh-teaching-plugin
 
-# 3. 重新打开 DeepSeek Harness，左侧栏出现「AI 教学」
+# 重新打开 DeepSeek Harness，左侧栏出现「AI 教学」
 ```
 
 ### 方式二：克隆仓库后按目录安装（开发者）
@@ -67,20 +64,19 @@ dsh plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.1.tgz
 ```bash
 git clone https://github.com/gbt24/dsh-teaching-plugin.git
 
-# 完全退出 DeepSeek Harness 后
 dsh plugin --profile desktop add /absolute/path/to/dsh-teaching-plugin/packages/dsh-plugin
 ```
 
 卸载：
 
 ```bash
-# 完全退出应用后
-dsh plugin --profile desktop remove dsh-ai-teaching
+dsh plugin --profile desktop remove dsh-teaching-plugin
 ```
 
 学习数据在 `$DSH_HOME/teaching/`（默认 `~/.dsh/teaching/`），卸载后保留；确认不再需要时可手动删除（不会影响原始资料文件）。
 
-> 只使用 Desktop 自带的 dsh CLI 或应用内插件管理器修改 `desktop` profile；不要用普通 npm 安装的 dsh 修改它。更完整的安装、升级、排障说明见 [`docs/install.md`](docs/install.md)。
+> 安装统一通过 npm；GitHub Releases 只发布版本说明，不再附带 tgz/zip 分发包。
+> 只使用 Desktop 自带的 `dsh` CLI 或应用内插件管理器修改 `desktop` profile；不要用普通 npm 安装的 dsh 修改它。更完整的安装、升级、排障说明见 [`docs/install.md`](docs/install.md)。
 
 ## 从源码构建与开发
 
@@ -90,7 +86,7 @@ pnpm install
 node scripts/build-plugin.mjs   # 生成 packages/dsh-plugin/lib/{index.js,client.js}
 pnpm typecheck                  # tsc --noEmit
 pnpm test                       # node --test，525 项
-pnpm run pack                   # 生成 dist/ 下的 tgz/zip 发布产物
+pnpm run pack                   # 生成 npm 发布用的 dist/dsh-teaching-plugin-<version>/（附本地校验归档）
 ```
 
 开发调试时可用应用自带 CLI 在隔离的 `DSH_HOME` 中启动 Web GUI，例如：

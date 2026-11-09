@@ -27,5 +27,5 @@ jobs:
         run: pnpm test
       - name: Build plugin
         run: node scripts/build-plugin.mjs
-      - name: Pack release artifacts
+      - name: Build publishable package
         run: node scripts/pack-plugin.mjs
