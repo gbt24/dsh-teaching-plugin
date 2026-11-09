@@ -243,6 +243,23 @@ function ContextMeter(props: {
 }
 
 export function TopBar(props: TopBarProps): React.ReactElement {
+  const warningText = props.bootstrap?.warnings.join('；') ?? ''
+  const [dismissedWarning, setDismissedWarning] = useState<string | undefined>(() => {
+    try {
+      return window.sessionStorage.getItem('ai-teaching:dismissed-warning') ?? undefined
+    } catch {
+      return undefined
+    }
+  })
+  const showWarnings = warningText !== '' && dismissedWarning !== warningText
+  const dismissWarnings = (): void => {
+    setDismissedWarning(warningText)
+    try {
+      window.sessionStorage.setItem('ai-teaching:dismissed-warning', warningText)
+    } catch {
+      // Session storage may be blocked; the in-memory dismissal still works.
+    }
+  }
   const model = props.bootstrap?.model
   const imageCapability = model?.imageInput === 'yes' ? '可读图' : model?.imageInput === 'no' ? '不可读图' : '图像能力未知'
   return (
@@ -315,9 +332,18 @@ export function TopBar(props: TopBarProps): React.ReactElement {
         </div>
       </header>
       <TaskProgressBar tasks={props.tasks} onCancel={props.onCancelTask} />
-      {props.bootstrap !== undefined && props.bootstrap.warnings.length > 0 && (
-        <div className="ai-banner" data-kind="warning" role="status">
-          <span>能力提示：{props.bootstrap.warnings.join('；')}</span>
+      {showWarnings && (
+        <div className="ai-banner ai-capability-banner" data-kind="warning" role="status">
+          <span>能力提示：{warningText}</span>
+          <button
+            type="button"
+            className="ai-banner-close"
+            aria-label="关闭能力提示"
+            title="关闭本次会话的能力提示"
+            onClick={dismissWarnings}
+          >
+            ×
+          </button>
         </div>
       )}
     </>

@@ -31,6 +31,10 @@ import { CourseSetupCard } from './CourseSetupCard.tsx'
 import { DraftReview } from './DraftReview.tsx'
 import { loadLayoutPrefs, saveLayoutPrefs } from '../layout-prefs.ts'
 import {
+  adjustPaneWidth, clampPaneWidths, DEFAULT_PANE_WIDTHS, loadPaneWidths, PANE_LIMITS,
+  resetPaneWidths, savePaneWidths, type PaneWidths,
+} from '../resize-layout.ts'
+import {
   COMPRESSION_CONFIRM_TEXT, COMPRESSION_FORCE_TEXT, compressionSuccessMessage,
   parseCompressionResult,
 } from '../context-compress.ts'
@@ -68,12 +72,75 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+/** Vertical drag handle between two plugin columns. */
+function ResizeHandle(props: {
+  readonly side: 'left' | 'right'
+  readonly widths: PaneWidths
+  readonly value: number
+  readonly min: number
+  readonly max: number
+  readonly onWidths: (widths: PaneWidths) => void
+  readonly getContainerWidth: () => number
+}): React.ReactElement {
+  const drag = useRef<{ startX: number; widths: PaneWidths } | null>(null)
+  const begin = (event: React.PointerEvent<HTMLDivElement>): void => {
+    event.preventDefault()
+    event.currentTarget.focus()
+    drag.current = { startX: event.clientX, widths: props.widths }
+    try { event.currentTarget.setPointerCapture(event.pointerId) } catch { /* older engines */ }
+  }
+  const move = (event: React.PointerEvent<HTMLDivElement>): void => {
+    if (drag.current === null) return
+    const delta = event.clientX - drag.current.startX
+    props.onWidths(adjustPaneWidth(drag.current.widths, props.side, delta, props.getContainerWidth()))
+  }
+  const end = (event: React.PointerEvent<HTMLDivElement>): void => {
+    drag.current = null
+    try { event.currentTarget.releasePointerCapture(event.pointerId) } catch { /* already released */ }
+  }
+  const reset = (): void => props.onWidths(resetPaneWidths())
+  const key = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === 'Home') { event.preventDefault(); reset(); return }
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+    event.preventDefault()
+    const step = event.shiftKey ? 48 : 16
+    const delta = event.key === 'ArrowRight' ? step : -step
+    props.onWidths(adjustPaneWidth(props.widths, props.side, delta, props.getContainerWidth()))
+  }
+  return (
+    <div
+      className="ai-resize-handle"
+      data-side={props.side}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={props.side === 'left' ? '调整课程导航宽度' : '调整右侧教学区宽度'}
+      aria-valuenow={Math.round(props.value)}
+      aria-valuemin={props.min}
+      aria-valuemax={props.max}
+      tabIndex={0}
+      title="拖动调整宽度；双击或按 Home 恢复默认"
+      onPointerDown={begin}
+      onPointerMove={move}
+      onPointerUp={end}
+      onPointerCancel={end}
+      onDoubleClick={reset}
+      onKeyDown={key}
+    />
+  )
+}
+
 /** The central teaching page registered under the `main` slot. */
 export function TeachingWorkspace(props: {
   /** Harness directory chooser (native Desktop dialog / Host OS chooser). */
   readonly pickDirectory?: () => Promise<string | null>
 } = {}): React.ReactElement {
   const [initialLayout] = useState(() => loadLayoutPrefs())
+  const [paneWidths, setPaneWidths] = useState<PaneWidths>(() => loadPaneWidths(
+    typeof window === 'undefined' ? undefined : window.localStorage,
+  ))
+  const layoutBodyRef = useRef<HTMLDivElement | null>(null)
+  const [compactLayout, setCompactLayout] = useState(() =>
+    typeof window === 'undefined' ? false : window.innerWidth < 780)
   const [state, dispatch] = React.useReducer(workspaceReducer, {
     ...INITIAL_WORKSPACE_STATE,
     leftCollapsed: initialLayout.leftCollapsed,
@@ -163,6 +230,30 @@ export function TeachingWorkspace(props: {
   useEffect(() => {
     saveLayoutPrefs({ leftCollapsed: state.leftCollapsed, rightCollapsed: state.rightCollapsed })
   }, [state.leftCollapsed, state.rightCollapsed])
+
+  const paneContainerWidth = useCallback((): number => (
+    layoutBodyRef.current?.clientWidth
+      ?? (typeof window === 'undefined' ? 1440 : window.innerWidth)
+  ), [])
+
+  // Persist pane widths and keep them inside the available chat width.
+  useEffect(() => {
+    savePaneWidths(typeof window === 'undefined' ? undefined : window.localStorage, paneWidths)
+  }, [paneWidths])
+
+  useEffect(() => {
+    const onResize = (): void => {
+      setCompactLayout(window.innerWidth < 780)
+      setPaneWidths(previous => clampPaneWidths(previous, paneContainerWidth()))
+    }
+    window.addEventListener('resize', onResize)
+    onResize()
+    return () => window.removeEventListener('resize', onResize)
+  }, [paneContainerWidth])
+
+  useEffect(() => {
+    setPaneWidths(previous => clampPaneWidths(previous, paneContainerWidth()))
+  }, [state.leftCollapsed, state.rightCollapsed, paneContainerWidth])
 
   // A different course restarts the structure-pending flow.
   useEffect(() => {
@@ -1325,10 +1416,16 @@ export function TeachingWorkspace(props: {
       )}
       {state.phase === 'ready' && !needsCourseSetup(detail) && (
         <div
+          ref={layoutBodyRef}
           className="ai-teaching-body"
           data-left-collapsed={state.leftCollapsed}
           data-right-collapsed={state.rightCollapsed}
+          style={compactLayout ? undefined : {
+            '--ai-left-width': `${paneWidths.left}px`,
+            '--ai-right-width': `${paneWidths.right}px`,
+          } as React.CSSProperties}
         >
+          <div className="ai-pane ai-pane-left">
           <Sidebar
             courses={state.courses}
             {...(detail !== undefined ? { courseDetail: detail } : {})}
@@ -1372,6 +1469,18 @@ export function TeachingWorkspace(props: {
             }}
             onOpenSource={documentId => openSource(documentId)}
           />
+          </div>
+          {!state.leftCollapsed && !compactLayout && (
+            <ResizeHandle
+              side="left"
+              widths={paneWidths}
+              value={paneWidths.left}
+              min={PANE_LIMITS.leftMin}
+              max={PANE_LIMITS.leftMax}
+              onWidths={setPaneWidths}
+              getContainerWidth={paneContainerWidth}
+            />
+          )}
           <div className="ai-teaching-main">
             <ChatPanel
               {...(detail !== undefined ? { courseTitle: detail.course.title } : {})}
@@ -1392,6 +1501,7 @@ export function TeachingWorkspace(props: {
               onRetry={retryLast}
               onDismissError={() => dispatch({ type: 'error/clear' })}
             />
+            {compactLayout === false && <div className="ai-pane ai-pane-right">
             <TeachingArea
               activities={state.activities}
               {...(state.selectedActivityId !== undefined ? { currentActivityId: state.selectedActivityId } : {})}
@@ -1427,6 +1537,18 @@ export function TeachingWorkspace(props: {
               onSaveNotes={saveNotes}
               onEvidenceClick={onEvidenceClick}
             />
+            </div>}
+            {!state.rightCollapsed && !compactLayout && (
+              <ResizeHandle
+                side="right"
+                widths={paneWidths}
+                value={paneWidths.right}
+                min={PANE_LIMITS.rightMin}
+                max={Math.round(1440 * PANE_LIMITS.rightMaxRatio)}
+                onWidths={setPaneWidths}
+                getContainerWidth={paneContainerWidth}
+              />
+            )}
           </div>
         </div>
       )}

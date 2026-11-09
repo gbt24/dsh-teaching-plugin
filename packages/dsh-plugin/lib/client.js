@@ -50,12 +50,23 @@ window.__ModuleLoader__.load({
     var TEACHING_CSS = `
     .ai-teaching-root {
       display: flex; flex-direction: column; height: 100%; min-height: 0;
+      box-sizing: border-box;
+      /* DSH frame titlebar clearance (48px on macOS; 0 elsewhere). */
+      padding-top: var(--dsh-frame-top-clearance, 0px);
       font-size: 13px; line-height: 1.6; color: var(--dsw-alias-label-primary, #1f2937);
       background: var(--dsw-alias-bg-base, transparent);
     }
+    .ai-capability-banner { position: relative; padding-right: 28px; }
+    .ai-banner-close { position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+      border: none; background: transparent; color: inherit; cursor: pointer; font-size: 16px;
+      line-height: 1; padding: 2px 6px; border-radius: 5px; opacity: 0.75; }
+    .ai-banner-close:hover { opacity: 1; background: rgba(127,127,127,0.12); }
     .ai-teaching-topbar {
       display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-      padding: 8px 14px; border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22));
+      /* When the DSH outer sidebar is collapsed, keep the title clear of the
+         native window controls / leading seat; the frame publishes the clearance. */
+      padding: 8px 14px;
+      padding-left: max(14px, calc(var(--dsh-frame-leading-clearance, 0px) - 56px + 14px)); border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22));
       background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.04));
       flex: 0 0 auto;
     }
@@ -77,7 +88,22 @@ window.__ModuleLoader__.load({
     .ai-lang-switch button[data-active="true"] {
       background: var(--dsw-alias-state-business-primary, #3b82f6); color: #fff;
     }
-    .ai-teaching-body { display: flex; flex: 1 1 auto; min-height: 0; }
+    .ai-teaching-body { display: flex; flex: 1 1 auto; min-height: 0; min-width: 0; }
+    .ai-pane { min-width: 0; display: flex; }
+    .ai-pane-left { flex: 0 0 var(--ai-left-width, 232px); width: var(--ai-left-width, 232px); }
+    .ai-pane-left > .ai-teaching-sidebar { width: 100%; flex: 1 1 auto; }
+    .ai-pane-right { flex: 0 0 var(--ai-right-width, 480px); width: var(--ai-right-width, 480px); }
+    .ai-pane-right > .ai-teaching-area { width: 100%; flex: 1 1 auto; }
+    .ai-teaching-body[data-left-collapsed="true"] .ai-pane-left { display: none; }
+    .ai-teaching-body[data-right-collapsed="true"] .ai-pane-right { display: none; }
+    .ai-resize-handle { flex: 0 0 6px; width: 6px; min-width: 6px; cursor: col-resize;
+      touch-action: none; position: relative; z-index: 3; background: transparent; }
+    .ai-resize-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 2px; width: 2px;
+      background: transparent; transition: background 0.12s ease; }
+    .ai-resize-handle:hover::after, .ai-resize-handle:focus-visible::after {
+      background: var(--dsw-alias-state-business-primary, #2563eb); }
+    .ai-resize-handle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #2563eb);
+      outline-offset: -2px; border-radius: 2px; }
     .ai-teaching-sidebar {
       width: 232px; flex: 0 0 232px; overflow-y: auto; padding: 10px 10px 20px;
       border-right: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22));
@@ -280,8 +306,10 @@ window.__ModuleLoader__.load({
     .ai-grow { flex: 1; }
     @media (max-width: 980px) {
       .ai-teaching-body { flex-direction: column; }
-      .ai-teaching-sidebar { width: auto; flex: 0 0 auto; max-height: 180px;
+      .ai-pane-left, .ai-pane-right { width: auto; flex: 1 1 auto; display: flex; }
+      .ai-pane-left > .ai-teaching-sidebar { width: auto; flex: 0 0 auto; max-height: 180px;
         border-right: none; border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); }
+      .ai-resize-handle { display: none; }
       .ai-teaching-main { flex-direction: column; }
       .ai-chat-panel { flex: 1 1 auto; border-right: none; min-height: 320px; }
       .ai-teaching-area { flex: 1 1 auto; }
@@ -21620,6 +21648,76 @@ window.__ModuleLoader__.load({
       }
     }
 
+    // packages/dsh-plugin/src/client/resize-layout.ts
+    var PANE_WIDTHS_STORAGE_KEY = "ai-teaching:widths";
+    var PANE_LIMITS = {
+      leftMin: 180,
+      leftMax: 420,
+      rightMin: 320,
+      rightMaxRatio: 0.6,
+      chatMin: 320,
+      defaultLeft: 232,
+      defaultRight: 480,
+      /** Two vertical drag handles between the three columns. */
+      handles: 12
+    };
+    var DEFAULT_PANE_WIDTHS = {
+      left: PANE_LIMITS.defaultLeft,
+      right: PANE_LIMITS.defaultRight
+    };
+    function parsePaneWidths(raw) {
+      if (raw === null || raw === void 0 || raw.trim() === "") return DEFAULT_PANE_WIDTHS;
+      try {
+        const value = JSON.parse(raw);
+        if (typeof value !== "object" || value === null) return DEFAULT_PANE_WIDTHS;
+        const record = value;
+        const left = typeof record["left"] === "number" && Number.isFinite(record["left"]) ? record["left"] : DEFAULT_PANE_WIDTHS.left;
+        const right = typeof record["right"] === "number" && Number.isFinite(record["right"]) ? record["right"] : DEFAULT_PANE_WIDTHS.right;
+        return clampPaneWidths({ left, right }, Number.POSITIVE_INFINITY);
+      } catch {
+        return DEFAULT_PANE_WIDTHS;
+      }
+    }
+    function loadPaneWidths(storage) {
+      if (storage === void 0) return DEFAULT_PANE_WIDTHS;
+      try {
+        return parsePaneWidths(storage.getItem(PANE_WIDTHS_STORAGE_KEY));
+      } catch {
+        return DEFAULT_PANE_WIDTHS;
+      }
+    }
+    function serializePaneWidths(widths) {
+      return JSON.stringify({ left: Math.round(widths.left), right: Math.round(widths.right) });
+    }
+    function savePaneWidths(storage, widths) {
+      if (storage === void 0) return;
+      try {
+        storage.setItem(PANE_WIDTHS_STORAGE_KEY, serializePaneWidths(widths));
+      } catch {
+      }
+    }
+    function clampPaneWidths(widths, containerWidth) {
+      const container = Number.isFinite(containerWidth) && containerWidth > 0 ? containerWidth : 1440;
+      const maxLeft = Math.min(PANE_LIMITS.leftMax, Math.max(PANE_LIMITS.leftMin, container - PANE_LIMITS.chatMin - PANE_LIMITS.rightMin - PANE_LIMITS.handles));
+      const left = Math.round(Math.max(PANE_LIMITS.leftMin, Math.min(widths.left, maxLeft)));
+      const maxRightByContainer = Math.max(PANE_LIMITS.rightMin, Math.floor(container * PANE_LIMITS.rightMaxRatio));
+      const maxRight = Math.max(PANE_LIMITS.rightMin, Math.min(maxRightByContainer, container - left - PANE_LIMITS.chatMin - PANE_LIMITS.handles));
+      const right = Math.round(Math.max(PANE_LIMITS.rightMin, Math.min(widths.right, maxRight)));
+      return {
+        left: Math.max(PANE_LIMITS.leftMin, Math.min(left, maxLeft)),
+        right: Math.max(PANE_LIMITS.rightMin, Math.min(right, maxRight))
+      };
+    }
+    function adjustPaneWidth(widths, pane, delta, containerWidth) {
+      return clampPaneWidths({
+        left: pane === "left" ? widths.left + delta : widths.left,
+        right: pane === "right" ? widths.right - delta : widths.right
+      }, containerWidth);
+    }
+    function resetPaneWidths() {
+      return DEFAULT_PANE_WIDTHS;
+    }
+
     // packages/dsh-plugin/src/client/components/Sidebar.tsx
     var import_react11 = require("react");
 
@@ -23031,6 +23129,22 @@ window.__ModuleLoader__.load({
       ] });
     }
     function TopBar(props) {
+      const warningText = props.bootstrap?.warnings.join("\uFF1B") ?? "";
+      const [dismissedWarning, setDismissedWarning] = (0, import_react13.useState)(() => {
+        try {
+          return window.sessionStorage.getItem("ai-teaching:dismissed-warning") ?? void 0;
+        } catch {
+          return void 0;
+        }
+      });
+      const showWarnings = warningText !== "" && dismissedWarning !== warningText;
+      const dismissWarnings = () => {
+        setDismissedWarning(warningText);
+        try {
+          window.sessionStorage.setItem("ai-teaching:dismissed-warning", warningText);
+        } catch {
+        }
+      };
       const model = props.bootstrap?.model;
       const imageCapability = model?.imageInput === "yes" ? "\u53EF\u8BFB\u56FE" : model?.imageInput === "no" ? "\u4E0D\u53EF\u8BFB\u56FE" : "\u56FE\u50CF\u80FD\u529B\u672A\u77E5";
       return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(import_jsx_runtime13.Fragment, { children: [
@@ -23104,10 +23218,23 @@ window.__ModuleLoader__.load({
           ] })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(TaskProgressBar, { tasks: props.tasks, onCancel: props.onCancelTask }),
-        props.bootstrap !== void 0 && props.bootstrap.warnings.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "ai-banner", "data-kind": "warning", role: "status", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { children: [
-          "\u80FD\u529B\u63D0\u793A\uFF1A",
-          props.bootstrap.warnings.join("\uFF1B")
-        ] }) })
+        showWarnings && /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "ai-banner ai-capability-banner", "data-kind": "warning", role: "status", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { children: [
+            "\u80FD\u529B\u63D0\u793A\uFF1A",
+            warningText
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+            "button",
+            {
+              type: "button",
+              className: "ai-banner-close",
+              "aria-label": "\u5173\u95ED\u80FD\u529B\u63D0\u793A",
+              title: "\u5173\u95ED\u672C\u6B21\u4F1A\u8BDD\u7684\u80FD\u529B\u63D0\u793A",
+              onClick: dismissWarnings,
+              children: "\xD7"
+            }
+          )
+        ] })
       ] });
     }
 
@@ -23142,8 +23269,71 @@ window.__ModuleLoader__.load({
     function sleep(ms) {
       return new Promise((resolve) => setTimeout(resolve, ms));
     }
+    function ResizeHandle(props) {
+      const drag = (0, import_react14.useRef)(null);
+      const begin = (event) => {
+        event.preventDefault();
+        event.currentTarget.focus();
+        drag.current = { startX: event.clientX, widths: props.widths };
+        try {
+          event.currentTarget.setPointerCapture(event.pointerId);
+        } catch {
+        }
+      };
+      const move = (event) => {
+        if (drag.current === null) return;
+        const delta = event.clientX - drag.current.startX;
+        props.onWidths(adjustPaneWidth(drag.current.widths, props.side, delta, props.getContainerWidth()));
+      };
+      const end = (event) => {
+        drag.current = null;
+        try {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        } catch {
+        }
+      };
+      const reset = () => props.onWidths(resetPaneWidths());
+      const key = (event) => {
+        if (event.key === "Home") {
+          event.preventDefault();
+          reset();
+          return;
+        }
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        const step = event.shiftKey ? 48 : 16;
+        const delta = event.key === "ArrowRight" ? step : -step;
+        props.onWidths(adjustPaneWidth(props.widths, props.side, delta, props.getContainerWidth()));
+      };
+      return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+        "div",
+        {
+          className: "ai-resize-handle",
+          "data-side": props.side,
+          role: "separator",
+          "aria-orientation": "vertical",
+          "aria-label": props.side === "left" ? "\u8C03\u6574\u8BFE\u7A0B\u5BFC\u822A\u5BBD\u5EA6" : "\u8C03\u6574\u53F3\u4FA7\u6559\u5B66\u533A\u5BBD\u5EA6",
+          "aria-valuenow": Math.round(props.value),
+          "aria-valuemin": props.min,
+          "aria-valuemax": props.max,
+          tabIndex: 0,
+          title: "\u62D6\u52A8\u8C03\u6574\u5BBD\u5EA6\uFF1B\u53CC\u51FB\u6216\u6309 Home \u6062\u590D\u9ED8\u8BA4",
+          onPointerDown: begin,
+          onPointerMove: move,
+          onPointerUp: end,
+          onPointerCancel: end,
+          onDoubleClick: reset,
+          onKeyDown: key
+        }
+      );
+    }
     function TeachingWorkspace(props = {}) {
       const [initialLayout] = (0, import_react14.useState)(() => loadLayoutPrefs());
+      const [paneWidths, setPaneWidths] = (0, import_react14.useState)(() => loadPaneWidths(
+        typeof window === "undefined" ? void 0 : window.localStorage
+      ));
+      const layoutBodyRef = (0, import_react14.useRef)(null);
+      const [compactLayout, setCompactLayout] = (0, import_react14.useState)(() => typeof window === "undefined" ? false : window.innerWidth < 780);
       const [state, dispatch] = import_react14.default.useReducer(workspaceReducer, {
         ...INITIAL_WORKSPACE_STATE,
         leftCollapsed: initialLayout.leftCollapsed,
@@ -23206,6 +23396,22 @@ window.__ModuleLoader__.load({
       (0, import_react14.useEffect)(() => {
         saveLayoutPrefs({ leftCollapsed: state.leftCollapsed, rightCollapsed: state.rightCollapsed });
       }, [state.leftCollapsed, state.rightCollapsed]);
+      const paneContainerWidth = (0, import_react14.useCallback)(() => layoutBodyRef.current?.clientWidth ?? (typeof window === "undefined" ? 1440 : window.innerWidth), []);
+      (0, import_react14.useEffect)(() => {
+        savePaneWidths(typeof window === "undefined" ? void 0 : window.localStorage, paneWidths);
+      }, [paneWidths]);
+      (0, import_react14.useEffect)(() => {
+        const onResize = () => {
+          setCompactLayout(window.innerWidth < 780);
+          setPaneWidths((previous) => clampPaneWidths(previous, paneContainerWidth()));
+        };
+        window.addEventListener("resize", onResize);
+        onResize();
+        return () => window.removeEventListener("resize", onResize);
+      }, [paneContainerWidth]);
+      (0, import_react14.useEffect)(() => {
+        setPaneWidths((previous) => clampPaneWidths(previous, paneContainerWidth()));
+      }, [state.leftCollapsed, state.rightCollapsed, paneContainerWidth]);
       (0, import_react14.useEffect)(() => {
         setSetup({ phase: "ready" });
       }, [state.courseDetail?.course.id]);
@@ -24196,11 +24402,16 @@ window.__ModuleLoader__.load({
         state.phase === "ready" && !needsCourseSetup(detail) && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
           "div",
           {
+            ref: layoutBodyRef,
             className: "ai-teaching-body",
             "data-left-collapsed": state.leftCollapsed,
             "data-right-collapsed": state.rightCollapsed,
+            style: compactLayout ? void 0 : {
+              "--ai-left-width": `${paneWidths.left}px`,
+              "--ai-right-width": `${paneWidths.right}px`
+            },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "ai-pane ai-pane-left", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
                 Sidebar,
                 {
                   courses: state.courses,
@@ -24251,6 +24462,18 @@ window.__ModuleLoader__.load({
                   },
                   onOpenSource: (documentId) => openSource(documentId)
                 }
+              ) }),
+              !state.leftCollapsed && !compactLayout && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                ResizeHandle,
+                {
+                  side: "left",
+                  widths: paneWidths,
+                  value: paneWidths.left,
+                  min: PANE_LIMITS.leftMin,
+                  max: PANE_LIMITS.leftMax,
+                  onWidths: setPaneWidths,
+                  getContainerWidth: paneContainerWidth
+                }
               ),
               /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "ai-teaching-main", children: [
                 /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
@@ -24279,7 +24502,7 @@ window.__ModuleLoader__.load({
                     onDismissError: () => dispatch({ type: "error/clear" })
                   }
                 ),
-                /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                compactLayout === false && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "ai-pane ai-pane-right", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
                   TeachingArea,
                   {
                     activities: state.activities,
@@ -24317,6 +24540,18 @@ window.__ModuleLoader__.load({
                     onNotesChange: setNotesDraft,
                     onSaveNotes: saveNotes,
                     onEvidenceClick
+                  }
+                ) }),
+                !state.rightCollapsed && !compactLayout && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                  ResizeHandle,
+                  {
+                    side: "right",
+                    widths: paneWidths,
+                    value: paneWidths.right,
+                    min: PANE_LIMITS.rightMin,
+                    max: Math.round(1440 * PANE_LIMITS.rightMaxRatio),
+                    onWidths: setPaneWidths,
+                    getContainerWidth: paneContainerWidth
                   }
                 )
               ] })

@@ -9,12 +9,23 @@
 export const TEACHING_CSS = `
 .ai-teaching-root {
   display: flex; flex-direction: column; height: 100%; min-height: 0;
+  box-sizing: border-box;
+  /* DSH frame titlebar clearance (48px on macOS; 0 elsewhere). */
+  padding-top: var(--dsh-frame-top-clearance, 0px);
   font-size: 13px; line-height: 1.6; color: var(--dsw-alias-label-primary, #1f2937);
   background: var(--dsw-alias-bg-base, transparent);
 }
+.ai-capability-banner { position: relative; padding-right: 28px; }
+.ai-banner-close { position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  border: none; background: transparent; color: inherit; cursor: pointer; font-size: 16px;
+  line-height: 1; padding: 2px 6px; border-radius: 5px; opacity: 0.75; }
+.ai-banner-close:hover { opacity: 1; background: rgba(127,127,127,0.12); }
 .ai-teaching-topbar {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding: 8px 14px; border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22));
+  /* When the DSH outer sidebar is collapsed, keep the title clear of the
+     native window controls / leading seat; the frame publishes the clearance. */
+  padding: 8px 14px;
+  padding-left: max(14px, calc(var(--dsh-frame-leading-clearance, 0px) - 56px + 14px)); border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22));
   background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.04));
   flex: 0 0 auto;
 }
@@ -36,7 +47,22 @@ export const TEACHING_CSS = `
 .ai-lang-switch button[data-active="true"] {
   background: var(--dsw-alias-state-business-primary, #3b82f6); color: #fff;
 }
-.ai-teaching-body { display: flex; flex: 1 1 auto; min-height: 0; }
+.ai-teaching-body { display: flex; flex: 1 1 auto; min-height: 0; min-width: 0; }
+.ai-pane { min-width: 0; display: flex; }
+.ai-pane-left { flex: 0 0 var(--ai-left-width, 232px); width: var(--ai-left-width, 232px); }
+.ai-pane-left > .ai-teaching-sidebar { width: 100%; flex: 1 1 auto; }
+.ai-pane-right { flex: 0 0 var(--ai-right-width, 480px); width: var(--ai-right-width, 480px); }
+.ai-pane-right > .ai-teaching-area { width: 100%; flex: 1 1 auto; }
+.ai-teaching-body[data-left-collapsed="true"] .ai-pane-left { display: none; }
+.ai-teaching-body[data-right-collapsed="true"] .ai-pane-right { display: none; }
+.ai-resize-handle { flex: 0 0 6px; width: 6px; min-width: 6px; cursor: col-resize;
+  touch-action: none; position: relative; z-index: 3; background: transparent; }
+.ai-resize-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 2px; width: 2px;
+  background: transparent; transition: background 0.12s ease; }
+.ai-resize-handle:hover::after, .ai-resize-handle:focus-visible::after {
+  background: var(--dsw-alias-state-business-primary, #2563eb); }
+.ai-resize-handle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #2563eb);
+  outline-offset: -2px; border-radius: 2px; }
 .ai-teaching-sidebar {
   width: 232px; flex: 0 0 232px; overflow-y: auto; padding: 10px 10px 20px;
   border-right: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22));
@@ -239,8 +265,10 @@ export const TEACHING_CSS = `
 .ai-grow { flex: 1; }
 @media (max-width: 980px) {
   .ai-teaching-body { flex-direction: column; }
-  .ai-teaching-sidebar { width: auto; flex: 0 0 auto; max-height: 180px;
+  .ai-pane-left, .ai-pane-right { width: auto; flex: 1 1 auto; display: flex; }
+  .ai-pane-left > .ai-teaching-sidebar { width: auto; flex: 0 0 auto; max-height: 180px;
     border-right: none; border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); }
+  .ai-resize-handle { display: none; }
   .ai-teaching-main { flex-direction: column; }
   .ai-chat-panel { flex: 1 1 auto; border-right: none; min-height: 320px; }
   .ai-teaching-area { flex: 1 1 auto; }
