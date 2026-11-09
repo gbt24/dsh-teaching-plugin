@@ -51,8 +51,13 @@ window.__ModuleLoader__.load({
     .ai-teaching-root {
       display: flex; flex-direction: column; height: 100%; min-height: 0;
       box-sizing: border-box;
-      /* DSH frame titlebar clearance (48px on macOS; 0 elsewhere). */
-      padding-top: var(--dsh-frame-top-clearance, 0px);
+      /* No top clearance here: the Harness frame only expects entry pages (plugin
+         manager and similar, not the conversation) to pad below the window's top
+         strip. This workspace replaces the conversation and its own top bar plays
+         the role of the conversation header, so it starts at the frame's top edge.
+         Padding the root would paint the clearance band in the root background and
+         show up as a black strip above the top bar. */
+      padding-top: 0;
       font-size: 13px; line-height: 1.6; color: var(--dsw-alias-label-primary, #1f2937);
       background: var(--dsw-alias-bg-base, transparent);
     }
@@ -63,10 +68,17 @@ window.__ModuleLoader__.load({
     .ai-banner-close:hover { opacity: 1; background: rgba(127,127,127,0.12); }
     .ai-teaching-topbar {
       display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-      /* When the DSH outer sidebar is collapsed, keep the title clear of the
-         native window controls / leading seat; the frame publishes the clearance. */
+      /* The whole top bar sits in the window's top strip, so it is the row that
+         must avoid the native window controls. While the outer sidebar is collapsed
+         the frame mounts its shell.leading seat over the main panel and publishes
+         the inline band it occupies (--dsh-frame-leading-clearance: 160px, 84px
+         in fullscreen). DSH's own conversation header starts its content exactly
+         after that band, so the top bar's inline padding does the same instead of
+         pushing the panel down. When the variable is absent (sidebar expanded,
+         plain Web, Windows) the regular 14px inset applies. */
       padding: 8px 14px;
-      padding-left: max(14px, calc(var(--dsh-frame-leading-clearance, 0px) - 56px + 14px)); border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22));
+      padding-left: max(14px, var(--dsh-frame-leading-clearance, 0px));
+      border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22));
       background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.04));
       flex: 0 0 auto;
     }
@@ -23148,7 +23160,7 @@ window.__ModuleLoader__.load({
       const model = props.bootstrap?.model;
       const imageCapability = model?.imageInput === "yes" ? "\u53EF\u8BFB\u56FE" : model?.imageInput === "no" ? "\u4E0D\u53EF\u8BFB\u56FE" : "\u56FE\u50CF\u80FD\u529B\u672A\u77E5";
       return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(import_jsx_runtime13.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("header", { className: "ai-teaching-topbar", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("header", { className: "ai-teaching-topbar", "data-window-drag": "", children: [
           /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "ai-topbar-titles", children: [
             /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "ai-row", style: { alignItems: "center", gap: 6 }, children: [
               /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(

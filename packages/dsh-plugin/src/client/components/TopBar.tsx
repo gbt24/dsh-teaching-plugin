@@ -264,7 +264,10 @@ export function TopBar(props: TopBarProps): React.ReactElement {
   const imageCapability = model?.imageInput === 'yes' ? '可读图' : model?.imageInput === 'no' ? '不可读图' : '图像能力未知'
   return (
     <>
-      <header className="ai-teaching-topbar">
+      {/* The bar takes the window's top strip (like DSH's conversation header),
+          so mark it draggable: ui-web base.css turns `data-window-drag` into the
+          one darwin drag rule, and keeps buttons/inputs under it clickable. */}
+      <header className="ai-teaching-topbar" data-window-drag="">
         <div className="ai-topbar-titles">
           <div className="ai-row" style={{ alignItems: 'center', gap: 6 }}>
             <button
