@@ -31,8 +31,8 @@ import { CourseSetupCard } from './CourseSetupCard.tsx'
 import { DraftReview } from './DraftReview.tsx'
 import { loadLayoutPrefs, saveLayoutPrefs } from '../layout-prefs.ts'
 import {
-  adjustPaneWidth, clampPaneWidths, DEFAULT_PANE_WIDTHS, loadPaneWidths, PANE_LIMITS,
-  resetPaneWidths, savePaneWidths, type PaneWidths,
+  adjustPaneWidth, loadPaneWidths, PANE_LIMITS, resetPaneWidths, resolvePaneWidths,
+  savePaneWidths, shouldCompact, type PaneLayoutInput, type PaneWidths,
 } from '../resize-layout.ts'
 import {
   COMPRESSION_CONFIRM_TEXT, COMPRESSION_FORCE_TEXT, compressionSuccessMessage,
@@ -79,8 +79,9 @@ function ResizeHandle(props: {
   readonly value: number
   readonly min: number
   readonly max: number
-  readonly onWidths: (widths: PaneWidths) => void
-  readonly getContainerWidth: () => number
+  /** Re-fit the widths captured at gesture start (`base`) by `delta`. */
+  readonly onResize: (side: 'left' | 'right', delta: number, base: PaneWidths) => void
+  readonly onReset: () => void
 }): React.ReactElement {
   const drag = useRef<{ startX: number; widths: PaneWidths } | null>(null)
   const begin = (event: React.PointerEvent<HTMLDivElement>): void => {
@@ -91,21 +92,19 @@ function ResizeHandle(props: {
   }
   const move = (event: React.PointerEvent<HTMLDivElement>): void => {
     if (drag.current === null) return
-    const delta = event.clientX - drag.current.startX
-    props.onWidths(adjustPaneWidth(drag.current.widths, props.side, delta, props.getContainerWidth()))
+    props.onResize(props.side, event.clientX - drag.current.startX, drag.current.widths)
   }
   const end = (event: React.PointerEvent<HTMLDivElement>): void => {
     drag.current = null
     try { event.currentTarget.releasePointerCapture(event.pointerId) } catch { /* already released */ }
   }
-  const reset = (): void => props.onWidths(resetPaneWidths())
   const key = (event: React.KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key === 'Home') { event.preventDefault(); reset(); return }
+    if (event.key === 'Home') { event.preventDefault(); props.onReset(); return }
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
     event.preventDefault()
     const step = event.shiftKey ? 48 : 16
     const delta = event.key === 'ArrowRight' ? step : -step
-    props.onWidths(adjustPaneWidth(props.widths, props.side, delta, props.getContainerWidth()))
+    props.onResize(props.side, delta, props.widths)
   }
   return (
     <div
@@ -117,13 +116,15 @@ function ResizeHandle(props: {
       aria-valuenow={Math.round(props.value)}
       aria-valuemin={props.min}
       aria-valuemax={props.max}
+      aria-valuetext={`${Math.round(props.value)}px`}
       tabIndex={0}
       title="拖动调整宽度；双击或按 Home 恢复默认"
       onPointerDown={begin}
       onPointerMove={move}
       onPointerUp={end}
       onPointerCancel={end}
-      onDoubleClick={reset}
+      onLostPointerCapture={end}
+      onDoubleClick={() => props.onReset()}
       onKeyDown={key}
     />
   )
@@ -139,8 +140,10 @@ export function TeachingWorkspace(props: {
     typeof window === 'undefined' ? undefined : window.localStorage,
   ))
   const layoutBodyRef = useRef<HTMLDivElement | null>(null)
-  const [compactLayout, setCompactLayout] = useState(() =>
-    typeof window === 'undefined' ? false : window.innerWidth < 780)
+  const layoutObserver = useRef<ResizeObserver | null>(null)
+  /** Actual width of the plugin's columns strip (not the window: DSH chrome changes it). */
+  const [bodyWidth, setBodyWidth] = useState(() =>
+    typeof window === 'undefined' ? 1440 : window.innerWidth)
   const [state, dispatch] = React.useReducer(workspaceReducer, {
     ...INITIAL_WORKSPACE_STATE,
     leftCollapsed: initialLayout.leftCollapsed,
@@ -148,6 +151,45 @@ export function TeachingWorkspace(props: {
   })
   const stateRef = useRef(state)
   stateRef.current = state
+  /** Measure the strip itself so DSH outer-sidebar/rightbar changes apply too. */
+  const measureLayoutBody = useCallback((node: HTMLDivElement | null): void => {
+    layoutBodyRef.current = node
+    layoutObserver.current?.disconnect()
+    layoutObserver.current = null
+    if (node === null) return
+    const update = (): void => setBodyWidth(node.clientWidth)
+    update()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(update)
+    observer.observe(node)
+    layoutObserver.current = observer
+  }, [])
+  // Preferences are what the user asked for; the solution is fitted per frame
+  // and never overwrites a wider preference when the window is small.
+  const compactLayout = shouldCompact(bodyWidth)
+  const paneLayoutInput: PaneLayoutInput = {
+    containerWidth: bodyWidth,
+    leftCollapsed: state.leftCollapsed,
+    rightCollapsed: state.rightCollapsed,
+  }
+  const paneLayout = resolvePaneWidths(paneWidths, paneLayoutInput)
+  const effectivePaneWidths: PaneWidths = { left: paneLayout.left, right: paneLayout.right }
+  /** Drag/keyboard result: adjust the visible panes, keep the collapsed pane's preference. */
+  const resizePane = useCallback((side: 'left' | 'right', delta: number, base: PaneWidths): void => {
+    const input: PaneLayoutInput = {
+      containerWidth: bodyWidth,
+      leftCollapsed: state.leftCollapsed,
+      rightCollapsed: state.rightCollapsed,
+    }
+    setPaneWidths(previous => {
+      const adjusted = adjustPaneWidth(base, side, delta, input)
+      return {
+        left: input.leftCollapsed === true ? previous.left : adjusted.left,
+        right: input.rightCollapsed === true ? previous.right : adjusted.right,
+      }
+    })
+  }, [bodyWidth, state.leftCollapsed, state.rightCollapsed])
+  const resetPanes = useCallback((): void => setPaneWidths(resetPaneWidths()), [])
   const streamAbort = useRef<AbortController | null>(null)
   const mounted = useRef(true)
   const pollTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -231,29 +273,19 @@ export function TeachingWorkspace(props: {
     saveLayoutPrefs({ leftCollapsed: state.leftCollapsed, rightCollapsed: state.rightCollapsed })
   }, [state.leftCollapsed, state.rightCollapsed])
 
-  const paneContainerWidth = useCallback((): number => (
-    layoutBodyRef.current?.clientWidth
-      ?? (typeof window === 'undefined' ? 1440 : window.innerWidth)
-  ), [])
-
-  // Persist pane widths and keep them inside the available chat width.
+  // Persist only user-chosen widths; fitting to the current width is derived.
   useEffect(() => {
     savePaneWidths(typeof window === 'undefined' ? undefined : window.localStorage, paneWidths)
   }, [paneWidths])
 
+  // Fallback measurement for engines without ResizeObserver (the ref callback
+  // observes the strip itself; this only covers window-sized containers).
   useEffect(() => {
-    const onResize = (): void => {
-      setCompactLayout(window.innerWidth < 780)
-      setPaneWidths(previous => clampPaneWidths(previous, paneContainerWidth()))
-    }
-    window.addEventListener('resize', onResize)
-    onResize()
-    return () => window.removeEventListener('resize', onResize)
-  }, [paneContainerWidth])
-
-  useEffect(() => {
-    setPaneWidths(previous => clampPaneWidths(previous, paneContainerWidth()))
-  }, [state.leftCollapsed, state.rightCollapsed, paneContainerWidth])
+    if (typeof ResizeObserver !== 'undefined') return undefined
+    const update = (): void => setBodyWidth(layoutBodyRef.current?.clientWidth ?? window.innerWidth)
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   // A different course restarts the structure-pending flow.
   useEffect(() => {
@@ -1416,13 +1448,14 @@ export function TeachingWorkspace(props: {
       )}
       {state.phase === 'ready' && !needsCourseSetup(detail) && (
         <div
-          ref={layoutBodyRef}
+          ref={measureLayoutBody}
           className="ai-teaching-body"
+          data-compact={compactLayout}
           data-left-collapsed={state.leftCollapsed}
           data-right-collapsed={state.rightCollapsed}
           style={compactLayout ? undefined : {
-            '--ai-left-width': `${paneWidths.left}px`,
-            '--ai-right-width': `${paneWidths.right}px`,
+            '--ai-left-width': `${effectivePaneWidths.left}px`,
+            '--ai-right-width': `${effectivePaneWidths.right}px`,
           } as React.CSSProperties}
         >
           <div className="ai-pane ai-pane-left">
@@ -1473,12 +1506,12 @@ export function TeachingWorkspace(props: {
           {!state.leftCollapsed && !compactLayout && (
             <ResizeHandle
               side="left"
-              widths={paneWidths}
-              value={paneWidths.left}
+              widths={effectivePaneWidths}
+              value={effectivePaneWidths.left}
               min={PANE_LIMITS.leftMin}
-              max={PANE_LIMITS.leftMax}
-              onWidths={setPaneWidths}
-              getContainerWidth={paneContainerWidth}
+              max={paneLayout.maxLeft}
+              onResize={resizePane}
+              onReset={resetPanes}
             />
           )}
           <div className="ai-teaching-main">
@@ -1501,6 +1534,17 @@ export function TeachingWorkspace(props: {
               onRetry={retryLast}
               onDismissError={() => dispatch({ type: 'error/clear' })}
             />
+            {!state.rightCollapsed && !compactLayout && (
+              <ResizeHandle
+                side="right"
+                widths={effectivePaneWidths}
+                value={effectivePaneWidths.right}
+                min={PANE_LIMITS.rightMin}
+                max={paneLayout.maxRight}
+                onResize={resizePane}
+                onReset={resetPanes}
+              />
+            )}
             {compactLayout === false && <div className="ai-pane ai-pane-right">
             <TeachingArea
               activities={state.activities}
@@ -1538,17 +1582,6 @@ export function TeachingWorkspace(props: {
               onEvidenceClick={onEvidenceClick}
             />
             </div>}
-            {!state.rightCollapsed && !compactLayout && (
-              <ResizeHandle
-                side="right"
-                widths={paneWidths}
-                value={paneWidths.right}
-                min={PANE_LIMITS.rightMin}
-                max={Math.round(1440 * PANE_LIMITS.rightMaxRatio)}
-                onWidths={setPaneWidths}
-                getContainerWidth={paneContainerWidth}
-              />
-            )}
           </div>
         </div>
       )}

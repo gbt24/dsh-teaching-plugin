@@ -67,12 +67,14 @@ export const TEACHING_CSS = `
 .ai-pane-right > .ai-teaching-area { width: 100%; flex: 1 1 auto; }
 .ai-teaching-body[data-left-collapsed="true"] .ai-pane-left { display: none; }
 .ai-teaching-body[data-right-collapsed="true"] .ai-pane-right { display: none; }
-.ai-resize-handle { flex: 0 0 6px; width: 6px; min-width: 6px; cursor: col-resize;
+.ai-resize-handle { flex: 0 0 8px; width: 8px; min-width: 8px; cursor: col-resize;
   touch-action: none; position: relative; z-index: 3; background: transparent; }
-.ai-resize-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 2px; width: 2px;
+.ai-resize-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px;
   background: transparent; transition: background 0.12s ease; }
-.ai-resize-handle:hover::after, .ai-resize-handle:focus-visible::after {
+.ai-resize-handle:hover::after, .ai-resize-handle:active::after,
+.ai-resize-handle:focus-visible::after {
   background: var(--dsw-alias-state-business-primary, #2563eb); }
+.ai-teaching-root:has(.ai-resize-handle:active) { cursor: col-resize; user-select: none; }
 .ai-resize-handle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #2563eb);
   outline-offset: -2px; border-radius: 2px; }
 .ai-teaching-sidebar {
@@ -275,16 +277,20 @@ export const TEACHING_CSS = `
 .ai-muted { opacity: 0.62; font-size: 12px; }
 .ai-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .ai-grow { flex: 1; }
-@media (max-width: 980px) {
-  .ai-teaching-body { flex-direction: column; }
-  .ai-pane-left, .ai-pane-right { width: auto; flex: 1 1 auto; display: flex; }
-  .ai-pane-left > .ai-teaching-sidebar { width: auto; flex: 0 0 auto; max-height: 180px;
-    border-right: none; border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); }
-  .ai-resize-handle { display: none; }
-  .ai-teaching-main { flex-direction: column; }
-  .ai-chat-panel { flex: 1 1 auto; border-right: none; min-height: 320px; }
-  .ai-teaching-area { flex: 1 1 auto; }
-}
+/* Stack only when the workspace itself is narrow (the window may be wide but
+   DSH chrome can leave a narrow strip); the attribute is owned by the workspace
+   so the resize handles and the stacked layout never disagree. */
+.ai-teaching-body[data-compact="true"] { flex-direction: column; }
+.ai-teaching-body[data-compact="true"] .ai-pane-left,
+.ai-teaching-body[data-compact="true"] .ai-pane-right { width: auto; flex: 1 1 auto; display: flex; }
+.ai-teaching-body[data-compact="true"] .ai-pane-left > .ai-teaching-sidebar {
+  width: auto; flex: 0 0 auto; max-height: 180px;
+  border-right: none; border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); }
+.ai-teaching-body[data-compact="true"] .ai-resize-handle { display: none; }
+.ai-teaching-body[data-compact="true"] .ai-teaching-main { flex-direction: column; }
+.ai-teaching-body[data-compact="true"] .ai-chat-panel {
+  flex: 1 1 auto; border-right: none; min-height: 320px; }
+.ai-teaching-body[data-compact="true"] .ai-teaching-area { flex: 1 1 auto; }
 .ai-course-row{display:flex;align-items:stretch;gap:4px}
 .ai-course-row .ai-course-button{flex:1;min-width:0}
 .ai-course-delete{border:1px solid var(--dsw-alias-border-l2,#d9d9d9);background:transparent;color:var(--dsw-alias-label-secondary,#888);border-radius:6px;cursor:pointer;padding:0 6px;font-size:12px}

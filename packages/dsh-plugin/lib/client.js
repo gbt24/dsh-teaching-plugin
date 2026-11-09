@@ -108,12 +108,14 @@ window.__ModuleLoader__.load({
     .ai-pane-right > .ai-teaching-area { width: 100%; flex: 1 1 auto; }
     .ai-teaching-body[data-left-collapsed="true"] .ai-pane-left { display: none; }
     .ai-teaching-body[data-right-collapsed="true"] .ai-pane-right { display: none; }
-    .ai-resize-handle { flex: 0 0 6px; width: 6px; min-width: 6px; cursor: col-resize;
+    .ai-resize-handle { flex: 0 0 8px; width: 8px; min-width: 8px; cursor: col-resize;
       touch-action: none; position: relative; z-index: 3; background: transparent; }
-    .ai-resize-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 2px; width: 2px;
+    .ai-resize-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 2px;
       background: transparent; transition: background 0.12s ease; }
-    .ai-resize-handle:hover::after, .ai-resize-handle:focus-visible::after {
+    .ai-resize-handle:hover::after, .ai-resize-handle:active::after,
+    .ai-resize-handle:focus-visible::after {
       background: var(--dsw-alias-state-business-primary, #2563eb); }
+    .ai-teaching-root:has(.ai-resize-handle:active) { cursor: col-resize; user-select: none; }
     .ai-resize-handle:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary, #2563eb);
       outline-offset: -2px; border-radius: 2px; }
     .ai-teaching-sidebar {
@@ -316,16 +318,20 @@ window.__ModuleLoader__.load({
     .ai-muted { opacity: 0.62; font-size: 12px; }
     .ai-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .ai-grow { flex: 1; }
-    @media (max-width: 980px) {
-      .ai-teaching-body { flex-direction: column; }
-      .ai-pane-left, .ai-pane-right { width: auto; flex: 1 1 auto; display: flex; }
-      .ai-pane-left > .ai-teaching-sidebar { width: auto; flex: 0 0 auto; max-height: 180px;
-        border-right: none; border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); }
-      .ai-resize-handle { display: none; }
-      .ai-teaching-main { flex-direction: column; }
-      .ai-chat-panel { flex: 1 1 auto; border-right: none; min-height: 320px; }
-      .ai-teaching-area { flex: 1 1 auto; }
-    }
+    /* Stack only when the workspace itself is narrow (the window may be wide but
+       DSH chrome can leave a narrow strip); the attribute is owned by the workspace
+       so the resize handles and the stacked layout never disagree. */
+    .ai-teaching-body[data-compact="true"] { flex-direction: column; }
+    .ai-teaching-body[data-compact="true"] .ai-pane-left,
+    .ai-teaching-body[data-compact="true"] .ai-pane-right { width: auto; flex: 1 1 auto; display: flex; }
+    .ai-teaching-body[data-compact="true"] .ai-pane-left > .ai-teaching-sidebar {
+      width: auto; flex: 0 0 auto; max-height: 180px;
+      border-right: none; border-bottom: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); }
+    .ai-teaching-body[data-compact="true"] .ai-resize-handle { display: none; }
+    .ai-teaching-body[data-compact="true"] .ai-teaching-main { flex-direction: column; }
+    .ai-teaching-body[data-compact="true"] .ai-chat-panel {
+      flex: 1 1 auto; border-right: none; min-height: 320px; }
+    .ai-teaching-body[data-compact="true"] .ai-teaching-area { flex: 1 1 auto; }
     .ai-course-row{display:flex;align-items:stretch;gap:4px}
     .ai-course-row .ai-course-button{flex:1;min-width:0}
     .ai-course-delete{border:1px solid var(--dsw-alias-border-l2,#d9d9d9);background:transparent;color:var(--dsw-alias-label-secondary,#888);border-radius:6px;cursor:pointer;padding:0 6px;font-size:12px}
@@ -21661,31 +21667,52 @@ window.__ModuleLoader__.load({
     }
 
     // packages/dsh-plugin/src/client/resize-layout.ts
-    var PANE_WIDTHS_STORAGE_KEY = "ai-teaching:widths";
+    var PANE_WIDTHS_STORAGE_KEY = "ai-teaching:widths:v2";
     var PANE_LIMITS = {
       leftMin: 180,
       leftMax: 420,
-      rightMin: 320,
+      rightMin: 280,
       rightMaxRatio: 0.6,
-      chatMin: 320,
+      /** The chat column is the flexible middle column and keeps this floor. */
+      chatMin: 280,
       defaultLeft: 232,
       defaultRight: 480,
-      /** Two vertical drag handles between the three columns. */
-      handles: 12
+      /** Width of one vertical drag handle (px). */
+      handleWidth: 8,
+      /** Below this container width the columns stack instead of squeezing. */
+      compactWidth: 780,
+      /** Last-resort right-pane floor when the container cannot hold the minima. */
+      rightHardMin: 240
     };
     var DEFAULT_PANE_WIDTHS = {
       left: PANE_LIMITS.defaultLeft,
       right: PANE_LIMITS.defaultRight
     };
+    var MAX_PREFERENCE = 2400;
+    function finiteContainer(width) {
+      return Number.isFinite(width) && width > 0 ? width : 1440;
+    }
+    function clampNumber(value, min, max) {
+      return Math.max(min, Math.min(value, max));
+    }
+    function shouldCompact(containerWidth) {
+      return finiteContainer(containerWidth) < PANE_LIMITS.compactWidth;
+    }
+    function visibleHandleCount(input) {
+      return (input.leftCollapsed === true ? 0 : 1) + (input.rightCollapsed === true ? 0 : 1);
+    }
     function parsePaneWidths(raw) {
       if (raw === null || raw === void 0 || raw.trim() === "") return DEFAULT_PANE_WIDTHS;
       try {
         const value = JSON.parse(raw);
         if (typeof value !== "object" || value === null) return DEFAULT_PANE_WIDTHS;
         const record = value;
-        const left = typeof record["left"] === "number" && Number.isFinite(record["left"]) ? record["left"] : DEFAULT_PANE_WIDTHS.left;
-        const right = typeof record["right"] === "number" && Number.isFinite(record["right"]) ? record["right"] : DEFAULT_PANE_WIDTHS.right;
-        return clampPaneWidths({ left, right }, Number.POSITIVE_INFINITY);
+        const rawLeft = typeof record["left"] === "number" && Number.isFinite(record["left"]) ? record["left"] : DEFAULT_PANE_WIDTHS.left;
+        const rawRight = typeof record["right"] === "number" && Number.isFinite(record["right"]) ? record["right"] : DEFAULT_PANE_WIDTHS.right;
+        return {
+          left: Math.round(clampNumber(rawLeft, PANE_LIMITS.leftMin, PANE_LIMITS.leftMax)),
+          right: Math.round(clampNumber(rawRight, PANE_LIMITS.rightMin, MAX_PREFERENCE))
+        };
       } catch {
         return DEFAULT_PANE_WIDTHS;
       }
@@ -21708,23 +21735,67 @@ window.__ModuleLoader__.load({
       } catch {
       }
     }
-    function clampPaneWidths(widths, containerWidth) {
-      const container = Number.isFinite(containerWidth) && containerWidth > 0 ? containerWidth : 1440;
-      const maxLeft = Math.min(PANE_LIMITS.leftMax, Math.max(PANE_LIMITS.leftMin, container - PANE_LIMITS.chatMin - PANE_LIMITS.rightMin - PANE_LIMITS.handles));
-      const left = Math.round(Math.max(PANE_LIMITS.leftMin, Math.min(widths.left, maxLeft)));
-      const maxRightByContainer = Math.max(PANE_LIMITS.rightMin, Math.floor(container * PANE_LIMITS.rightMaxRatio));
-      const maxRight = Math.max(PANE_LIMITS.rightMin, Math.min(maxRightByContainer, container - left - PANE_LIMITS.chatMin - PANE_LIMITS.handles));
-      const right = Math.round(Math.max(PANE_LIMITS.rightMin, Math.min(widths.right, maxRight)));
-      return {
-        left: Math.max(PANE_LIMITS.leftMin, Math.min(left, maxLeft)),
-        right: Math.max(PANE_LIMITS.rightMin, Math.min(right, maxRight))
-      };
+    function resolvePaneWidths(preference, input) {
+      const container = finiteContainer(input.containerWidth);
+      const leftVisible = input.leftCollapsed !== true;
+      const rightVisible = input.rightCollapsed !== true;
+      const compact = shouldCompact(container);
+      const available = Math.max(
+        0,
+        container - (compact ? 0 : visibleHandleCount(input) * PANE_LIMITS.handleWidth)
+      );
+      const ratioCap = Math.max(PANE_LIMITS.rightMin, Math.floor(container * PANE_LIMITS.rightMaxRatio));
+      let left = leftVisible ? Math.round(clampNumber(preference.left, PANE_LIMITS.leftMin, PANE_LIMITS.leftMax)) : 0;
+      let right = rightVisible ? Math.round(clampNumber(preference.right, PANE_LIMITS.rightMin, Math.min(ratioCap, MAX_PREFERENCE))) : 0;
+      let overflow = left + right + PANE_LIMITS.chatMin - available;
+      if (overflow > 0) {
+        const cutRight = Math.min(overflow, Math.max(0, right - PANE_LIMITS.rightMin));
+        right -= cutRight;
+        overflow -= cutRight;
+      }
+      if (overflow > 0) {
+        const cutLeft = Math.min(overflow, Math.max(0, left - PANE_LIMITS.leftMin));
+        left -= cutLeft;
+        overflow -= cutLeft;
+      }
+      if (overflow > 0 && rightVisible) {
+        right = Math.max(PANE_LIMITS.rightHardMin, right - overflow);
+      }
+      const maxLeft = leftVisible ? Math.min(
+        PANE_LIMITS.leftMax,
+        Math.max(PANE_LIMITS.leftMin, available - right - PANE_LIMITS.chatMin)
+      ) : 0;
+      const maxRight = rightVisible ? Math.max(right, Math.min(ratioCap, available - left - PANE_LIMITS.chatMin)) : 0;
+      return { left, right, maxLeft, maxRight, compact };
     }
-    function adjustPaneWidth(widths, pane, delta, containerWidth) {
-      return clampPaneWidths({
-        left: pane === "left" ? widths.left + delta : widths.left,
-        right: pane === "right" ? widths.right - delta : widths.right
-      }, containerWidth);
+    function adjustPaneWidth(widths, pane, delta, input) {
+      const layout = resolvePaneWidths(widths, input);
+      const container = finiteContainer(input.containerWidth);
+      const leftVisible = input.leftCollapsed !== true;
+      const rightVisible = input.rightCollapsed !== true;
+      const available = Math.max(
+        0,
+        container - (layout.compact ? 0 : visibleHandleCount(input) * PANE_LIMITS.handleWidth)
+      );
+      const ratioCap = Math.max(PANE_LIMITS.rightMin, Math.floor(container * PANE_LIMITS.rightMaxRatio));
+      if (pane === "left") {
+        if (!leftVisible) return widths;
+        const max2 = Math.max(
+          PANE_LIMITS.leftMin,
+          Math.min(PANE_LIMITS.leftMax, available - (rightVisible ? layout.right : 0) - PANE_LIMITS.chatMin)
+        );
+        const next2 = Math.round(clampNumber(layout.left + delta, PANE_LIMITS.leftMin, max2));
+        const solved2 = resolvePaneWidths({ left: next2, right: layout.right }, input);
+        return { left: solved2.left, right: solved2.right };
+      }
+      if (!rightVisible) return widths;
+      const max = Math.max(
+        PANE_LIMITS.rightMin,
+        Math.min(ratioCap, available - (leftVisible ? layout.left : 0) - PANE_LIMITS.chatMin)
+      );
+      const next = Math.round(clampNumber(layout.right - delta, PANE_LIMITS.rightMin, max));
+      const solved = resolvePaneWidths({ left: layout.left, right: next }, input);
+      return { left: solved.left, right: solved.right };
     }
     function resetPaneWidths() {
       return DEFAULT_PANE_WIDTHS;
@@ -23294,8 +23365,7 @@ window.__ModuleLoader__.load({
       };
       const move = (event) => {
         if (drag.current === null) return;
-        const delta = event.clientX - drag.current.startX;
-        props.onWidths(adjustPaneWidth(drag.current.widths, props.side, delta, props.getContainerWidth()));
+        props.onResize(props.side, event.clientX - drag.current.startX, drag.current.widths);
       };
       const end = (event) => {
         drag.current = null;
@@ -23304,18 +23374,17 @@ window.__ModuleLoader__.load({
         } catch {
         }
       };
-      const reset = () => props.onWidths(resetPaneWidths());
       const key = (event) => {
         if (event.key === "Home") {
           event.preventDefault();
-          reset();
+          props.onReset();
           return;
         }
         if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
         event.preventDefault();
         const step = event.shiftKey ? 48 : 16;
         const delta = event.key === "ArrowRight" ? step : -step;
-        props.onWidths(adjustPaneWidth(props.widths, props.side, delta, props.getContainerWidth()));
+        props.onResize(props.side, delta, props.widths);
       };
       return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
         "div",
@@ -23328,13 +23397,15 @@ window.__ModuleLoader__.load({
           "aria-valuenow": Math.round(props.value),
           "aria-valuemin": props.min,
           "aria-valuemax": props.max,
+          "aria-valuetext": `${Math.round(props.value)}px`,
           tabIndex: 0,
           title: "\u62D6\u52A8\u8C03\u6574\u5BBD\u5EA6\uFF1B\u53CC\u51FB\u6216\u6309 Home \u6062\u590D\u9ED8\u8BA4",
           onPointerDown: begin,
           onPointerMove: move,
           onPointerUp: end,
           onPointerCancel: end,
-          onDoubleClick: reset,
+          onLostPointerCapture: end,
+          onDoubleClick: () => props.onReset(),
           onKeyDown: key
         }
       );
@@ -23345,7 +23416,8 @@ window.__ModuleLoader__.load({
         typeof window === "undefined" ? void 0 : window.localStorage
       ));
       const layoutBodyRef = (0, import_react14.useRef)(null);
-      const [compactLayout, setCompactLayout] = (0, import_react14.useState)(() => typeof window === "undefined" ? false : window.innerWidth < 780);
+      const layoutObserver = (0, import_react14.useRef)(null);
+      const [bodyWidth, setBodyWidth] = (0, import_react14.useState)(() => typeof window === "undefined" ? 1440 : window.innerWidth);
       const [state, dispatch] = import_react14.default.useReducer(workspaceReducer, {
         ...INITIAL_WORKSPACE_STATE,
         leftCollapsed: initialLayout.leftCollapsed,
@@ -23353,6 +23425,41 @@ window.__ModuleLoader__.load({
       });
       const stateRef = (0, import_react14.useRef)(state);
       stateRef.current = state;
+      const measureLayoutBody = (0, import_react14.useCallback)((node) => {
+        layoutBodyRef.current = node;
+        layoutObserver.current?.disconnect();
+        layoutObserver.current = null;
+        if (node === null) return;
+        const update = () => setBodyWidth(node.clientWidth);
+        update();
+        if (typeof ResizeObserver === "undefined") return;
+        const observer = new ResizeObserver(update);
+        observer.observe(node);
+        layoutObserver.current = observer;
+      }, []);
+      const compactLayout = shouldCompact(bodyWidth);
+      const paneLayoutInput = {
+        containerWidth: bodyWidth,
+        leftCollapsed: state.leftCollapsed,
+        rightCollapsed: state.rightCollapsed
+      };
+      const paneLayout = resolvePaneWidths(paneWidths, paneLayoutInput);
+      const effectivePaneWidths = { left: paneLayout.left, right: paneLayout.right };
+      const resizePane = (0, import_react14.useCallback)((side, delta, base) => {
+        const input = {
+          containerWidth: bodyWidth,
+          leftCollapsed: state.leftCollapsed,
+          rightCollapsed: state.rightCollapsed
+        };
+        setPaneWidths((previous) => {
+          const adjusted = adjustPaneWidth(base, side, delta, input);
+          return {
+            left: input.leftCollapsed === true ? previous.left : adjusted.left,
+            right: input.rightCollapsed === true ? previous.right : adjusted.right
+          };
+        });
+      }, [bodyWidth, state.leftCollapsed, state.rightCollapsed]);
+      const resetPanes = (0, import_react14.useCallback)(() => setPaneWidths(resetPaneWidths()), []);
       const streamAbort = (0, import_react14.useRef)(null);
       const mounted = (0, import_react14.useRef)(true);
       const pollTimer = (0, import_react14.useRef)(void 0);
@@ -23408,22 +23515,15 @@ window.__ModuleLoader__.load({
       (0, import_react14.useEffect)(() => {
         saveLayoutPrefs({ leftCollapsed: state.leftCollapsed, rightCollapsed: state.rightCollapsed });
       }, [state.leftCollapsed, state.rightCollapsed]);
-      const paneContainerWidth = (0, import_react14.useCallback)(() => layoutBodyRef.current?.clientWidth ?? (typeof window === "undefined" ? 1440 : window.innerWidth), []);
       (0, import_react14.useEffect)(() => {
         savePaneWidths(typeof window === "undefined" ? void 0 : window.localStorage, paneWidths);
       }, [paneWidths]);
       (0, import_react14.useEffect)(() => {
-        const onResize = () => {
-          setCompactLayout(window.innerWidth < 780);
-          setPaneWidths((previous) => clampPaneWidths(previous, paneContainerWidth()));
-        };
-        window.addEventListener("resize", onResize);
-        onResize();
-        return () => window.removeEventListener("resize", onResize);
-      }, [paneContainerWidth]);
-      (0, import_react14.useEffect)(() => {
-        setPaneWidths((previous) => clampPaneWidths(previous, paneContainerWidth()));
-      }, [state.leftCollapsed, state.rightCollapsed, paneContainerWidth]);
+        if (typeof ResizeObserver !== "undefined") return void 0;
+        const update = () => setBodyWidth(layoutBodyRef.current?.clientWidth ?? window.innerWidth);
+        window.addEventListener("resize", update);
+        return () => window.removeEventListener("resize", update);
+      }, []);
       (0, import_react14.useEffect)(() => {
         setSetup({ phase: "ready" });
       }, [state.courseDetail?.course.id]);
@@ -24414,13 +24514,14 @@ window.__ModuleLoader__.load({
         state.phase === "ready" && !needsCourseSetup(detail) && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
           "div",
           {
-            ref: layoutBodyRef,
+            ref: measureLayoutBody,
             className: "ai-teaching-body",
+            "data-compact": compactLayout,
             "data-left-collapsed": state.leftCollapsed,
             "data-right-collapsed": state.rightCollapsed,
             style: compactLayout ? void 0 : {
-              "--ai-left-width": `${paneWidths.left}px`,
-              "--ai-right-width": `${paneWidths.right}px`
+              "--ai-left-width": `${effectivePaneWidths.left}px`,
+              "--ai-right-width": `${effectivePaneWidths.right}px`
             },
             children: [
               /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "ai-pane ai-pane-left", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
@@ -24479,12 +24580,12 @@ window.__ModuleLoader__.load({
                 ResizeHandle,
                 {
                   side: "left",
-                  widths: paneWidths,
-                  value: paneWidths.left,
+                  widths: effectivePaneWidths,
+                  value: effectivePaneWidths.left,
                   min: PANE_LIMITS.leftMin,
-                  max: PANE_LIMITS.leftMax,
-                  onWidths: setPaneWidths,
-                  getContainerWidth: paneContainerWidth
+                  max: paneLayout.maxLeft,
+                  onResize: resizePane,
+                  onReset: resetPanes
                 }
               ),
               /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "ai-teaching-main", children: [
@@ -24512,6 +24613,18 @@ window.__ModuleLoader__.load({
                     onEvidenceClick,
                     onRetry: retryLast,
                     onDismissError: () => dispatch({ type: "error/clear" })
+                  }
+                ),
+                !state.rightCollapsed && !compactLayout && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+                  ResizeHandle,
+                  {
+                    side: "right",
+                    widths: effectivePaneWidths,
+                    value: effectivePaneWidths.right,
+                    min: PANE_LIMITS.rightMin,
+                    max: paneLayout.maxRight,
+                    onResize: resizePane,
+                    onReset: resetPanes
                   }
                 ),
                 compactLayout === false && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "ai-pane ai-pane-right", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
@@ -24553,19 +24666,7 @@ window.__ModuleLoader__.load({
                     onSaveNotes: saveNotes,
                     onEvidenceClick
                   }
-                ) }),
-                !state.rightCollapsed && !compactLayout && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
-                  ResizeHandle,
-                  {
-                    side: "right",
-                    widths: paneWidths,
-                    value: paneWidths.right,
-                    min: PANE_LIMITS.rightMin,
-                    max: Math.round(1440 * PANE_LIMITS.rightMaxRatio),
-                    onWidths: setPaneWidths,
-                    getContainerWidth: paneContainerWidth
-                  }
-                )
+                ) })
               ] })
             ]
           }
