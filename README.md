@@ -26,7 +26,7 @@ AI 知识库教学插件（DeepSeek Harness Desktop）
 
 **教学与练习**
 
-- 对话式教学 + 右侧持续教学区域（可调整宽度、可折叠）。
+- 对话式教学 + 右侧持续教学区域。
 - 练习、提示、参考答案、换种讲法；作答提交后给出反馈并记录。
 - 概念掌握度、复习队列、学习会话与历史记录。
 - 图形/动画/交互式 HTML 教学卡片直接内嵌在对话中，支持全屏交互。
@@ -48,7 +48,7 @@ AI 知识库教学插件（DeepSeek Harness Desktop）
 
 前置：已安装并至少启动过一次 DeepSeek Harness Desktop `0.2.2-rc.1` 或更高兼容版本（当前在 macOS 完成验证，Windows / Linux 尚未验证）。命令中的 `dsh` 指应用自带的 CLI，请确保它在 `PATH` 中；其他平台使用对应平台的 CLI 可执行文件即可。安装前请先完全退出 DeepSeek Harness。
 
-### 方式一：npm 包（推荐，和 dsh-context 一样）
+### 方式一：npm 包
 
 ```bash
 # 安装最新版（或固定版本：dsh-teaching-plugin@0.1.2）
@@ -57,7 +57,7 @@ dsh plugin --profile desktop add dsh-teaching-plugin
 # 重新打开 DeepSeek Harness，左侧栏出现「AI 教学」
 ```
 
-### 方式二：克隆仓库后按目录安装（开发者）
+### 方式二：克隆仓库后按目录安装
 
 仓库 `packages/dsh-plugin/lib/` 已包含构建好的 Host/Client 产物，克隆后无需构建。
 
@@ -97,26 +97,26 @@ DSH_HOME="$PWD/.scratch/dsh-dev/home" dsh --profile teaching-dev --no-open --por
 
 ## 仓库结构
 
-| 路径 | 内容 |
-| --- | --- |
-| `packages/dsh-plugin/` | 插件本体：Host 路由与本地服务、Client 教学界面、`cordis.patch.yml`、构建产物 `lib/` |
-| `packages/teaching-core/` | 教学领域核心：资料/课程/学习/实验/可移植性等模块与契约 |
-| `docs/` | 需求、架构、契约、验收矩阵、技术决策、安装文档与研究记录 |
-| `docs/evidence/` | 各阶段真实执行结果与截图证据 |
-| `samples/` | 可分发课程样例 |
-| `scripts/` | 构建与冒烟脚本 |
+| 路径                      | 内容                                                                                |
+| ------------------------- | ----------------------------------------------------------------------------------- |
+| `packages/dsh-plugin/`    | 插件本体：Host 路由与本地服务、Client 教学界面、`cordis.patch.yml`、构建产物 `lib/` |
+| `packages/teaching-core/` | 教学领域核心：资料/课程/学习/实验/可移植性等模块与契约                              |
+| `docs/`                   | 需求、架构、契约、验收矩阵、技术决策、安装文档与研究记录                            |
+| `docs/evidence/`          | 各阶段真实执行结果与截图证据                                                        |
+| `samples/`                | 可分发课程样例                                                                      |
+| `scripts/`                | 构建与冒烟脚本                                                                      |
 
 ## 文档入口
 
-| 目的 | 文档 |
-| --- | --- |
-| 产品需求（R01–R40） | [`docs/requirements.md`](docs/requirements.md) |
-| 模块职责与数据流 | [`docs/architecture.md`](docs/architecture.md) |
-| 跨模块契约 | [`docs/contracts.md`](docs/contracts.md) |
-| 实施计划与阶段 | [`docs/plan.md`](docs/plan.md) |
-| 验收矩阵 | [`docs/acceptance.md`](docs/acceptance.md) |
-| 安装 / 升级 / 卸载 | [`docs/install.md`](docs/install.md) |
-| 技术决策登记 | [`docs/technical-decisions.md`](docs/technical-decisions.md) |
+| 目的                | 文档                                                         |
+| ------------------- | ------------------------------------------------------------ |
+| 产品需求（R01–R40） | [`docs/requirements.md`](docs/requirements.md)               |
+| 模块职责与数据流    | [`docs/architecture.md`](docs/architecture.md)               |
+| 跨模块契约          | [`docs/contracts.md`](docs/contracts.md)                     |
+| 实施计划与阶段      | [`docs/plan.md`](docs/plan.md)                               |
+| 验收矩阵            | [`docs/acceptance.md`](docs/acceptance.md)                   |
+| 安装 / 升级 / 卸载  | [`docs/install.md`](docs/install.md)                         |
+| 技术决策登记        | [`docs/technical-decisions.md`](docs/technical-decisions.md) |
 
 ## 已知限制
 
