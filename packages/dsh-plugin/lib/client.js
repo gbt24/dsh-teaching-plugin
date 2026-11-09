@@ -541,6 +541,74 @@ window.__ModuleLoader__.load({
     .ai-plan-summary .ai-plan-chapters li { margin: 2px 0; }
     .ai-plan-advanced { margin-top: 10px; border-top: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); padding-top: 8px; }
 
+
+
+    /* Planning wizard layout: fields previously used class names with no CSS, so
+       labels, textareas and action buttons collided and candidate URLs ran together. */
+    .ai-planning-wizard { display: flex; flex-direction: column; gap: 10px; max-width: 920px; min-width: 0; margin: 0 auto; }
+    .ai-planning-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+    .ai-planning-title { margin: 0; font-size: 16px; }
+    .ai-planning-progress { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; opacity: 0.8; }
+    .ai-planning-bar { width: 90px; height: 5px; border-radius: 999px; overflow: hidden;
+      background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.16)); }
+    .ai-planning-bar > span { display: block; height: 100%; background: var(--dsw-alias-state-business-primary, #2563eb); }
+    .ai-planning-card { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25));
+      border-radius: 12px; padding: 14px 16px; background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.04));
+      min-width: 0; }
+    .ai-planning-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; min-width: 0; }
+    .ai-planning-field > span { font-size: 12px; font-weight: 600; opacity: 0.85; }
+    .ai-planning-field input, .ai-planning-field select, .ai-planning-field textarea,
+    .ai-planning-card > input, .ai-planning-card > textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; }
+    .ai-planning-textarea { min-height: 96px; resize: vertical; padding: 6px 8px; border-radius: 7px;
+      border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3)); background: transparent; color: inherit; }
+    .ai-edit-title { padding: 6px 8px; border-radius: 7px; border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3));
+      background: transparent; color: inherit; }
+    .ai-planning-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 12px; }
+    .ai-planning-questions { display: flex; flex-direction: column; gap: 12px; }
+    .ai-planning-question { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22));
+      border-radius: 10px; padding: 10px 12px; margin: 0; min-width: 0; }
+    .ai-planning-question legend { font-weight: 600; font-size: 13px; padding: 0 4px; }
+    .ai-planning-question > .ai-muted { margin: 2px 0 8px; }
+    .ai-planning-options { display: flex; flex-direction: column; gap: 0; margin: 4px 0; }
+    .ai-planning-answer-state { font-size: 11px; opacity: 0.75; margin: 4px 0; }
+    .ai-planning-chapters { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+    .ai-planning-chapter { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.2));
+      border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .ai-planning-chapter textarea { min-height: 64px; }
+    .ai-warning-list { margin: 6px 0; padding-left: 18px; font-size: 11px; opacity: 0.8; }
+    .ai-planning-candidate-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
+    .ai-planning-candidates { display: flex; flex-direction: column; gap: 8px; max-height: 460px; overflow-y: auto; padding-right: 2px; }
+    .ai-planning-candidate { display: flex; align-items: flex-start; gap: 8px; min-width: 0;
+      border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3)); border-radius: 10px;
+      padding: 9px 10px; background: var(--dsw-alias-bg-base, transparent); }
+    .ai-planning-candidate[data-selected="true"] { border-color: var(--dsw-alias-state-business-primary, #2563eb);
+      background: var(--dsw-alias-bg-layer-1, rgba(37,99,235,0.10)); }
+    .ai-planning-candidate > input { margin-top: 3px; flex: 0 0 auto; }
+    .ai-planning-candidate-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .ai-planning-candidate-top { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+    .ai-planning-candidate-title { flex: 1 1 auto; min-width: 0; font-weight: 600; font-size: 13px;
+      overflow-wrap: anywhere; }
+    .ai-planning-candidate-status { flex: 0 0 auto; font-size: 10px; border: 1px solid currentColor;
+      border-radius: 999px; padding: 0 6px; opacity: 0.75; }
+    .ai-planning-candidate-status[data-status="failed"] { color: var(--dsw-alias-state-error-primary, #b91c1c); }
+    .ai-planning-candidate-status[data-status="fetched"] { color: var(--dsw-alias-state-success-primary, #15803d); }
+    .ai-planning-candidate-source { display: flex; align-items: baseline; gap: 6px; min-width: 0; font-size: 11px; }
+    .ai-planning-source-badge { flex: 0 0 auto; font-size: 10px; }
+    .ai-planning-candidate-url { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; color: var(--dsw-alias-link, #2563eb); }
+    .ai-planning-candidate-purpose { font-size: 11px; opacity: 0.85; overflow-wrap: anywhere; }
+    .ai-planning-candidate-snippet { font-size: 12px; opacity: 0.8; white-space: normal; overflow-wrap: anywhere;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+    .ai-planning-candidate-snippet[data-expanded="true"] { display: block; -webkit-line-clamp: unset; overflow: visible; }
+    .ai-planning-candidate-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
+    .ai-planning-candidate-actions .ai-link-button { font-size: 11px; }
+    .ai-planning-candidate-reason { font-size: 11px; opacity: 0.8; color: var(--dsw-alias-state-warn-primary, #b45309); }
+    @media (max-width: 760px) {
+      .ai-planning-grid { grid-template-columns: minmax(0, 1fr); }
+      .ai-planning-candidate-source { flex-wrap: wrap; }
+      .ai-planning-candidate-url { white-space: normal; overflow-wrap: anywhere; }
+    }
+
     `;
 
     // packages/dsh-plugin/src/client/components/Workspace.tsx
@@ -20419,6 +20487,7 @@ window.__ModuleLoader__.load({
       const [customQuestions, setCustomQuestions] = (0, import_react7.useState)(/* @__PURE__ */ new Set());
       const [briefDraft, setBriefDraft] = (0, import_react7.useState)(() => briefToDraft(props.initialPlan?.brief, props.initialPlan?.topic));
       const [selectedIds, setSelectedIds] = (0, import_react7.useState)(() => props.initialPlan !== void 0 ? defaultSelectedCandidateIds(props.initialPlan) : []);
+      const [expandedCandidates, setExpandedCandidates] = (0, import_react7.useState)(/* @__PURE__ */ new Set());
       const [busyLabel, setBusyLabel] = (0, import_react7.useState)(props.busy === true ? "\u5904\u7406\u4E2D\u2026" : void 0);
       const [error, setError] = (0, import_react7.useState)(void 0);
       const [note, setNote] = (0, import_react7.useState)(void 0);
@@ -20841,7 +20910,7 @@ window.__ModuleLoader__.load({
               "textarea",
               {
                 className: "ai-planning-textarea",
-                rows: 3,
+                rows: 5,
                 value: briefDraft.goals,
                 disabled: busy,
                 placeholder: plan.brief?.goals?.join("\n") ?? "\u53EF\u7559\u7A7A\uFF0C\u63D0\u4EA4\u65F6\u4F7F\u7528\u8BA1\u5212\u6458\u8981\u4E2D\u7684\u76EE\u6807",
@@ -21016,32 +21085,100 @@ window.__ModuleLoader__.load({
         view === "candidates" && plan !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("section", { className: "ai-planning-card", "aria-label": "\u5019\u9009\u8D44\u6599", children: [
           /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "ai-muted", children: "\u4EE5\u4E0B\u662F\u4ECE\u7F51\u7EDC\u68C0\u7D22\u5230\u7684\u5019\u9009\u8D44\u6599\u3002\u52FE\u9009\u8981\u6293\u53D6\u5165\u5E93\u7684\u9875\u9762\uFF1B\u4E5F\u53EF\u4EE5\u7A0D\u540E\u5728\u5DE6\u4FA7\u300C\u8D44\u6599\u300D\u533A\u624B\u52A8\u6DFB\u52A0\u672C\u5730\u6587\u4EF6\u6216\u7F51\u9875 URL\u3002" }),
           plan.warnings !== void 0 && plan.warnings.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("ul", { className: "ai-warning-list", children: plan.warnings.map((warning) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("li", { children: warning }, warning)) }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-candidate-toolbar", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "ai-muted", children: [
+              "\u5DF2\u9009 ",
+              selectedIds.length,
+              " / ",
+              (plan.candidates ?? []).length,
+              " \u6761"
+            ] }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-small-button",
+                disabled: busy || (plan.candidates ?? []).length === 0,
+                onClick: () => setSelectedIds((plan.candidates ?? []).map((candidate) => candidate.id)),
+                children: "\u5168\u9009"
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+              "button",
+              {
+                type: "button",
+                className: "ai-small-button",
+                disabled: busy || selectedIds.length === 0,
+                onClick: () => setSelectedIds([]),
+                children: "\u6E05\u7A7A"
+              }
+            )
+          ] }),
           /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-candidates", children: [
-            (plan.candidates ?? []).map((candidate) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "ai-planning-candidate", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: selectedIds.includes(candidate.id),
-                  disabled: busy,
-                  onChange: () => setSelectedIds((previous) => toggleCandidateId(previous, candidate.id))
-                }
-              ),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "ai-planning-candidate-main", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-planning-candidate-title", children: candidate.title }),
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "ai-muted", children: [
-                  candidate.domain,
-                  " \xB7 ",
-                  candidate.url
-                ] }),
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-planning-candidate-snippet", children: candidate.snippet }),
-                candidate.reason !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: "ai-muted", children: [
-                  "\u8BF4\u660E\uFF1A",
-                  candidate.reason
+            (plan.candidates ?? []).map((candidate) => {
+              const selected = selectedIds.includes(candidate.id);
+              const expanded = expandedCandidates.has(candidate.id);
+              return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("article", { className: "ai-planning-candidate", "data-selected": selected, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                  "input",
+                  {
+                    type: "checkbox",
+                    checked: selected,
+                    disabled: busy,
+                    "aria-label": `\u9009\u62E9\u8D44\u6599 ${candidate.title}`,
+                    onChange: () => setSelectedIds((previous) => toggleCandidateId(previous, candidate.id))
+                  }
+                ),
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-candidate-main", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-candidate-top", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-planning-candidate-title", title: candidate.title, children: candidate.title }),
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-planning-candidate-status", "data-status": candidate.status, children: candidate.status === "fetched" ? "\u5DF2\u6293\u53D6" : candidate.status === "failed" ? "\u5931\u8D25" : candidate.status === "selected" ? "\u5DF2\u9009" : "\u5019\u9009" })
+                  ] }),
+                  /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-candidate-source", children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-badge ai-planning-source-badge", children: candidate.domain || "\u672A\u77E5\u6765\u6E90" }),
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                      "a",
+                      {
+                        href: candidate.url,
+                        target: "_blank",
+                        rel: "noopener noreferrer",
+                        className: "ai-planning-candidate-url",
+                        title: candidate.url,
+                        children: candidate.url
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-candidate-purpose", children: [
+                    "\u7528\u9014\uFF1A",
+                    candidate.purpose ?? (candidate.sourceQuery !== void 0 ? `\u68C0\u7D22\u300C${candidate.sourceQuery}\u300D` : "\u672A\u6807\u6CE8"),
+                    candidate.score !== void 0 ? ` \xB7 \u53EF\u4FE1\u5EA6\u8BC4\u5206 ${candidate.score}` : ""
+                  ] }),
+                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-planning-candidate-snippet", "data-expanded": expanded, children: candidate.snippet !== "" ? candidate.snippet : "\uFF08\u65E0\u6458\u8981\uFF09" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-candidate-actions", children: [
+                    candidate.snippet.length > 120 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                      "button",
+                      {
+                        type: "button",
+                        className: "ai-link-button",
+                        disabled: busy,
+                        onClick: () => setExpandedCandidates((previous) => {
+                          const next = new Set(previous);
+                          if (next.has(candidate.id)) next.delete(candidate.id);
+                          else next.add(candidate.id);
+                          return next;
+                        }),
+                        children: expanded ? "\u6536\u8D77\u6458\u8981" : "\u5C55\u5F00\u6458\u8981"
+                      }
+                    ),
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("a", { className: "ai-link-button", href: candidate.url, target: "_blank", rel: "noopener noreferrer", children: "\u6253\u5F00\u539F\u7F51\u9875" })
+                  ] }),
+                  candidate.reason !== void 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-planning-candidate-reason", children: [
+                    "\u8BF4\u660E\uFF1A",
+                    candidate.reason
+                  ] })
                 ] })
-              ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "ai-badge", children: candidate.status })
-            ] }, candidate.id)),
+              ] }, candidate.id);
+            }),
             (plan.candidates ?? []).length === 0 && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "ai-muted", children: "\u6CA1\u6709\u68C0\u7D22\u5230\u5019\u9009\u8D44\u6599\uFF0C\u53EF\u4EE5\u76F4\u63A5\u521B\u5EFA\u8BFE\u7A0B\uFF0C\u6216\u7A0D\u540E\u5728\u8D44\u6599\u533A\u6DFB\u52A0\u3002" })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "ai-row", children: [

@@ -774,6 +774,15 @@ ${buildSummaryInput(selection.compacted)}
       const candidates: PlanMaterialCandidate[] = []
       const seen = new Set<string>()
       const warnings: string[] = []
+      const purposeForQuery = (query: string, index: number): string => {
+        const brief = plan.brief
+        if (brief === undefined) return query
+        const topic = brief.searchTopics[index]
+        if (topic !== undefined && topic.trim() !== '') return `补「${topic.trim()}」相关资料`
+        const chapter = brief.chapters[Math.min(index, Math.max(0, brief.chapters.length - 1))]
+        if (chapter !== undefined) return `对应章节：${chapter.title}`
+        return query
+      }
       for (let index = 0; index < queries.length; index += 1) {
         if (context.cancelled()) break
         const query = queries[index]!
@@ -800,6 +809,8 @@ ${buildSummaryInput(selection.compacted)}
             score: official ? 2 : 1,
             selected: official || candidates.length < 6,
             status: 'candidate',
+            purpose: purposeForQuery(query, index),
+            sourceQuery: query,
           })
         }
         context.step(`query-${index}`, { status: 'done', detail: `${result.value.length} 个结果` })

@@ -64836,6 +64836,15 @@ ${buildSummaryInput(selection.compacted)}
       const candidates = [];
       const seen = /* @__PURE__ */ new Set();
       const warnings = [];
+      const purposeForQuery = (query, index) => {
+        const brief = plan.brief;
+        if (brief === void 0) return query;
+        const topic = brief.searchTopics[index];
+        if (topic !== void 0 && topic.trim() !== "") return `\u8865\u300C${topic.trim()}\u300D\u76F8\u5173\u8D44\u6599`;
+        const chapter = brief.chapters[Math.min(index, Math.max(0, brief.chapters.length - 1))];
+        if (chapter !== void 0) return `\u5BF9\u5E94\u7AE0\u8282\uFF1A${chapter.title}`;
+        return query;
+      };
       for (let index = 0; index < queries.length; index += 1) {
         if (context.cancelled()) break;
         const query = queries[index];
@@ -64864,7 +64873,9 @@ ${buildSummaryInput(selection.compacted)}
             domain,
             score: official ? 2 : 1,
             selected: official || candidates.length < 6,
-            status: "candidate"
+            status: "candidate",
+            purpose: purposeForQuery(query, index),
+            sourceQuery: query
           });
         }
         context.step(`query-${index}`, { status: "done", detail: `${result.value.length} \u4E2A\u7ED3\u679C` });

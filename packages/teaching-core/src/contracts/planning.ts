@@ -80,6 +80,10 @@ export interface PlanMaterialCandidate {
   readonly selected?: boolean
   readonly status: 'candidate' | 'selected' | 'fetched' | 'failed'
   readonly reason?: string
+  /** What this material is used for in the plan (chapter/topic). */
+  readonly purpose?: string
+  /** The search query that surfaced this candidate. */
+  readonly sourceQuery?: string
 }
 
 /** One guided course plan, persisted beside courses/sessions. */

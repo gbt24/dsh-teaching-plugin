@@ -500,4 +500,72 @@ export const TEACHING_CSS = `
 .ai-plan-summary .ai-plan-chapters li { margin: 2px 0; }
 .ai-plan-advanced { margin-top: 10px; border-top: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22)); padding-top: 8px; }
 
+
+
+/* Planning wizard layout: fields previously used class names with no CSS, so
+   labels, textareas and action buttons collided and candidate URLs ran together. */
+.ai-planning-wizard { display: flex; flex-direction: column; gap: 10px; max-width: 920px; min-width: 0; margin: 0 auto; }
+.ai-planning-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.ai-planning-title { margin: 0; font-size: 16px; }
+.ai-planning-progress { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; opacity: 0.8; }
+.ai-planning-bar { width: 90px; height: 5px; border-radius: 999px; overflow: hidden;
+  background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.16)); }
+.ai-planning-bar > span { display: block; height: 100%; background: var(--dsw-alias-state-business-primary, #2563eb); }
+.ai-planning-card { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25));
+  border-radius: 12px; padding: 14px 16px; background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.04));
+  min-width: 0; }
+.ai-planning-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; min-width: 0; }
+.ai-planning-field > span { font-size: 12px; font-weight: 600; opacity: 0.85; }
+.ai-planning-field input, .ai-planning-field select, .ai-planning-field textarea,
+.ai-planning-card > input, .ai-planning-card > textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; }
+.ai-planning-textarea { min-height: 96px; resize: vertical; padding: 6px 8px; border-radius: 7px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3)); background: transparent; color: inherit; }
+.ai-edit-title { padding: 6px 8px; border-radius: 7px; border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3));
+  background: transparent; color: inherit; }
+.ai-planning-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 12px; }
+.ai-planning-questions { display: flex; flex-direction: column; gap: 12px; }
+.ai-planning-question { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.22));
+  border-radius: 10px; padding: 10px 12px; margin: 0; min-width: 0; }
+.ai-planning-question legend { font-weight: 600; font-size: 13px; padding: 0 4px; }
+.ai-planning-question > .ai-muted { margin: 2px 0 8px; }
+.ai-planning-options { display: flex; flex-direction: column; gap: 0; margin: 4px 0; }
+.ai-planning-answer-state { font-size: 11px; opacity: 0.75; margin: 4px 0; }
+.ai-planning-chapters { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.ai-planning-chapter { border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.2));
+  border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.ai-planning-chapter textarea { min-height: 64px; }
+.ai-warning-list { margin: 6px 0; padding-left: 18px; font-size: 11px; opacity: 0.8; }
+.ai-planning-candidate-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
+.ai-planning-candidates { display: flex; flex-direction: column; gap: 8px; max-height: 460px; overflow-y: auto; padding-right: 2px; }
+.ai-planning-candidate { display: flex; align-items: flex-start; gap: 8px; min-width: 0;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.3)); border-radius: 10px;
+  padding: 9px 10px; background: var(--dsw-alias-bg-base, transparent); }
+.ai-planning-candidate[data-selected="true"] { border-color: var(--dsw-alias-state-business-primary, #2563eb);
+  background: var(--dsw-alias-bg-layer-1, rgba(37,99,235,0.10)); }
+.ai-planning-candidate > input { margin-top: 3px; flex: 0 0 auto; }
+.ai-planning-candidate-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ai-planning-candidate-top { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.ai-planning-candidate-title { flex: 1 1 auto; min-width: 0; font-weight: 600; font-size: 13px;
+  overflow-wrap: anywhere; }
+.ai-planning-candidate-status { flex: 0 0 auto; font-size: 10px; border: 1px solid currentColor;
+  border-radius: 999px; padding: 0 6px; opacity: 0.75; }
+.ai-planning-candidate-status[data-status="failed"] { color: var(--dsw-alias-state-error-primary, #b91c1c); }
+.ai-planning-candidate-status[data-status="fetched"] { color: var(--dsw-alias-state-success-primary, #15803d); }
+.ai-planning-candidate-source { display: flex; align-items: baseline; gap: 6px; min-width: 0; font-size: 11px; }
+.ai-planning-source-badge { flex: 0 0 auto; font-size: 10px; }
+.ai-planning-candidate-url { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; color: var(--dsw-alias-link, #2563eb); }
+.ai-planning-candidate-purpose { font-size: 11px; opacity: 0.85; overflow-wrap: anywhere; }
+.ai-planning-candidate-snippet { font-size: 12px; opacity: 0.8; white-space: normal; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.ai-planning-candidate-snippet[data-expanded="true"] { display: block; -webkit-line-clamp: unset; overflow: visible; }
+.ai-planning-candidate-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; }
+.ai-planning-candidate-actions .ai-link-button { font-size: 11px; }
+.ai-planning-candidate-reason { font-size: 11px; opacity: 0.8; color: var(--dsw-alias-state-warn-primary, #b45309); }
+@media (max-width: 760px) {
+  .ai-planning-grid { grid-template-columns: minmax(0, 1fr); }
+  .ai-planning-candidate-source { flex-wrap: wrap; }
+  .ai-planning-candidate-url { white-space: normal; overflow-wrap: anywhere; }
+}
+
 `

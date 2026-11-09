@@ -66,6 +66,8 @@ export function PlanningWizard(props: PlanningWizardProps): React.ReactElement {
     briefToDraft(props.initialPlan?.brief, props.initialPlan?.topic))
   const [selectedIds, setSelectedIds] = useState<readonly string[]>(() =>
     props.initialPlan !== undefined ? defaultSelectedCandidateIds(props.initialPlan) : [])
+  /** Candidate snippets expanded by the student (title/URL/purpose stay compact). */
+  const [expandedCandidates, setExpandedCandidates] = useState<ReadonlySet<string>>(new Set())
   const [busyLabel, setBusyLabel] = useState<string | undefined>(props.busy === true ? '处理中…' : undefined)
   const [error, setError] = useState<string | undefined>(undefined)
   const [note, setNote] = useState<string | undefined>(undefined)
@@ -533,7 +535,7 @@ export function PlanningWizard(props: PlanningWizardProps): React.ReactElement {
                 onChange={event => setBriefDraft({ ...briefDraft, duration: event.target.value })} /></label>
           </div>
           <label className="ai-planning-field"><span>学习目标（每行一个；已由 AI 填写）</span>
-            <textarea className="ai-planning-textarea" rows={3} value={briefDraft.goals} disabled={busy}
+            <textarea className="ai-planning-textarea" rows={5} value={briefDraft.goals} disabled={busy}
               placeholder={plan.brief?.goals?.join('\n') ?? '可留空，提交时使用计划摘要中的目标'}
               onChange={event => setBriefDraft({ ...briefDraft, goals: event.target.value })} />
           </label>
@@ -632,24 +634,70 @@ export function PlanningWizard(props: PlanningWizardProps): React.ReactElement {
           {plan.warnings !== undefined && plan.warnings.length > 0 && (
             <ul className="ai-warning-list">{plan.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul>
           )}
+          <div className="ai-planning-candidate-toolbar">
+            <span className="ai-muted">已选 {selectedIds.length} / {(plan.candidates ?? []).length} 条</span>
+            <button type="button" className="ai-small-button" disabled={busy || (plan.candidates ?? []).length === 0}
+              onClick={() => setSelectedIds((plan.candidates ?? []).map(candidate => candidate.id))}>
+              全选
+            </button>
+            <button type="button" className="ai-small-button" disabled={busy || selectedIds.length === 0}
+              onClick={() => setSelectedIds([])}>
+              清空
+            </button>
+          </div>
           <div className="ai-planning-candidates">
-            {(plan.candidates ?? []).map(candidate => (
-              <label className="ai-planning-candidate" key={candidate.id}>
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(candidate.id)}
-                  disabled={busy}
-                  onChange={() => setSelectedIds(previous => toggleCandidateId(previous, candidate.id))}
-                />
-                <span className="ai-planning-candidate-main">
-                  <span className="ai-planning-candidate-title">{candidate.title}</span>
-                  <span className="ai-muted">{candidate.domain} · {candidate.url}</span>
-                  <span className="ai-planning-candidate-snippet">{candidate.snippet}</span>
-                  {candidate.reason !== undefined && <span className="ai-muted">说明：{candidate.reason}</span>}
-                </span>
-                <span className="ai-badge">{candidate.status}</span>
-              </label>
-            ))}
+            {(plan.candidates ?? []).map(candidate => {
+              const selected = selectedIds.includes(candidate.id)
+              const expanded = expandedCandidates.has(candidate.id)
+              return (
+                <article className="ai-planning-candidate" data-selected={selected} key={candidate.id}>
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    disabled={busy}
+                    aria-label={`选择资料 ${candidate.title}`}
+                    onChange={() => setSelectedIds(previous => toggleCandidateId(previous, candidate.id))}
+                  />
+                  <div className="ai-planning-candidate-main">
+                    <div className="ai-planning-candidate-top">
+                      <span className="ai-planning-candidate-title" title={candidate.title}>{candidate.title}</span>
+                      <span className="ai-planning-candidate-status" data-status={candidate.status}>
+                        {candidate.status === 'fetched' ? '已抓取' : candidate.status === 'failed' ? '失败' : candidate.status === 'selected' ? '已选' : '候选'}
+                      </span>
+                    </div>
+                    <div className="ai-planning-candidate-source">
+                      <span className="ai-badge ai-planning-source-badge">{candidate.domain || '未知来源'}</span>
+                      <a href={candidate.url} target="_blank" rel="noopener noreferrer"
+                        className="ai-planning-candidate-url" title={candidate.url}>
+                        {candidate.url}
+                      </a>
+                    </div>
+                    <div className="ai-planning-candidate-purpose">
+                      用途：{candidate.purpose ?? (candidate.sourceQuery !== undefined ? `检索「${candidate.sourceQuery}」` : '未标注')}
+                      {candidate.score !== undefined ? ` · 可信度评分 ${candidate.score}` : ''}
+                    </div>
+                    <div className="ai-planning-candidate-snippet" data-expanded={expanded}>
+                      {candidate.snippet !== '' ? candidate.snippet : '（无摘要）'}
+                    </div>
+                    <div className="ai-planning-candidate-actions">
+                      {candidate.snippet.length > 120 && (
+                        <button type="button" className="ai-link-button" disabled={busy}
+                          onClick={() => setExpandedCandidates(previous => {
+                            const next = new Set(previous)
+                            if (next.has(candidate.id)) next.delete(candidate.id)
+                            else next.add(candidate.id)
+                            return next
+                          })}>
+                          {expanded ? '收起摘要' : '展开摘要'}
+                        </button>
+                      )}
+                      <a className="ai-link-button" href={candidate.url} target="_blank" rel="noopener noreferrer">打开原网页</a>
+                    </div>
+                    {candidate.reason !== undefined && <div className="ai-planning-candidate-reason">说明：{candidate.reason}</div>}
+                  </div>
+                </article>
+              )
+            })}
             {(plan.candidates ?? []).length === 0 && <div className="ai-muted">没有检索到候选资料，可以直接创建课程，或稍后在资料区添加。</div>}
           </div>
           <div className="ai-row">
