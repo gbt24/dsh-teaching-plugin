@@ -12,8 +12,7 @@
     "build:spike": "node scripts/build-spike.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test \"packages/**/tests/**/*.test.ts\"",
-    "test:all": "pnpm typecheck && pnpm test",
-    "pack": "node scripts/pack-plugin.mjs"
+    "test:all": "pnpm typecheck && pnpm test"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
@@ -29,5 +28,10 @@
     "katex": "^0.16.22",
     "mammoth": "^1.13.0",
     "pdfjs-dist": "^4.10.38"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gbt24/deepseek-teaching-plugin.git"
   }
 }
