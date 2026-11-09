@@ -4,10 +4,9 @@
 
 ## 前置
 
-- 已安装并至少启动过一次 DeepSeek Harness Desktop（应用会初始化 `~/.dsh` 与 desktop profile）。
-- 使用 Desktop 自带的 dsh CLI 或应用内插件管理器管理 desktop profile；**不要**用普通 npm 安装的 dsh 修改 desktop profile。
-- bundled CLI 路径（macOS）：
-  `/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh`
+- 已安装并至少启动过一次 DeepSeek Harness Desktop（应用会初始化 `$DSH_HOME`，默认 `~/.dsh`，以及 desktop profile）。
+- 使用 Desktop 自带的 `dsh` CLI 或应用内插件管理器管理 desktop profile；**不要**用普通 npm 安装的 dsh 修改 desktop profile。
+- 命令中的 `dsh` 指应用自带的 CLI，请确保它在 `PATH` 中；不同平台的安装位置不同，使用对应平台的 CLI 可执行文件即可。当前在 macOS 完成验证，Windows / Linux 尚未验证。
 
 ## 安装
 
@@ -18,8 +17,7 @@
 ```bash
 # 1. 完全退出 DeepSeek Harness Desktop
 # 2. 用应用自带 CLI 安装分发包
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.1.tgz
+dsh plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.1.tgz
 
 # 3. 重新打开应用，左侧栏出现「AI 教学」
 ```
@@ -36,12 +34,10 @@ install_bundle target=/absolute/path/to/dsh-teaching-plugin/packages/dsh-plugin
 
 安装成功后 profile 的 `dependencies.dsh-ai-teaching` 为 `link:` 路径，bundles 列表包含 `dsh-ai-teaching`，宿主侧立即激活（`application: applied`）；浏览器页面刷新后左侧栏出现「AI 教学」。
 
-### 方式 C：bundled CLI + 源码目录（本机开发）
+### 方式 C：dsh CLI + 源码目录（本机开发）
 
 ```bash
-DSH_HOME="${DSH_HOME:-$HOME/.dsh}" \
-  "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add /absolute/path/to/packages/dsh-plugin
+dsh plugin --profile desktop add /absolute/path/to/packages/dsh-plugin
 ```
 
 安装后重新打开应用生效。
@@ -52,7 +48,7 @@ DSH_HOME="${DSH_HOME:-$HOME/.dsh}" \
 2. 首次向导：填写课程名、学习目标与基础 → 选择本地资料（支持 Markdown/文本/PDF/图片/Word/PPT/代码/Notebook）→ 等待导入进度 → 检查 AI 生成的课程草案（可修改概念顺序/删除概念）→ 确认后开始系统学习。
 3. 想直接提问：可先跳过课程结构，随问随学（已就绪资料可立即检索）。
 
-数据位置：`~/.dsh/teaching/`（原资料只读，不会写回；解析产物、索引、学习记录分别存放）。云端模型请求只发送与当前任务相关的资料片段；凭据沿用 Harness 自身配置，插件不复制、不落盘。
+数据位置：`$DSH_HOME/teaching/`（默认 `~/.dsh/teaching/`；原资料只读，不会写回；解析产物、索引、学习记录分别存放）。云端模型请求只发送与当前任务相关的资料片段；凭据沿用 Harness 自身配置，插件不复制、不落盘。
 
 ## 升级
 
@@ -84,9 +80,7 @@ pnpm run pack                   # 生成 dist/dsh-ai-teaching-<version>.tgz|.zip
 `pnpm run pack` 会把工作区专用的 `workspace:*` 依赖从发布清单中移除（Host 依赖已内联），再打 tar/zip。发布前建议在隔离 `DSH_HOME` 中用分发包做一次安装与启动验证：
 
 ```bash
-DSH_HOME=/tmp/dsh-release-check \
-  "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile web add dist/dsh-ai-teaching-0.1.1.tgz
+DSH_HOME=/tmp/dsh-release-check dsh plugin --profile web add dist/dsh-ai-teaching-0.1.1.tgz
 # 启动后日志出现 [ai-teaching] ready 即通过
 ```
 

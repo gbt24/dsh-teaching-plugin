@@ -42,11 +42,11 @@ AI 知识库教学插件（DeepSeek Harness Desktop）
 - 左侧课程导航与右侧教学区可拖拽调整宽度（双击/Home 恢复默认，宽度本地保存）。
 - 模型与推理力度选择、上下文用量显示、手动压缩上下文。
 - 中文 / English / 中英双语界面；能力缺失提示可关闭（本次会话内）。
-- 数据默认保存在 `~/.dsh/teaching/`；模型凭据沿用 Harness 自身配置，插件不复制、不落盘凭据。
+- 数据默认保存在 `$DSH_HOME/teaching/`（macOS/Linux 通常为 `~/.dsh/teaching/`）；模型凭据沿用 Harness 自身配置，插件不复制、不落盘凭据。
 
 ## 安装
 
-前置：macOS，已安装并至少启动过一次 DeepSeek Harness Desktop `0.2.2-rc.1` 或更高兼容版本。两种方式任选其一。
+前置：已安装并至少启动过一次 DeepSeek Harness Desktop `0.2.2-rc.1` 或更高兼容版本（本插件当前在 macOS 完成验证，Windows / Linux 尚未验证）。以下命令使用应用自带的 `dsh` CLI；请确保它在 `PATH` 中（不同平台的安装位置不同，使用对应平台的 CLI 可执行文件即可）。两种方式任选其一。
 
 ### 方式一：GitHub Release 分发包（推荐给其他同学）
 
@@ -55,8 +55,7 @@ AI 知识库教学插件（DeepSeek Harness Desktop）
 ```bash
 # 1. 完全退出 DeepSeek Harness Desktop
 # 2. 安装下载的分发包
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.1.tgz
+dsh plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.1.tgz
 
 # 3. 重新打开 DeepSeek Harness，左侧栏出现「AI 教学」
 ```
@@ -69,19 +68,17 @@ AI 知识库教学插件（DeepSeek Harness Desktop）
 git clone https://github.com/gbt24/dsh-teaching-plugin.git
 
 # 完全退出 DeepSeek Harness 后
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add /absolute/path/to/dsh-teaching-plugin/packages/dsh-plugin
+dsh plugin --profile desktop add /absolute/path/to/dsh-teaching-plugin/packages/dsh-plugin
 ```
 
 卸载：
 
 ```bash
 # 完全退出应用后
-"/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop remove dsh-ai-teaching
+dsh plugin --profile desktop remove dsh-ai-teaching
 ```
 
-学习数据在 `~/.dsh/teaching/`，卸载后保留；确认不再需要时可手动删除（不会影响原始资料文件）。
+学习数据在 `$DSH_HOME/teaching/`（默认 `~/.dsh/teaching/`），卸载后保留；确认不再需要时可手动删除（不会影响原始资料文件）。
 
 > 只使用 Desktop 自带的 dsh CLI 或应用内插件管理器修改 `desktop` profile；不要用普通 npm 安装的 dsh 修改它。更完整的安装、升级、排障说明见 [`docs/install.md`](docs/install.md)。
 
@@ -99,9 +96,7 @@ pnpm run pack                   # 生成 dist/ 下的 tgz/zip 发布产物
 开发调试时可用应用自带 CLI 在隔离的 `DSH_HOME` 中启动 Web GUI，例如：
 
 ```bash
-DSH_HOME="$PWD/.scratch/dsh-dev/home" \
-  "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  --profile teaching-dev --no-open --port 3180
+DSH_HOME="$PWD/.scratch/dsh-dev/home" dsh --profile teaching-dev --no-open --port 3180
 ```
 
 ## 仓库结构
@@ -129,7 +124,7 @@ DSH_HOME="$PWD/.scratch/dsh-dev/home" \
 
 ## 已知限制
 
-- 仅验证 macOS 桌面；其他平台与旧版 Harness 未做兼容性承诺。
+- 当前验证平台为 macOS；Windows / Linux 与旧版 Harness 尚未验证，未做兼容性承诺。
 - 联网资料检索依赖宿主配置的搜索 provider；未配置时明确降级为基于已有资料/模型知识的方案。
 - 扫描件 OCR 依赖本机可用的 tesseract；缺失时回退为原文/图片展示并标注不确定性。
 - Mermaid 目前以源码形式展示，尚未接入实时渲染。

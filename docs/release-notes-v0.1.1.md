@@ -11,20 +11,19 @@
 
 ## 安装
 
-要求：macOS + DeepSeek Harness Desktop **0.2.2-rc.1**（`engines.dsh` 允许 `>=0.2.2-rc.1 <0.3.0`）。
+要求：DeepSeek Harness Desktop **0.2.2-rc.1**（`engines.dsh` 允许 `>=0.2.2-rc.1 <0.3.0`；当前在 macOS 验证，Windows / Linux 尚未验证）。命令中的 `dsh` 指应用自带的 CLI，请确保它在 `PATH` 中。
 
 1. 下载本 Release 的 `dsh-ai-teaching-0.1.1.tgz`（或 `.zip`）。
 2. **完全退出** DeepSeek Harness Desktop。
 3. 用应用自带 CLI 安装：
 
    ```bash
-   "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-     plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.1.tgz
+   dsh plugin --profile desktop add /path/to/dsh-ai-teaching-0.1.1.tgz
    ```
 
 4. 重新打开应用，左侧栏出现「AI 教学」。
 
-卸载：`... plugin --profile desktop remove dsh-ai-teaching`（需先退出应用）。学习数据保留在 `~/.dsh/teaching/`；原始资料文件不受影响。
+卸载：`... plugin --profile desktop remove dsh-ai-teaching`（需先退出应用）。学习数据保留在 `$DSH_HOME/teaching/`（默认 `~/.dsh/teaching/`）；原始资料文件不受影响。
 
 ## 校验
 
