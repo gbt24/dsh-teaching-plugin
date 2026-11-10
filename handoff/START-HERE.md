@@ -4,6 +4,7 @@
 
 ## 执行顺序
 
+0. 先读 [项目记忆](../docs/impl/PROJECT-MEMORY.md)（当前版本、自动基线、命令、约束与已知陷阱）与分区代码地图 `docs/impl/memory/*.md`。完成条件：知道当前 HEAD/测试基线，以及任务所处模块的事实入口。
 1. 阅读 [需求规格](../docs/requirements.md)，确认 R01–R40 及 v1 范围。完成条件：知道任务引用的 R 与整体范围的关系。
 2. 阅读 [任务卡](task-cards.md) 中分配给你的任务及 [计划](../docs/plan.md) 中的前置条件。完成条件：前置证据已存在，写入所有权明确；缺条件时记录具体 gap，不用 mock 宣称通过。
 3. 阅读 [协作契约](../docs/contracts.md)。新建或修改 interface 时同时读取 [架构提案](../docs/architecture.md)。完成条件：共享对象、错误、修订与学习状态语义明确。
