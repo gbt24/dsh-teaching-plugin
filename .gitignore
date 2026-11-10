@@ -6,3 +6,18 @@ tmp/
 *.log
 .DS_Store
 AGENTS.md
+
+# 内部文档不上传 GitHub（AI 协作说明、项目记忆、阶段证据等）
+handoff/
+docs/impl/
+docs/evidence/
+docs/research/
+docs/plans/
+
+# docs 根目录只发布少量对外文档；其余 markdown（plan/contracts/acceptance/
+# technical-decisions 等）保留在本地，不随仓库上传
+docs/*.md
+!docs/requirements.md
+!docs/architecture.md
+!docs/install.md
+!docs/release-notes-*.md

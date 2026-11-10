@@ -14,7 +14,7 @@ AI 知识库教学插件（DeepSeek Harness Desktop）
 - 插件版本 `0.1.2`；目标 **DeepSeek Harness Desktop `0.2.2-rc.1`**（`engines.dsh`: `>=0.2.2-rc.1 <0.3.0`）。
 - 已在 **macOS + 0.2.2-rc.1** 上完成真实桌面加载、模型调用、资料导入、教学流程与数据持久化验证；Windows / Linux 尚未验证。
 - 自动化验证：`tsc` 0 errors、`525` 项测试通过；客户端 bundle 约 `1.1 MiB`。
-- 真实桌面验收清单中仍有若干人工教学/外部依赖项在持续补齐，详见 `docs/evidence/`。
+- 真实桌面验收清单中仍有若干人工教学/外部依赖项在持续补齐；验收证据保留在本地开发仓库，不随公开仓库发布。
 
 ## 功能
 
@@ -101,8 +101,7 @@ DSH_HOME="$PWD/.scratch/dsh-dev/home" dsh --profile teaching-dev --no-open --por
 | ------------------------- | ----------------------------------------------------------------------------------- |
 | `packages/dsh-plugin/`    | 插件本体：Host 路由与本地服务、Client 教学界面、`cordis.patch.yml`、构建产物 `lib/` |
 | `packages/teaching-core/` | 教学领域核心：资料/课程/学习/实验/可移植性等模块与契约                              |
-| `docs/`                   | 需求、架构、契约、验收矩阵、技术决策、安装文档与研究记录                            |
-| `docs/evidence/`          | 各阶段真实执行结果与截图证据                                                        |
+| `docs/`                   | 对外文档：需求（R01–R40）、架构、安装 / 升级 / 卸载、版本发布说明                  |
 | `samples/`                | 可分发课程样例                                                                      |
 | `scripts/`                | 构建与冒烟脚本                                                                      |
 
@@ -112,11 +111,8 @@ DSH_HOME="$PWD/.scratch/dsh-dev/home" dsh --profile teaching-dev --no-open --por
 | ------------------- | ------------------------------------------------------------ |
 | 产品需求（R01–R40） | [`docs/requirements.md`](docs/requirements.md)               |
 | 模块职责与数据流    | [`docs/architecture.md`](docs/architecture.md)               |
-| 跨模块契约          | [`docs/contracts.md`](docs/contracts.md)                     |
-| 实施计划与阶段      | [`docs/plan.md`](docs/plan.md)                               |
-| 验收矩阵            | [`docs/acceptance.md`](docs/acceptance.md)                   |
 | 安装 / 升级 / 卸载  | [`docs/install.md`](docs/install.md)                         |
-| 技术决策登记        | [`docs/technical-decisions.md`](docs/technical-decisions.md) |
+| 版本发布说明        | [`docs/release-notes-v0.1.2.md`](docs/release-notes-v0.1.2.md) |
 
 ## 已知限制
 
