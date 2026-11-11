@@ -128,7 +128,12 @@ export interface KbIndexEntry {
   readonly line: number
 }
 
-/** index.md 的一个 H2 分区。 */
+/**
+ * index.md 的一个分区。
+ *
+ * 普通分区来自 H2 标题；章节分区（`kind: 'chapter'`）也接受 H3/H4 标题，
+ * 例如 `## 概念索引` 下的 `### 第 1 章 · 构造过程抽象`。
+ */
 export interface KbIndexSection {
   readonly title: string
   readonly kind: 'chapter-overviews' | 'chapter' | 'tool' | 'review' | 'raw' | 'other'
@@ -724,18 +729,23 @@ export function parseIndexSections(content: string): KbIndex {
       if (total !== null) totalPages = Number(total[1])
       continue
     }
-    const h2 = /^##\s+(.+?)\s*#*\s*$/.exec(line)
-    if (h2 !== null) {
-      const rawTitle = (h2[1] ?? '').trim()
+    // 标题层级 H2–H4：H2 起新分区；任意层级的章节型标题（第 N 章 / Chapter N）
+    // 也单独成为章节分区——LLM-wiki 索引常把章节写在「概念索引」等 H2 之下。
+    const heading = /^(#{2,4})\s+(.+?)\s*#*\s*$/.exec(line)
+    if (heading !== null) {
+      const level = (heading[1] ?? '').length
+      const rawTitle = (heading[2] ?? '').trim()
       const cleanedTitle = rawTitle.replace(/\s*\(\d+\)\s*$/, '')
       const meta = sectionKindOf(cleanedTitle)
-      current = {
-        title: cleanedTitle,
-        kind: meta.kind,
-        ...(meta.chapterNumber !== undefined ? { chapterNumber: meta.chapterNumber } : {}),
-        entries: [],
+      if (level === 2 || meta.kind === 'chapter') {
+        current = {
+          title: cleanedTitle,
+          kind: meta.kind,
+          ...(meta.chapterNumber !== undefined ? { chapterNumber: meta.chapterNumber } : {}),
+          entries: [],
+        }
+        sections.push(current as KbIndexSection)
       }
-      sections.push(current as KbIndexSection)
       continue
     }
     if (current === undefined) continue
@@ -1310,6 +1320,8 @@ export async function buildKbStructureFromContext(
     readonly title: string
     readonly summary?: string
     readonly role: 'chapter' | 'appendix' | 'tool'
+    /** 章节序号：来自 index 章节分区/章节概览/tags 兜底，用于排序与合并。 */
+    readonly number?: number
     readonly page?: KbPage
     readonly conceptSlugs: string[]
   }
@@ -1374,6 +1386,7 @@ export async function buildKbStructureFromContext(
         title,
         ...(overview !== undefined && pageSummary(overview) !== undefined ? { summary: pageSummary(overview) } : {}),
         role: 'chapter',
+        number,
         ...(overview !== undefined ? { page: overview } : {}),
         conceptSlugs,
       })
@@ -1396,6 +1409,7 @@ export async function buildKbStructureFromContext(
         title: source.title,
         ...(source.summary !== undefined ? { summary: source.summary } : {}),
         role: 'chapter',
+        ...(source.number !== undefined ? { number: source.number } : {}),
         page,
         conceptSlugs,
       })
@@ -1411,7 +1425,7 @@ export async function buildKbStructureFromContext(
           }
         }
         for (const slug of conceptSlugs) assignedConceptSlugs.add(slug)
-        chapterDrafts.push({ title: `第 ${number} 章 ${section.title}`, role: 'chapter', conceptSlugs })
+        chapterDrafts.push({ title: `第 ${number} 章 ${section.title}`, role: 'chapter', number, conceptSlugs })
       }
     }
   }
@@ -1443,6 +1457,78 @@ export async function buildKbStructureFromContext(
       conceptSlugs,
     })
   }
+
+  // 其余带概念条目的目录分区（如「对比页」「实体」）各自成章，
+  // 避免这些 wiki 页被当成「未分章内容」。
+  for (const section of index?.sections ?? []) {
+    if (section.kind !== 'other' || section.entries.length === 0) continue
+    const conceptSlugs: string[] = []
+    for (const entry of section.entries) {
+      const page = resolveLink(entry.target)
+      if (page === undefined || !conceptSources.has(page.slug)) continue
+      if (assignedConceptSlugs.has(page.slug) || conceptSlugs.includes(page.slug)) continue
+      conceptSlugs.push(page.slug)
+    }
+    if (conceptSlugs.length === 0) continue
+    for (const slug of conceptSlugs) assignedConceptSlugs.add(slug)
+    const summary = section.entries.find(entry => entry.summary !== undefined)?.summary
+    chapterDrafts.push({
+      title: section.title,
+      ...(summary !== undefined ? { summary } : {}),
+      role: 'chapter',
+      conceptSlugs,
+    })
+    notes.push(`「${section.title}」分区按目录成章（${conceptSlugs.length} 个概念）`)
+  }
+
+  // tags 兜底：章节标签（tags: chapter-1 / ch1 …）给 index 未覆盖的概念归章，
+  // 已存在的同号章节合并，缺少的补成「第 N 章」。
+  const chapterTagPattern = /^(?:chapter|ch)[-_ ]?([0-9]{1,3})$/i
+  const tagChapterSlugs = new Map<number, string[]>()
+  for (const slug of orderedConceptSlugs) {
+    if (assignedConceptSlugs.has(slug)) continue
+    const concept = conceptSources.get(slug)
+    if (concept === undefined) continue
+    let number: number | undefined
+    for (const tag of concept.tags) {
+      const match = chapterTagPattern.exec(tag.trim())
+      if (match === null) continue
+      const parsed = Number(match[1])
+      if (Number.isFinite(parsed)) {
+        number = parsed
+        break
+      }
+    }
+    if (number === undefined) continue
+    const bucket = tagChapterSlugs.get(number) ?? []
+    bucket.push(slug)
+    tagChapterSlugs.set(number, bucket)
+  }
+  if (tagChapterSlugs.size > 0) {
+    const taggedChapters: string[] = []
+    for (const [number, slugs] of [...tagChapterSlugs.entries()].sort((a, b) => a[0] - b[0])) {
+      const existing = chapterDrafts.find(chapter => chapter.number === number)
+      if (existing !== undefined) {
+        for (const slug of slugs) {
+          if (existing.conceptSlugs.includes(slug)) continue
+          existing.conceptSlugs.push(slug)
+          assignedConceptSlugs.add(slug)
+        }
+      } else {
+        chapterDrafts.push({ title: `第 ${number} 章`, role: 'chapter', number, conceptSlugs: [...slugs] })
+        for (const slug of slugs) assignedConceptSlugs.add(slug)
+      }
+      taggedChapters.push(`第 ${number} 章`)
+    }
+    notes.push(`按概念 tags 的章节标签归章：${taggedChapters.join('、')}`)
+  }
+
+  // 章节顺序：有编号的章节按序号在前，其余（工具章节/资料分区/附录）保持插入顺序。
+  const numberedChapters = chapterDrafts
+    .filter(chapter => chapter.number !== undefined)
+    .sort((a, b) => (a.number as number) - (b.number as number))
+  const unnumberedChapters = chapterDrafts.filter(chapter => chapter.number === undefined)
+  chapterDrafts.splice(0, chapterDrafts.length, ...numberedChapters, ...unnumberedChapters)
 
   // 未分章概念 → 附录章节
   const unassigned = orderedConceptSlugs.filter(slug => !assignedConceptSlugs.has(slug))

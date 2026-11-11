@@ -20,8 +20,8 @@ import { courseId as newCourseId, nowIso } from '../../src/contracts/ids.ts'
 import type { Course } from '../../src/contracts/course.ts'
 import type { CourseRepository } from '../../src/storage/repositories.ts'
 import {
-  createCourseRecord, createTestCorpus, errorCode, kbSamplePath, listKbFixtureFiles,
-  samplePath, valueOf,
+  createCourseRecord, createTestCorpus, errorCode, KB_NESTED_SAMPLE_DIR, kbNestedSamplePath,
+  kbSamplePath, listKbFixtureFiles, samplePath, valueOf,
 } from './helpers.ts'
 
 async function importFixture(context: Awaited<ReturnType<typeof createTestCorpus>>, courseId: string): Promise<void> {
@@ -308,4 +308,57 @@ test('章节顺序：index 顺序与章节概览编号一致时按 index 顺序�
   // 第一章概念顺序与 index 条目一致
   const firstChapterTitles = (chapters[0]?.conceptIds ?? []).map(id => revision.concepts.find(concept => concept.id === id)?.title)
   assert.deepEqual(firstChapterTitles, ['极限概念', '连续与间断'])
+})
+
+test('嵌套章节：H3 章节标题解析、非章节分区各自成章、tags 兜底归章', async t => {
+  const context = await createTestCorpus()
+  t.after(async () => await context.cleanup())
+  const course = await createCourseRecord(context.courses, '嵌套章节测试')
+  const files = await listKbFixtureFiles(KB_NESTED_SAMPLE_DIR)
+  const outcome = await context.service.importFiles(course.id, files.map(path => ({ path })))
+  assert.equal(outcome.failures.length, 0, JSON.stringify(outcome.failures))
+
+  // 解析层：H3 章节标题（位于「## 概念索引」之下）必须成为 chapter 分区
+  const index = parseIndexSections(await readFile(kbNestedSamplePath('index.md'), 'utf8'))
+  const chapterSections = index.sections.filter(section => section.kind === 'chapter')
+  assert.deepEqual(chapterSections.map(section => section.chapterNumber), [1, 2])
+  assert.ok(index.sections.some(section => section.kind === 'other' && section.title === '对比页'))
+  assert.ok(index.sections.some(section => section.kind === 'other' && section.title === '实体'))
+
+  const detection = valueOf(await context.service.detectKnowledgeBase({ courseId: course.id as never }))
+  assert.equal(detection.facts.isKnowledgeBase, true)
+  assert.equal(detection.facts.chapterOverviewCount, 0, 'fixture 没有章节概览页，应走 index 分区')
+
+  const revision = valueOf(await context.service.proposeCourseStructure({
+    courseId: course.id as never,
+    courseTitle: '嵌套章节测试',
+    goal: '验证 H3 章节与非章节分区',
+    language: 'zh',
+    strategy: 'kb-structure',
+  }))
+  const chapters = revision.chapters ?? []
+  const titles = chapters.map(chapter => chapter.title)
+  assert.deepEqual(titles, ['第 1 章 · 基础', '第 2 章 · 进阶', '第 3 章', '对比页', '实体'])
+  assert.ok(!titles.includes('未分章内容'), '不应再出现未分章内容附录')
+  assert.deepEqual(chapters.map(chapter => chapter.role), ['chapter', 'chapter', 'chapter', 'chapter', 'chapter'])
+
+  const conceptTitles = new Map(revision.concepts.map(concept => [concept.id, concept.title]))
+  const titlesOf = (title: string): (string | undefined)[] => {
+    const chapter = chapters.find(item => item.title === title)
+    assert.ok(chapter !== undefined, `缺少章节：${title}`)
+    return chapter.conceptIds.map(id => conceptTitles.get(id))
+  }
+  assert.deepEqual(titlesOf('第 1 章 · 基础'), ['概念甲'])
+  // 概念丙未出现在 index，但 tags: chapter-2 → 合并进已有第 2 章
+  assert.deepEqual(titlesOf('第 2 章 · 进阶'), ['概念乙', '概念丙'])
+  // 概念丁 tags: chapter-3 → 补出「第 3 章」
+  assert.deepEqual(titlesOf('第 3 章'), ['概念丁'])
+  // 对比页/实体 各自成章
+  assert.deepEqual(titlesOf('对比页'), ['对比甲乙'])
+  assert.deepEqual(titlesOf('实体'), ['实体乙'])
+
+  // 每个概念恰好属于一个章节，且全部被覆盖
+  const covered = chapters.flatMap(chapter => chapter.conceptIds)
+  assert.equal(new Set(covered).size, covered.length, '概念不应出现在多个章节')
+  assert.equal(new Set(covered).size, revision.concepts.length)
 })

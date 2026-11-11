@@ -5635,18 +5635,21 @@ function parseIndexSections(content) {
       if (total !== null) totalPages = Number(total[1]);
       continue;
     }
-    const h2 = /^##\s+(.+?)\s*#*\s*$/.exec(line);
-    if (h2 !== null) {
-      const rawTitle = (h2[1] ?? "").trim();
+    const heading = /^(#{2,4})\s+(.+?)\s*#*\s*$/.exec(line);
+    if (heading !== null) {
+      const level = (heading[1] ?? "").length;
+      const rawTitle = (heading[2] ?? "").trim();
       const cleanedTitle = rawTitle.replace(/\s*\(\d+\)\s*$/, "");
       const meta = sectionKindOf(cleanedTitle);
-      current = {
-        title: cleanedTitle,
-        kind: meta.kind,
-        ...meta.chapterNumber !== void 0 ? { chapterNumber: meta.chapterNumber } : {},
-        entries: []
-      };
-      sections.push(current);
+      if (level === 2 || meta.kind === "chapter") {
+        current = {
+          title: cleanedTitle,
+          kind: meta.kind,
+          ...meta.chapterNumber !== void 0 ? { chapterNumber: meta.chapterNumber } : {},
+          entries: []
+        };
+        sections.push(current);
+      }
       continue;
     }
     if (current === void 0) continue;
@@ -6155,6 +6158,7 @@ async function buildKbStructureFromContext(deps, input, context, signal) {
         title,
         ...overview !== void 0 && pageSummary(overview) !== void 0 ? { summary: pageSummary(overview) } : {},
         role: "chapter",
+        number,
         ...overview !== void 0 ? { page: overview } : {},
         conceptSlugs
       });
@@ -6177,6 +6181,7 @@ async function buildKbStructureFromContext(deps, input, context, signal) {
         title: source.title,
         ...source.summary !== void 0 ? { summary: source.summary } : {},
         role: "chapter",
+        ...source.number !== void 0 ? { number: source.number } : {},
         page,
         conceptSlugs
       });
@@ -6191,7 +6196,7 @@ async function buildKbStructureFromContext(deps, input, context, signal) {
           }
         }
         for (const slug of conceptSlugs) assignedConceptSlugs.add(slug);
-        chapterDrafts.push({ title: `\u7B2C ${number} \u7AE0 ${section.title}`, role: "chapter", conceptSlugs });
+        chapterDrafts.push({ title: `\u7B2C ${number} \u7AE0 ${section.title}`, role: "chapter", number, conceptSlugs });
       }
     }
   }
@@ -6219,6 +6224,68 @@ async function buildKbStructureFromContext(deps, input, context, signal) {
       conceptSlugs
     });
   }
+  for (const section of index?.sections ?? []) {
+    if (section.kind !== "other" || section.entries.length === 0) continue;
+    const conceptSlugs = [];
+    for (const entry of section.entries) {
+      const page = resolveLink(entry.target);
+      if (page === void 0 || !conceptSources.has(page.slug)) continue;
+      if (assignedConceptSlugs.has(page.slug) || conceptSlugs.includes(page.slug)) continue;
+      conceptSlugs.push(page.slug);
+    }
+    if (conceptSlugs.length === 0) continue;
+    for (const slug of conceptSlugs) assignedConceptSlugs.add(slug);
+    const summary = section.entries.find((entry) => entry.summary !== void 0)?.summary;
+    chapterDrafts.push({
+      title: section.title,
+      ...summary !== void 0 ? { summary } : {},
+      role: "chapter",
+      conceptSlugs
+    });
+    notes.push(`\u300C${section.title}\u300D\u5206\u533A\u6309\u76EE\u5F55\u6210\u7AE0\uFF08${conceptSlugs.length} \u4E2A\u6982\u5FF5\uFF09`);
+  }
+  const chapterTagPattern = /^(?:chapter|ch)[-_ ]?([0-9]{1,3})$/i;
+  const tagChapterSlugs = /* @__PURE__ */ new Map();
+  for (const slug of orderedConceptSlugs) {
+    if (assignedConceptSlugs.has(slug)) continue;
+    const concept = conceptSources.get(slug);
+    if (concept === void 0) continue;
+    let number;
+    for (const tag of concept.tags) {
+      const match = chapterTagPattern.exec(tag.trim());
+      if (match === null) continue;
+      const parsed = Number(match[1]);
+      if (Number.isFinite(parsed)) {
+        number = parsed;
+        break;
+      }
+    }
+    if (number === void 0) continue;
+    const bucket = tagChapterSlugs.get(number) ?? [];
+    bucket.push(slug);
+    tagChapterSlugs.set(number, bucket);
+  }
+  if (tagChapterSlugs.size > 0) {
+    const taggedChapters = [];
+    for (const [number, slugs] of [...tagChapterSlugs.entries()].sort((a, b) => a[0] - b[0])) {
+      const existing = chapterDrafts.find((chapter) => chapter.number === number);
+      if (existing !== void 0) {
+        for (const slug of slugs) {
+          if (existing.conceptSlugs.includes(slug)) continue;
+          existing.conceptSlugs.push(slug);
+          assignedConceptSlugs.add(slug);
+        }
+      } else {
+        chapterDrafts.push({ title: `\u7B2C ${number} \u7AE0`, role: "chapter", number, conceptSlugs: [...slugs] });
+        for (const slug of slugs) assignedConceptSlugs.add(slug);
+      }
+      taggedChapters.push(`\u7B2C ${number} \u7AE0`);
+    }
+    notes.push(`\u6309\u6982\u5FF5 tags \u7684\u7AE0\u8282\u6807\u7B7E\u5F52\u7AE0\uFF1A${taggedChapters.join("\u3001")}`);
+  }
+  const numberedChapters = chapterDrafts.filter((chapter) => chapter.number !== void 0).sort((a, b) => a.number - b.number);
+  const unnumberedChapters = chapterDrafts.filter((chapter) => chapter.number === void 0);
+  chapterDrafts.splice(0, chapterDrafts.length, ...numberedChapters, ...unnumberedChapters);
   const unassigned = orderedConceptSlugs.filter((slug) => !assignedConceptSlugs.has(slug));
   if (unassigned.length > 0) {
     chapterDrafts.push({

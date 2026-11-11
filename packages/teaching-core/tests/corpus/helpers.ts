@@ -26,6 +26,9 @@ export const SAMPLE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../.
 /** 仓库内可分发 LLM-wiki fixture 目录（课程结构 v2）。 */
 export const KB_SAMPLE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../samples/kb')
 
+/** 嵌套章节 fixture：章节标题在 H3、非章节分区各自成章、章节 tags 兜底。 */
+export const KB_NESTED_SAMPLE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../../../../samples/kb-nested')
+
 /** 样例绝对路径（samples/corpus）。 */
 export function samplePath(...parts: readonly string[]): string {
   return join(SAMPLE_DIR, ...parts)
@@ -36,8 +39,13 @@ export function kbSamplePath(...parts: readonly string[]): string {
   return join(KB_SAMPLE_DIR, ...parts)
 }
 
+/** 嵌套章节 fixture 绝对路径（samples/kb-nested）。 */
+export function kbNestedSamplePath(...parts: readonly string[]): string {
+  return join(KB_NESTED_SAMPLE_DIR, ...parts)
+}
+
 /** 递归列出 fixture 中需要导入的 Markdown 文件（排除 README）。 */
-export async function listKbFixtureFiles(): Promise<string[]> {
+export async function listKbFixtureFiles(root: string = KB_SAMPLE_DIR): Promise<string[]> {
   const files: string[] = []
   const walk = async (directory: string): Promise<void> => {
     const entries = await readdir(directory, { withFileTypes: true })
@@ -51,7 +59,7 @@ export async function listKbFixtureFiles(): Promise<string[]> {
       if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'README.md') files.push(full)
     }
   }
-  await walk(KB_SAMPLE_DIR)
+  await walk(root)
   return files.sort()
 }
 
