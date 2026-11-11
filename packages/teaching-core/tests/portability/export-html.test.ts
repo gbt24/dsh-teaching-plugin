@@ -51,6 +51,11 @@ test('offline export renders every activity kind and stays self-contained', asyn
     assert.match(html, /<textarea[^>]*class="teaching-code-editor"/u, 'code editor rendered')
     assert.match(html, /离线页面：不执行原生代码/u, 'offline code-run notice rendered')
     assert.match(html, /我的笔记：<strong>泛化误差<\/strong>是关键/u, 'notes rendered when requested')
+    // Markdown 表格在离线页同样渲染（同一 render/markdown 模块）。
+    assert.match(html, /class="teaching-table-wrap"/u, 'markdown table wrapper rendered')
+    assert.match(html, /<table class="teaching-table">/u, 'markdown table rendered')
+    assert.match(html, /<th>指标<\/th>/u, 'table header cell rendered')
+    assert.match(html, /\.teaching-table th, \.teaching-table td/u, 'offline page ships table CSS')
     assert.match(html, /学习记录摘要/u, 'learning summary rendered')
     assert.match(html, /离线说明/u, 'visible offline notice')
     assert.match(html, /KaTeX 专用字体未内嵌/u, 'visible KaTeX font limitation')

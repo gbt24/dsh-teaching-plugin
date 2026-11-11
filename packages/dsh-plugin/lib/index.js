@@ -55666,6 +55666,9 @@ function renderMath(latex, displayMode, environment) {
 var SAFE_LINK = /^https?:\/\//iu;
 var MAX_SOURCE_LENGTH = 2e5;
 var MAX_CODE_BLOCK = 1e5;
+var MAX_TABLE_COLUMNS = 16;
+var MAX_TABLE_ROWS = 200;
+var MAX_TABLE_CELL_LENGTH = 1e3;
 function parseInlineMarkdown(source) {
   const result = [];
   let buffer = "";
@@ -55754,6 +55757,88 @@ function parseInlineMarkdown(source) {
   flush();
   return result;
 }
+function splitTableRow(line) {
+  const cells = [];
+  let buffer = "";
+  let inCode = false;
+  let index = 0;
+  while (index < line.length) {
+    const char = line[index] ?? "";
+    if (char === "\\" && line[index + 1] === "|") {
+      buffer += "|";
+      index += 2;
+      continue;
+    }
+    if (char === "`") {
+      inCode = !inCode;
+      buffer += char;
+      index += 1;
+      continue;
+    }
+    if (char === "|" && !inCode) {
+      cells.push(buffer);
+      buffer = "";
+      index += 1;
+      continue;
+    }
+    buffer += char;
+    index += 1;
+  }
+  cells.push(buffer);
+  const trimmed = line.trim();
+  if (trimmed.startsWith("|")) cells.shift();
+  if (trimmed.endsWith("|") && !trimmed.endsWith("\\|")) cells.pop();
+  return cells.map((cell) => cell.trim());
+}
+function parseTableDelimiter(line) {
+  const trimmed = line.trim();
+  if (!trimmed.includes("|") || !trimmed.includes("-")) return void 0;
+  const cells = splitTableRow(trimmed);
+  if (cells.length === 0) return void 0;
+  const align = [];
+  for (const cell of cells) {
+    const value = cell.trim();
+    if (!/^:?-+:?$/u.test(value)) return void 0;
+    const left = value.startsWith(":");
+    const right = value.endsWith(":");
+    align.push(left && right ? "center" : left ? "left" : right ? "right" : void 0);
+  }
+  return align;
+}
+function parseTableAt(lines, start) {
+  const headerLine = (lines[start] ?? "").trim();
+  if (!headerLine.includes("|")) return void 0;
+  const align = parseTableDelimiter(lines[start + 1] ?? "");
+  if (align === void 0) return void 0;
+  const rawHeader = splitTableRow(headerLine);
+  if (rawHeader.length === 0 || rawHeader.length !== align.length) return void 0;
+  const columnCount = Math.min(rawHeader.length, MAX_TABLE_COLUMNS);
+  const boundCell = (cell) => cell.length > MAX_TABLE_CELL_LENGTH ? cell.slice(0, MAX_TABLE_CELL_LENGTH) : cell;
+  const header = rawHeader.slice(0, columnCount).map((cell) => parseInlineMarkdown(boundCell(cell)));
+  const columns = align.slice(0, columnCount);
+  const rows = [];
+  let cursor = start + 2;
+  let truncated = false;
+  while (cursor < lines.length) {
+    const rawLine = lines[cursor] ?? "";
+    const line = rawLine.trim();
+    if (line === "" || line === "$$" || /^```/u.test(line) || /^#{1,4}\s+/u.test(line) || /^>\s?/u.test(line) || /^(?:-{3,}|\*{3,}|_{3,})$/u.test(line)) break;
+    if (!line.includes("|")) break;
+    if (rows.length >= MAX_TABLE_ROWS) {
+      truncated = true;
+    } else {
+      const cells = splitTableRow(line);
+      const row = [];
+      for (let column = 0; column < columnCount; column += 1) row.push(parseInlineMarkdown(boundCell(cells[column] ?? "")));
+      rows.push(row);
+    }
+    cursor += 1;
+  }
+  return {
+    block: { type: "table", header, align: columns, rows, ...truncated ? { truncated: true } : {} },
+    next: cursor
+  };
+}
 function parseMarkdown2(source) {
   const bounded = source.length > MAX_SOURCE_LENGTH ? source.slice(0, MAX_SOURCE_LENGTH) : source;
   const lines = bounded.replace(/\r\n?/gu, "\n").split("\n");
@@ -55789,6 +55874,12 @@ function parseMarkdown2(source) {
       }
       index += 1;
       blocks.push({ type: "math", latex: mathLines.join("\n") });
+      continue;
+    }
+    const table = parseTableAt(lines, index);
+    if (table !== void 0) {
+      blocks.push(table.block);
+      index = table.next;
       continue;
     }
     const heading = /^(#{1,4})\s+(.*)$/u.exec(trimmed);
@@ -55843,10 +55934,18 @@ function parseMarkdown2(source) {
       if (nextTrimmed === "" || /^```/u.test(nextTrimmed) || /^#{1,4}\s+/u.test(nextTrimmed) || /^>\s?/u.test(nextTrimmed) || nextTrimmed === "$$" || /^(?:-{3,}|\*{3,}|_{3,})$/u.test(nextTrimmed)) {
         break;
       }
+      const previous = paragraphLines[paragraphLines.length - 1] ?? "";
+      if (previous.includes("|") && parseTableAt(lines, index - 1) !== void 0) {
+        paragraphLines.pop();
+        index -= 1;
+        break;
+      }
       paragraphLines.push(next);
       index += 1;
     }
-    blocks.push({ type: "paragraph", children: parseInlineMarkdown(paragraphLines.join("\n")) });
+    if (paragraphLines.length > 0) {
+      blocks.push({ type: "paragraph", children: parseInlineMarkdown(paragraphLines.join("\n")) });
+    }
   }
   return blocks;
 }
@@ -55898,6 +55997,39 @@ function appendMarkdownBlocks(parent, document2, blocks, environment) {
       parent.appendChild(pre);
     } else if (block.type === "math") {
       parent.appendChild(renderMath(block.latex, true, environment));
+    } else if (block.type === "table") {
+      const wrapper = createElement(document2, "div", { className: "teaching-table-wrap" });
+      const table = createElement(document2, "table", { className: "teaching-table" });
+      const head = createElement(document2, "thead");
+      const headerRow = createElement(document2, "tr");
+      block.header.forEach((cell, column) => {
+        const align = block.align[column];
+        const th = createElement(document2, "th", align === void 0 ? {} : { attrs: { "data-align": align } });
+        appendInlineTokens(document2, th, cell, environment);
+        headerRow.appendChild(th);
+      });
+      head.appendChild(headerRow);
+      table.appendChild(head);
+      const body = createElement(document2, "tbody");
+      for (const row of block.rows) {
+        const tr = createElement(document2, "tr");
+        row.forEach((cell, column) => {
+          const align = block.align[column];
+          const td2 = createElement(document2, "td", align === void 0 ? {} : { attrs: { "data-align": align } });
+          appendInlineTokens(document2, td2, cell, environment);
+          tr.appendChild(td2);
+        });
+        body.appendChild(tr);
+      }
+      table.appendChild(body);
+      wrapper.appendChild(table);
+      if (block.truncated === true) {
+        wrapper.appendChild(createElement(document2, "div", {
+          className: "teaching-table-note",
+          text: "\u2026\uFF08\u8868\u683C\u8FC7\u957F\uFF0C\u5DF2\u622A\u65AD\uFF09"
+        }));
+      }
+      parent.appendChild(wrapper);
     } else if (block.type === "quote") {
       const quote = createElement(document2, "blockquote", { className: "teaching-quote" });
       appendMarkdownBlocks(quote, document2, block.blocks, environment);
@@ -59947,6 +60079,13 @@ section.tp-session h2, section.tp-course h2, section.tp-learning h2 { margin: 0 
 .teaching-code-block { margin: 8px 0; padding: 10px; border-radius: 8px; background: rgba(15, 23, 42, 0.06); overflow: auto; }
 .teaching-code-block code, .teaching-code-inline { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
 .teaching-rule { border: 0; border-top: 1px solid var(--dsw-border); margin: 12px 0; }
+.teaching-table-wrap { margin: 8px 0; max-width: 100%; overflow-x: auto; }
+.teaching-table { border-collapse: collapse; font-size: 13px; line-height: 1.55; }
+.teaching-table th, .teaching-table td { border: 1px solid var(--dsw-border); padding: 5px 10px; text-align: left; vertical-align: top; }
+.teaching-table th { background: rgba(15, 23, 42, 0.045); }
+.teaching-table th[data-align="center"], .teaching-table td[data-align="center"] { text-align: center; }
+.teaching-table th[data-align="right"], .teaching-table td[data-align="right"] { text-align: right; }
+.teaching-table-note { margin-top: 2px; font-size: 11px; color: var(--dsw-text-secondary); }
 .teaching-math-block { margin: 8px 0; overflow-x: auto; }
 .teaching-math-inline { white-space: nowrap; }
 .teaching-link { color: #2563eb; }

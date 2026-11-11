@@ -563,6 +563,13 @@ section.tp-session h2, section.tp-course h2, section.tp-learning h2 { margin: 0 
 .teaching-code-block { margin: 8px 0; padding: 10px; border-radius: 8px; background: rgba(15, 23, 42, 0.06); overflow: auto; }
 .teaching-code-block code, .teaching-code-inline { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
 .teaching-rule { border: 0; border-top: 1px solid var(--dsw-border); margin: 12px 0; }
+.teaching-table-wrap { margin: 8px 0; max-width: 100%; overflow-x: auto; }
+.teaching-table { border-collapse: collapse; font-size: 13px; line-height: 1.55; }
+.teaching-table th, .teaching-table td { border: 1px solid var(--dsw-border); padding: 5px 10px; text-align: left; vertical-align: top; }
+.teaching-table th { background: rgba(15, 23, 42, 0.045); }
+.teaching-table th[data-align="center"], .teaching-table td[data-align="center"] { text-align: center; }
+.teaching-table th[data-align="right"], .teaching-table td[data-align="right"] { text-align: right; }
+.teaching-table-note { margin-top: 2px; font-size: 11px; color: var(--dsw-text-secondary); }
 .teaching-math-block { margin: 8px 0; overflow-x: auto; }
 .teaching-math-inline { white-space: nowrap; }
 .teaching-link { color: #2563eb; }

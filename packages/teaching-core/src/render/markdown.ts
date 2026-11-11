@@ -8,8 +8,8 @@
  * through the KaTeX renderer with the model's string as LaTeX, not HTML.
  *
  * Supported: ATX headings (1–4), paragraphs, unordered/ordered lists, fenced
- * code blocks, block quotes, horizontal rules, strong/emphasis, inline code,
- * http(s) links, inline/display math, hard line breaks.
+ * code blocks, block quotes, horizontal rules, GFM pipe tables, strong/emphasis,
+ * inline code, http(s) links, inline/display math, hard line breaks.
  */
 import { createElement } from './dom.ts'
 import { renderMath } from './math.ts'
@@ -25,18 +25,26 @@ export type MarkdownInline =
   | { readonly type: 'break' }
 
 /** One block token. */
+/** Column alignment of a GFM pipe table (`:---`, `:---:`, `---:`). */
+export type MarkdownTableAlign = 'left' | 'center' | 'right'
+
 export type MarkdownBlock =
   | { readonly type: 'heading'; readonly level: 1 | 2 | 3 | 4; readonly children: readonly MarkdownInline[] }
   | { readonly type: 'paragraph'; readonly children: readonly MarkdownInline[] }
   | { readonly type: 'list'; readonly ordered: boolean; readonly items: readonly (readonly MarkdownInline[])[] }
   | { readonly type: 'code'; readonly language?: string; readonly code: string }
   | { readonly type: 'math'; readonly latex: string }
+  | { readonly type: 'table'; readonly header: readonly (readonly MarkdownInline[])[]; readonly align: readonly (MarkdownTableAlign | undefined)[]; readonly rows: readonly (readonly (readonly MarkdownInline[])[])[]; readonly truncated?: boolean }
   | { readonly type: 'quote'; readonly blocks: readonly MarkdownBlock[] }
   | { readonly type: 'rule' }
 
 const SAFE_LINK = /^https?:\/\//iu
 const MAX_SOURCE_LENGTH = 200_000
 const MAX_CODE_BLOCK = 100_000
+/** Table caps keep model output from blowing up the chat/export layout. */
+const MAX_TABLE_COLUMNS = 16
+const MAX_TABLE_ROWS = 200
+const MAX_TABLE_CELL_LENGTH = 1_000
 
 /** Tokenise inline Markdown into the safe vocabulary. */
 export function parseInlineMarkdown(source: string): readonly MarkdownInline[] {
@@ -132,6 +140,101 @@ export function parseInlineMarkdown(source: string): readonly MarkdownInline[] {
 }
 
 /** Tokenise block-level Markdown into the safe vocabulary. */
+/** 把表格一行按未转义管道切分成单元格（保留 `\|` 与行内代码里的管道）。 */
+function splitTableRow(line: string): string[] {
+  const cells: string[] = []
+  let buffer = ''
+  let inCode = false
+  let index = 0
+  while (index < line.length) {
+    const char = line[index] ?? ''
+    if (char === '\\' && line[index + 1] === '|') {
+      buffer += '|'
+      index += 2
+      continue
+    }
+    if (char === '`') {
+      inCode = !inCode
+      buffer += char
+      index += 1
+      continue
+    }
+    if (char === '|' && !inCode) {
+      cells.push(buffer)
+      buffer = ''
+      index += 1
+      continue
+    }
+    buffer += char
+    index += 1
+  }
+  cells.push(buffer)
+  const trimmed = line.trim()
+  // 去掉管道表格最外侧的空单元格（`| a | b |` 与 `|| a | b` 都兼容）。
+  if (trimmed.startsWith('|')) cells.shift()
+  if (trimmed.endsWith('|') && !trimmed.endsWith('\\|')) cells.pop()
+  return cells.map(cell => cell.trim())
+}
+
+/** 解析 GFM 分隔行（`| --- | :---: | ---: |`）；不是分隔行时返回 undefined。 */
+function parseTableDelimiter(line: string): readonly (MarkdownTableAlign | undefined)[] | undefined {
+  const trimmed = line.trim()
+  if (!trimmed.includes('|') || !trimmed.includes('-')) return undefined
+  const cells = splitTableRow(trimmed)
+  if (cells.length === 0) return undefined
+  const align: (MarkdownTableAlign | undefined)[] = []
+  for (const cell of cells) {
+    const value = cell.trim()
+    if (!/^:?-+:?$/u.test(value)) return undefined
+    const left = value.startsWith(':')
+    const right = value.endsWith(':')
+    align.push(left && right ? 'center' : left ? 'left' : right ? 'right' : undefined)
+  }
+  return align
+}
+
+/** 从 start 行尝试解析一张 GFM 管道表格；不是表格时返回 undefined。 */
+function parseTableAt(
+  lines: readonly string[],
+  start: number,
+): { readonly block: Extract<MarkdownBlock, { type: 'table' }>; readonly next: number } | undefined {
+  const headerLine = (lines[start] ?? '').trim()
+  if (!headerLine.includes('|')) return undefined
+  const align = parseTableDelimiter(lines[start + 1] ?? '')
+  if (align === undefined) return undefined
+  const rawHeader = splitTableRow(headerLine)
+  // GFM 要求表头列数与分隔行列数一致；否则按普通段落处理，不猜结构。
+  if (rawHeader.length === 0 || rawHeader.length !== align.length) return undefined
+  const columnCount = Math.min(rawHeader.length, MAX_TABLE_COLUMNS)
+  const boundCell = (cell: string): string => (cell.length > MAX_TABLE_CELL_LENGTH ? cell.slice(0, MAX_TABLE_CELL_LENGTH) : cell)
+  const header = rawHeader.slice(0, columnCount).map(cell => parseInlineMarkdown(boundCell(cell)))
+  const columns = align.slice(0, columnCount)
+  const rows: (readonly (readonly MarkdownInline[])[])[] = []
+  let cursor = start + 2
+  let truncated = false
+  while (cursor < lines.length) {
+    const rawLine = lines[cursor] ?? ''
+    const line = rawLine.trim()
+    if (line === '' || line === '$$' || /^```/u.test(line) || /^#{1,4}\s+/u.test(line)
+      || /^>\s?/u.test(line) || /^(?:-{3,}|\*{3,}|_{3,})$/u.test(line)) break
+    // 表格数据行必须含管道；否则视为表格结束，交给其他块处理。
+    if (!line.includes('|')) break
+    if (rows.length >= MAX_TABLE_ROWS) {
+      truncated = true
+    } else {
+      const cells = splitTableRow(line)
+      const row: (readonly MarkdownInline[])[] = []
+      for (let column = 0; column < columnCount; column += 1) row.push(parseInlineMarkdown(boundCell(cells[column] ?? '')))
+      rows.push(row)
+    }
+    cursor += 1
+  }
+  return {
+    block: { type: 'table', header, align: columns, rows, ...(truncated ? { truncated: true } : {}) },
+    next: cursor,
+  }
+}
+
 export function parseMarkdown(source: string): readonly MarkdownBlock[] {
   const bounded = source.length > MAX_SOURCE_LENGTH ? source.slice(0, MAX_SOURCE_LENGTH) : source
   const lines = bounded.replace(/\r\n?/gu, '\n').split('\n')
@@ -169,6 +272,13 @@ export function parseMarkdown(source: string): readonly MarkdownBlock[] {
       }
       index += 1
       blocks.push({ type: 'math', latex: mathLines.join('\n') })
+      continue
+    }
+    // GFM pipe table (header row + delimiter row).
+    const table = parseTableAt(lines, index)
+    if (table !== undefined) {
+      blocks.push(table.block)
+      index = table.next
       continue
     }
     // Heading.
@@ -230,10 +340,20 @@ export function parseMarkdown(source: string): readonly MarkdownBlock[] {
         || /^>\s?/u.test(nextTrimmed) || nextTrimmed === '$$' || /^(?:-{3,}|\*{3,}|_{3,})$/u.test(nextTrimmed)) {
         break
       }
+      // 表格紧跟正文（中间没有空行）时，把上一行退回成表头，段落在此结束。
+      // 必须确认退回去的上一行确实能组成表格，否则会反复退回同一行。
+      const previous = paragraphLines[paragraphLines.length - 1] ?? ''
+      if (previous.includes('|') && parseTableAt(lines, index - 1) !== undefined) {
+        paragraphLines.pop()
+        index -= 1
+        break
+      }
       paragraphLines.push(next)
       index += 1
     }
-    blocks.push({ type: 'paragraph', children: parseInlineMarkdown(paragraphLines.join('\n')) })
+    if (paragraphLines.length > 0) {
+      blocks.push({ type: 'paragraph', children: parseInlineMarkdown(paragraphLines.join('\n')) })
+    }
   }
   return blocks
 }
@@ -328,6 +448,40 @@ export function appendMarkdownBlocks(
       parent.appendChild(pre)
     } else if (block.type === 'math') {
       parent.appendChild(renderMath(block.latex, true, environment))
+    } else if (block.type === 'table') {
+      // 表格结构固定为 table/thead/tbody/th/td，单元格内容继续走安全 inline 渲染。
+      const wrapper = createElement(document, 'div', { className: 'teaching-table-wrap' })
+      const table = createElement(document, 'table', { className: 'teaching-table' })
+      const head = createElement(document, 'thead')
+      const headerRow = createElement(document, 'tr')
+      block.header.forEach((cell, column) => {
+        const align = block.align[column]
+        const th = createElement(document, 'th', align === undefined ? {} : { attrs: { 'data-align': align } })
+        appendInlineTokens(document, th, cell, environment)
+        headerRow.appendChild(th)
+      })
+      head.appendChild(headerRow)
+      table.appendChild(head)
+      const body = createElement(document, 'tbody')
+      for (const row of block.rows) {
+        const tr = createElement(document, 'tr')
+        row.forEach((cell, column) => {
+          const align = block.align[column]
+          const td = createElement(document, 'td', align === undefined ? {} : { attrs: { 'data-align': align } })
+          appendInlineTokens(document, td, cell, environment)
+          tr.appendChild(td)
+        })
+        body.appendChild(tr)
+      }
+      table.appendChild(body)
+      wrapper.appendChild(table)
+      if (block.truncated === true) {
+        wrapper.appendChild(createElement(document, 'div', {
+          className: 'teaching-table-note',
+          text: '…（表格过长，已截断）',
+        }))
+      }
+      parent.appendChild(wrapper)
     } else if (block.type === 'quote') {
       const quote = createElement(document, 'blockquote', { className: 'teaching-quote' })
       appendMarkdownBlocks(quote, document, block.blocks, environment)

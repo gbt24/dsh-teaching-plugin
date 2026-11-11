@@ -263,6 +263,18 @@ export const TEACHING_CSS = `
 .teaching-markdown pre code { background: transparent; padding: 0; }
 .teaching-markdown blockquote { margin: 0.5em 0; padding-left: 10px;
   border-left: 3px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.35)); opacity: 0.9; }
+.teaching-markdown .teaching-table-wrap { margin: 0.55em 0; max-width: 100%; overflow-x: auto; }
+.teaching-markdown .teaching-table { border-collapse: collapse; font-size: 12.5px; line-height: 1.55; }
+.teaching-markdown .teaching-table th, .teaching-markdown .teaching-table td {
+  border: 1px solid var(--dsw-alias-border-l2, rgba(127,127,127,0.25));
+  padding: 5px 10px; text-align: left; vertical-align: top; }
+.teaching-markdown .teaching-table th {
+  background: var(--dsw-alias-bg-layer-1, rgba(127,127,127,0.08)); font-weight: 600; }
+.teaching-markdown .teaching-table th[data-align="center"],
+.teaching-markdown .teaching-table td[data-align="center"] { text-align: center; }
+.teaching-markdown .teaching-table th[data-align="right"],
+.teaching-markdown .teaching-table td[data-align="right"] { text-align: right; }
+.teaching-markdown .teaching-table-note { margin-top: 2px; font-size: 11px; opacity: 0.72; }
 .teaching-markdown a { color: var(--dsw-alias-state-business-primary, var(--dsw-alias-state-business-primary, #2563eb)); }
 .teaching-markdown hr { border: none; border-top: 1px solid
   var(--dsw-alias-border-l2, rgba(127,127,127,0.3)); margin: 0.8em 0; }
